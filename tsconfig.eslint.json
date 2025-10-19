@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true
+  },
+  "include": [
+    "src",
+    "vite.config.ts",
+    ".eslintrc.cjs"
+  ]
+}
+

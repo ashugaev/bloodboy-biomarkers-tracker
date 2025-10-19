@@ -1,0 +1,8 @@
+@import 'antd/dist/reset.css';
+@import '@ag-grid-community/styles/ag-grid.css';
+@import '@ag-grid-community/styles/ag-theme-material.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+

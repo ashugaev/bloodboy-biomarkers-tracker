@@ -1,0 +1,55 @@
+{
+  "extends": ["stylelint-config-standard-scss", "stylelint-config-property-sort-order-smacss"],
+  "ignoreFiles": ["**/build/**", "**/dist/**", "**/node_modules/**"],
+  "rules": {
+    "scss/dollar-variable-pattern": [
+      "^[a-z]([a-zA-Z0-9]+)?(_)?([a-z0-9]([a-zA-Z0-9]+)?)?(_)?([a-z0-9]([a-zA-Z0-9]+)?)?$",
+      {
+        "message": "You can name variables in 'camelCase' using also '_'"
+      }
+    ],
+    "scss/at-mixin-pattern": [
+      "^[a-z][a-zA-Z]+$",
+      {
+        "message": "Expected mixin name to be 'camelCase'"
+      }
+    ],
+    "scss/percent-placeholder-pattern": [
+      "^[a-z]([a-zA-Z0-9]+)?(_)?([a-z0-9]([a-zA-Z0-9]+)?)?(_)?([a-z0-9]([a-zA-Z0-9]+)?)?$",
+      {
+        "message": "You can name variables in 'camelCase' using also '_'"
+      }
+    ],
+    "scss/at-function-pattern": [
+      "^[a-z][a-zA-Z]+$",
+      {
+        "message": "Expected functions name to be 'camelCase'"
+      }
+    ],
+    "selector-class-pattern": "^[a-z][a-zA-Z]+",
+    "function-name-case": [
+      "lower",
+      {
+        "ignoreFunctions": ["/^[a-z][a-zA-Z]+/"]
+      }
+    ],
+    "value-keyword-case": [
+      "lower",
+      {
+        "ignoreFunctions": ["/^[a-z][a-zA-Z]+/"]
+      }
+    ],
+    "selector-pseudo-class-no-unknown": [
+      true,
+      {
+        "ignorePseudoClasses": ["export", "global"]
+      }
+    ],
+    "no-duplicate-selectors": null,
+    "no-descending-specificity": null,
+    "scss/at-extend-no-missing-placeholder": null,
+    "scss/double-slash-comment-whitespace-inside": null,
+    "scss/double-slash-comment-empty-line-before": null
+  }
+}
+

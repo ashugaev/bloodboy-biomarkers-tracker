@@ -1,0 +1,73 @@
+# React Component Structure
+
+## Component Structure Pattern
+Components follow this structure:
+
+```
+ComponentName/
+├── ComponentName.tsx       # Main component file
+├── ComponentName.types.ts  # TypeScript types
+└── index.ts                # Exports
+```
+
+## Component Template (ComponentName.tsx)
+
+```tsx
+import cn from 'classnames'
+
+import { ComponentNameProps } from './ComponentName.types'
+
+export const ComponentName = (props: ComponentNameProps) => {
+    const { className } = props
+
+    return (
+        <div className={cn('p-4 bg-white rounded', className)}>
+            ComponentName
+        </div>
+    )
+}
+```
+
+## Types Template (ComponentName.types.ts)
+
+```tsx
+export interface ComponentNameProps {
+    className?: string
+}
+```
+
+## Index Template (index.ts)
+
+```tsx
+export * from './ComponentName'
+export * from './ComponentName.types'
+```
+
+## Styling with Tailwind CSS
+
+Use Tailwind utility classes directly in className:
+```tsx
+// Layout
+className='flex items-center justify-between'
+
+// Spacing
+className='p-4 m-2 gap-4'
+
+// Colors (use theme colors when possible)
+className='bg-primary text-white'
+
+// Responsive
+className='text-sm md:text-base lg:text-lg'
+
+// States
+className='hover:bg-gray-100 focus:outline-none'
+```
+
+## Rules
+- Use named exports only (no default exports)
+- Component name must match file name (PascalCase)
+- Always include className prop for style composition
+- Use classnames (cn) for combining Tailwind classes
+- Keep component logic in the main file
+- Extract complex types to .types.ts file
+- Prefer Tailwind utility classes over custom CSS
