@@ -7,7 +7,7 @@ import { DBStore } from '../constants/stores'
 import { db } from '../services/db.service'
 import { StoreTypeMap, UseDbResult } from '../types/store.types'
 
-type AnyTable = EntityTable<StoreTypeMap[DBStore.BIOMARKER_CONFIGS], 'id'> | EntityTable<StoreTypeMap[DBStore.BIOMARKER_RECORDS], 'id'> | EntityTable<StoreTypeMap[DBStore.UPLOADED_FILES], 'id'>
+type AnyTable = EntityTable<StoreTypeMap[DBStore.BIOMARKER_CONFIGS], 'id'> | EntityTable<StoreTypeMap[DBStore.BIOMARKER_RECORDS], 'id'> | EntityTable<StoreTypeMap[DBStore.UPLOADED_FILES], 'id'> | EntityTable<StoreTypeMap[DBStore.APP_SETTINGS], 'id'>
 
 const getTable = (storeName: DBStore): AnyTable => {
     switch (storeName) {
@@ -17,6 +17,8 @@ const getTable = (storeName: DBStore): AnyTable => {
             return db.biomarkerRecords
         case DBStore.UPLOADED_FILES:
             return db.uploadedFiles
+        case DBStore.APP_SETTINGS:
+            return db.appSettings
         default:
             throw new Error(`Unknown store: ${storeName}`)
     }

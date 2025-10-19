@@ -1,53 +1,24 @@
-import { ConfigProvider } from 'antd'
-import { RcFile } from 'antd/es/upload/interface'
-import { PDFParse } from 'pdf-parse'
-import { UploadRequestOption } from 'rc-upload/lib/interface'
+import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
+import { ModuleRegistry } from '@ag-grid-community/core'
+import { App as AntApp, ConfigProvider } from 'antd'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 
-import { UploadDropZone } from '@/components/UploadDropZone'
 import { themeConfig } from '@/constants'
+import { HomePage, DataPage } from '@/pages'
 
-interface PdfData {
-    text: string
-    numpages: number
-}
+ModuleRegistry.registerModules([ClientSideRowModelModule])
 
 export const App = () => {
-    const handleUpload = async (data: UploadRequestOption) => {
-        const file = data.file as RcFile
-        let parser: PDFParse | null = null
-
-        try {
-            const arrayBuffer = await file.arrayBuffer()
-            parser = new PDFParse({ data: arrayBuffer })
-            const pdfData = await parser.getText() as PdfData
-
-            // eslint-disable-next-line no-console
-            console.log('Extracted text:', pdfData.text)
-            // eslint-disable-next-line no-console
-            console.log('Pages:', pdfData.numpages)
-
-            data.onSuccess?.(pdfData)
-        } catch (error) {
-            // eslint-disable-next-line no-console
-            console.error('PDF parsing error:', error)
-            data.onError?.(error as Error)
-        } finally {
-            if (parser) {
-                await parser.destroy()
-            }
-        }
-    }
-
     return (
         <ConfigProvider theme={themeConfig}>
-            <div className='min-h-screen bg-gray-50 flex items-center justify-center'>
-                <div className='w-full max-w-2xl px-4'>
-                    <UploadDropZone
-                        customRequest={handleUpload}
-                        button
-                    />
-                </div>
-            </div>
+            <AntApp>
+                <BrowserRouter>
+                    <Routes>
+                        <Route path='/' element={<HomePage/>}/>
+                        <Route path='/data' element={<DataPage/>}/>
+                    </Routes>
+                </BrowserRouter>
+            </AntApp>
         </ConfigProvider>
     )
 }

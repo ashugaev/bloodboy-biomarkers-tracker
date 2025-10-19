@@ -2,11 +2,13 @@ import { DBStore } from '../constants/stores'
 
 import { BiomarkerConfig, BiomarkerRecord } from './biomarker.types'
 import { UploadedDocument } from './document.types'
+import { AppSettings } from './settings.types'
 
 export interface StoreTypeMap {
     [DBStore.BIOMARKER_CONFIGS]: BiomarkerConfig
     [DBStore.BIOMARKER_RECORDS]: BiomarkerRecord
     [DBStore.UPLOADED_FILES]: UploadedDocument
+    [DBStore.APP_SETTINGS]: AppSettings
 }
 
 export interface UseDbResult<T> {

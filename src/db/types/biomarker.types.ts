@@ -104,6 +104,8 @@ export interface BiomarkerRecord extends BaseEntity, TestMetadata, RecordNotes {
     documentId?: string
     value: number
     unit: Unit
+    approved: boolean
+    latest: boolean
 }
 
 export interface BiomarkerStats {
