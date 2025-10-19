@@ -1,21 +1,51 @@
 import { ConfigProvider } from 'antd'
+import { RcFile } from 'antd/es/upload/interface'
+import { PDFParse } from 'pdf-parse'
+import { UploadRequestOption } from 'rc-upload/lib/interface'
 
-import { BiomarkerExample } from '@/components/BiomarkerExample'
-import { DocumentUpload } from '@/components/DocumentUpload'
+import { UploadDropZone } from '@/components/UploadDropZone'
 import { themeConfig } from '@/constants'
 
+interface PdfData {
+    text: string
+    numpages: number
+}
+
 export const App = () => {
+    const handleUpload = async (data: UploadRequestOption) => {
+        const file = data.file as RcFile
+        let parser: PDFParse | null = null
+
+        try {
+            const arrayBuffer = await file.arrayBuffer()
+            parser = new PDFParse({ data: arrayBuffer })
+            const pdfData = await parser.getText() as PdfData
+
+            // eslint-disable-next-line no-console
+            console.log('Extracted text:', pdfData.text)
+            // eslint-disable-next-line no-console
+            console.log('Pages:', pdfData.numpages)
+
+            data.onSuccess?.(pdfData)
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            console.error('PDF parsing error:', error)
+            data.onError?.(error as Error)
+        } finally {
+            if (parser) {
+                await parser.destroy()
+            }
+        }
+    }
+
     return (
         <ConfigProvider theme={themeConfig}>
-            <div className='min-h-screen bg-gray-50'>
-                <div className='container mx-auto py-8'>
-                    <h1 className='text-3xl font-bold text-center mb-8'>
-                        Blood Test Tracker
-                    </h1>
-                    <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-                        <DocumentUpload/>
-                        <BiomarkerExample/>
-                    </div>
+            <div className='min-h-screen bg-gray-50 flex items-center justify-center'>
+                <div className='w-full max-w-2xl px-4'>
+                    <UploadDropZone
+                        customRequest={handleUpload}
+                        button
+                    />
                 </div>
             </div>
         </ConfigProvider>
