@@ -55,9 +55,9 @@ export const ApiKeyInput = (props: ApiKeyInputProps) => {
                     placeholder='sk-...'
                     value={apiKeyInput}
                     onChange={(e) => { setApiKeyInput(e.target.value) }}
-                    onPressEnter={handleSaveApiKey}
+                    onPressEnter={() => { void handleSaveApiKey() }}
                 />
-                <Button type='primary' onClick={handleSaveApiKey}>
+                <Button type='primary' onClick={() => { void handleSaveApiKey() }}>
                     Save
                 </Button>
             </div>

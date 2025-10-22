@@ -93,7 +93,7 @@ export const UploadDropZone = (props: UploadDropZoneProps) => {
                     </Flex>
                 </Flex>
                 {button && (
-                    <Button type='primary'>
+                    <Button type='primary' disabled={props.disabled}>
                         Select File
                     </Button>
                 )}

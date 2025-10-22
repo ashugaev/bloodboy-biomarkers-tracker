@@ -1,20 +1,21 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 
 import { db } from '../services/db.service'
-import { BiomarkerConfig, BiomarkerType } from '../types'
+import { BiomarkerConfig } from '../types'
 
-export const useBiomarkerConfigs = (enabledOnly: boolean = false) => {
+export const useBiomarkerConfigs = (approvedOnly: boolean = true) => {
     const configs = useLiveQuery(
         async () => {
-            if (enabledOnly) {
-                return await db.biomarkerConfigs
-                    .where('enabled')
-                    .equals(1)
-                    .toArray()
+            const query = db.biomarkerConfigs.toCollection()
+
+            if (approvedOnly) {
+                const allConfigs = await query.toArray()
+                return allConfigs.filter(c => c.approved)
             }
+
             return await db.biomarkerConfigs.toArray()
         },
-        [enabledOnly],
+        [approvedOnly],
     )
 
     return {
@@ -30,24 +31,6 @@ export const useBiomarkerConfig = (id?: string) => {
             return await db.biomarkerConfigs.get(id) ?? null
         },
         [id],
-    )
-
-    return {
-        config,
-        loading: config === undefined,
-    }
-}
-
-export const useBiomarkerConfigByType = (type?: BiomarkerType) => {
-    const config = useLiveQuery(
-        async () => {
-            if (!type) return null
-            return await db.biomarkerConfigs
-                .where('type')
-                .equals(type)
-                .first() ?? null
-        },
-        [type],
     )
 
     return {

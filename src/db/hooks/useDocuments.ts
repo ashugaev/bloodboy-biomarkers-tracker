@@ -1,18 +1,15 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 
 import { db } from '../services/db.service'
-import { UploadedDocument, DocumentStatus, DocumentType } from '../types'
+import { UploadedDocument, DocumentType } from '../types'
 
-export const useDocuments = (status?: DocumentStatus, type?: DocumentType) => {
+export const useDocuments = (type?: DocumentType) => {
     const documents = useLiveQuery(
         async () => {
-            let query = db.uploadedFiles.toCollection()
-
-            if (status) {
-                query = db.uploadedFiles.where('status').equals(status)
-            }
-
-            const results = await query.reverse().sortBy('uploadDate')
+            const results = await db.uploadedFiles
+                .toCollection()
+                .reverse()
+                .sortBy('uploadDate')
 
             if (type) {
                 return results.filter(doc => doc.type === type)
@@ -20,7 +17,7 @@ export const useDocuments = (status?: DocumentStatus, type?: DocumentType) => {
 
             return results
         },
-        [status, type],
+        [type],
     )
 
     return {

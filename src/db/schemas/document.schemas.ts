@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { DocumentType, DocumentStatus } from '../types/document.types'
+import { DocumentType } from '../types/document.types'
 
 const baseEntitySchema = z.object({
     id: z.string().uuid(),
@@ -28,9 +28,9 @@ export const uploadedDocumentSchema = baseEntitySchema
     .merge(documentMetadataSchema)
     .extend({
         type: z.nativeEnum(DocumentType),
-        status: z.nativeEnum(DocumentStatus),
+        approved: z.boolean(),
         uploadDate: z.coerce.date(),
-        filePath: z.string().optional(),
+        fileData: z.instanceof(ArrayBuffer).optional(),
         thumbnailPath: z.string().optional(),
         extractedText: z.string().optional(),
     })

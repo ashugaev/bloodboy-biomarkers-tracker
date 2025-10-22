@@ -13,7 +13,7 @@ export const useBiomarkerRecords = (biomarkerId?: string) => {
                 .where('biomarkerId')
                 .equals(biomarkerId)
                 .reverse()
-                .sortBy('testDate')
+                .sortBy('createdAt')
         },
         [biomarkerId],
     )
@@ -46,7 +46,7 @@ export const useRecentRecords = (limit: number = 10) => {
     const records = useLiveQuery(
         async () => {
             return await db.biomarkerRecords
-                .orderBy('testDate')
+                .orderBy('createdAt')
                 .reverse()
                 .limit(limit)
                 .toArray()
@@ -73,4 +73,17 @@ export const updateBiomarkerRecord = async (id: string, updates: Partial<Biomark
 
 export const deleteBiomarkerRecord = async (id: string): Promise<void> => {
     await db.biomarkerRecords.delete(id)
+}
+
+export const modifyBiomarkerRecord = async (
+    id: string,
+    changeCallback: (record: BiomarkerRecord) => void,
+): Promise<number> => {
+    return await db.biomarkerRecords
+        .where('id')
+        .equals(id)
+        .modify((record) => {
+            changeCallback(record)
+            record.updatedAt = new Date()
+        })
 }

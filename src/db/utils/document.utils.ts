@@ -1,28 +1,31 @@
 import { v4 as uuidv4 } from 'uuid'
 
-import { UploadedDocument, DocumentType, DocumentStatus } from '../types/document.types'
+import { getCurrentUserId } from '../hooks/useUser'
+import { UploadedDocument, DocumentType } from '../types/document.types'
 
-const createBaseEntity = () => {
+const createBaseEntity = async () => {
     const now = new Date()
+    const userId = await getCurrentUserId()
     return {
         id: uuidv4(),
+        userId,
         createdAt: now,
         updatedAt: now,
     }
 }
 
-export const createDocument = (
+export const createDocument = async (
     partial: Partial<UploadedDocument>,
-): UploadedDocument => {
+): Promise<UploadedDocument> => {
     const now = new Date()
     return {
-        ...createBaseEntity(),
+        ...await createBaseEntity(),
         fileName: '',
         originalName: '',
         fileSize: 0,
         mimeType: '',
         type: DocumentType.PDF,
-        status: DocumentStatus.UPLOADED,
+        approved: false,
         uploadDate: now,
         ...partial,
     }
@@ -40,14 +43,4 @@ export const formatFileSize = (bytes: number): string => {
     const i = Math.floor(Math.log(bytes) / Math.log(k))
 
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
-}
-
-export const getDocumentStatusColor = (status: DocumentStatus): string => {
-    const colors: Record<DocumentStatus, string> = {
-        [DocumentStatus.UPLOADED]: 'text-blue-600',
-        [DocumentStatus.PROCESSING]: 'text-yellow-600',
-        [DocumentStatus.PROCESSED]: 'text-green-600',
-        [DocumentStatus.ERROR]: 'text-red-600',
-    }
-    return colors[status]
 }

@@ -8,5 +8,7 @@ export interface UploadStatusProps {
     stage: UploadStage
     currentPage?: number
     totalPages?: number
+    currentFile?: number
+    totalFiles?: number
     className?: string
 }

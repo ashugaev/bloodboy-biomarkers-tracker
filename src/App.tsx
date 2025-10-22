@@ -4,11 +4,14 @@ import { App as AntApp, ConfigProvider } from 'antd'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 
 import { themeConfig } from '@/constants'
+import { useCurrentUser } from '@/db'
 import { HomePage, DataPage } from '@/pages'
 
 ModuleRegistry.registerModules([ClientSideRowModelModule])
 
 export const App = () => {
+    useCurrentUser()
+
     return (
         <ConfigProvider theme={themeConfig}>
             <AntApp>

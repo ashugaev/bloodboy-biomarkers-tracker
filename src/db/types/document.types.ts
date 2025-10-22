@@ -4,13 +4,6 @@ export enum DocumentType {
     PDF = 'pdf',
 }
 
-export enum DocumentStatus {
-    UPLOADED = 'uploaded',
-    PROCESSING = 'processing',
-    PROCESSED = 'processed',
-    ERROR = 'error',
-}
-
 export interface FileMetadata {
     fileName: string
     originalName: string
@@ -27,9 +20,9 @@ export interface DocumentMetadata {
 
 export interface UploadedDocument extends BaseEntity, FileMetadata, DocumentMetadata {
     type: DocumentType
-    status: DocumentStatus
+    approved: boolean
     uploadDate: Date
-    filePath?: string
+    fileData?: ArrayBuffer
     thumbnailPath?: string
     extractedText?: string
 }
@@ -38,5 +31,4 @@ export interface DocumentStats {
     totalDocuments: number
     totalSize: number
     byType: Record<DocumentType, number>
-    byStatus: Record<DocumentStatus, number>
 }

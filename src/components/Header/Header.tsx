@@ -11,7 +11,7 @@ export const Header = (props: HeaderProps) => {
                 <div className='flex items-center h-16'>
                     <Link to='/' className='flex items-center gap-2'>
                         <img src='/favicon.svg' alt='Blood Test Tracker' className='w-5 h-5'/>
-                        <span className='text-lg font-semibold text-gray-800'>BTT</span>
+                        <span className='text-lg font-semibold text-gray-800'>Bloodboy</span>
                     </Link>
                 </div>
             </div>

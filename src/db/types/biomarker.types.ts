@@ -6,8 +6,8 @@ export interface BaseEntity {
 }
 
 export interface Range {
-    min: number
-    max: number
+    min?: number
+    max?: number
 }
 
 export enum BiomarkerType {
@@ -79,19 +79,14 @@ export interface BiomarkerMetadata {
 }
 
 export interface BiomarkerRanges {
-    normalRange: Range
+    normalRange?: Range
     criticalRange?: Range
+    targetRange?: Range
 }
 
 export interface BiomarkerConfig extends BaseEntity, BiomarkerMetadata, BiomarkerRanges {
-    type: BiomarkerType
-    unit: Unit
-    enabled: boolean
-}
-
-export interface TestMetadata {
-    testDate: Date
-    lab?: string
+    unit?: Unit
+    approved: boolean
 }
 
 export interface RecordNotes {
@@ -99,13 +94,14 @@ export interface RecordNotes {
     doctorNotes?: string
 }
 
-export interface BiomarkerRecord extends BaseEntity, TestMetadata, RecordNotes {
+export interface BiomarkerRecord extends BaseEntity, RecordNotes {
     biomarkerId: string
     documentId?: string
-    value: number
+    value?: number
     unit: Unit
     approved: boolean
     latest: boolean
+    order?: number
 }
 
 export interface BiomarkerStats {

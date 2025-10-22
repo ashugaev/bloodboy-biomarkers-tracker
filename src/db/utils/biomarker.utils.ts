@@ -1,43 +1,37 @@
 import { v4 as uuidv4 } from 'uuid'
 
-import { BiomarkerType, Unit, BiomarkerConfig, BiomarkerRecord } from '../types/biomarker.types'
+import { getCurrentUserId } from '../hooks/useUser'
+import { BiomarkerConfig, BiomarkerRecord } from '../types/biomarker.types'
 
-const createBaseEntity = () => {
+const createBaseEntity = async () => {
     const now = new Date()
+    const userId = await getCurrentUserId()
     return {
         id: uuidv4(),
+        userId,
         createdAt: now,
         updatedAt: now,
     }
 }
 
-export const createBiomarkerConfig = (
+export const createBiomarkerConfig = async (
     partial: Partial<BiomarkerConfig>,
-): BiomarkerConfig => {
+): Promise<BiomarkerConfig> => {
     return {
-        ...createBaseEntity(),
-        type: BiomarkerType.GLUCOSE,
-        name: '',
-        unit: Unit.MG_DL,
-        normalRange: {
-            min: 0,
-            max: 100,
-        },
-        enabled: true,
+        ...await createBaseEntity(),
         ...partial,
-    }
+    } as BiomarkerConfig
 }
 
-export const createBiomarkerRecord = (
+export const createBiomarkerRecord = async (
     partial: Partial<BiomarkerRecord>,
-): BiomarkerRecord => {
+): Promise<BiomarkerRecord> => {
     const now = new Date()
     return {
-        ...createBaseEntity(),
-        biomarkerId: '',
-        value: 0,
-        unit: Unit.MG_DL,
+        ...await createBaseEntity(),
         testDate: now,
+        approved: false,
+        latest: true,
         ...partial,
-    }
+    } as BiomarkerRecord
 }

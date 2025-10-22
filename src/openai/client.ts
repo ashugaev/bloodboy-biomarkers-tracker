@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { App } from 'antd'
 import OpenAI from 'openai'
@@ -10,6 +10,15 @@ export const useOpenAI = () => {
     const { message } = App.useApp()
     const { data: settings, loading, remove } = useDb(DBStore.APP_SETTINGS)
     const apiKey = settings[0]?.openaiApiKey
+    const [minLoadingTime, setMinLoadingTime] = useState(true)
+
+    // Minimum loading time to prevent blinking of the component
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setMinLoadingTime(false)
+        }, 200)
+        return () => { clearTimeout(timer) }
+    }, [])
 
     const resetApiKey = useCallback(async () => {
         if (settings[0]) {
@@ -31,12 +40,13 @@ export const useOpenAI = () => {
                     create: async (...args: Parameters<typeof openaiClient.chat.completions.create>): Promise<Awaited<ReturnType<typeof openaiClient.chat.completions.create>>> => {
                         try {
                             return await openaiClient.chat.completions.create(...args)
-                        } catch (error: any) {
-                            if (error?.status === 401) {
-                                message.error('Invalid API key')
-                                await resetApiKey()
+                        } catch (error: unknown) {
+                            const err = error as { status?: number, message?: string }
+                            if (err.status === 401) {
+                                void message.error('Invalid API key')
+                                void resetApiKey()
                             } else {
-                                message.error(`OpenAI API error: ${error?.message || 'Unknown error'}`)
+                                void message.error(`OpenAI API error: ${err.message ?? 'Unknown error'}`)
                             }
                             throw error
                         }
@@ -49,6 +59,6 @@ export const useOpenAI = () => {
     return {
         client,
         hasApiKey: !!apiKey,
-        loading,
+        loading: loading || minLoadingTime,
     }
 }

@@ -1,12 +1,16 @@
 import { z } from 'zod'
 
-import { BiomarkerType, Unit } from '../types/biomarker.types'
-import { isUnitValidForBiomarker } from '../utils/biomarker-units'
+import { Unit } from '../types/biomarker.types'
 
 const rangeSchema = z.object({
-    min: z.number(),
-    max: z.number(),
-}).refine(data => data.min < data.max, {
+    min: z.number().optional(),
+    max: z.number().optional(),
+}).refine(data => {
+    if (data.min !== undefined && data.max !== undefined) {
+        return data.min < data.max
+    }
+    return true
+}, {
     message: 'Min must be less than max',
 })
 
@@ -23,30 +27,18 @@ const biomarkerMetadataSchema = z.object({
 })
 
 const biomarkerRangesSchema = z.object({
-    normalRange: rangeSchema,
+    normalRange: rangeSchema.optional(),
     criticalRange: rangeSchema.optional(),
+    targetRange: rangeSchema.optional(),
 })
 
 export const biomarkerConfigSchema = baseEntitySchema
     .merge(biomarkerMetadataSchema)
     .merge(biomarkerRangesSchema)
     .extend({
-        type: z.nativeEnum(BiomarkerType),
-        unit: z.nativeEnum(Unit),
-        enabled: z.boolean(),
+        unit: z.nativeEnum(Unit).optional(),
+        approved: z.boolean(),
     })
-    .refine(
-        data => isUnitValidForBiomarker(data.type, data.unit),
-        {
-            message: 'Unit is not valid for this biomarker type',
-            path: ['unit'],
-        },
-    )
-
-const testMetadataSchema = z.object({
-    testDate: z.coerce.date(),
-    lab: z.string().optional(),
-})
 
 const recordNotesSchema = z.object({
     notes: z.string().optional(),
@@ -54,20 +46,13 @@ const recordNotesSchema = z.object({
 })
 
 export const biomarkerRecordSchema = baseEntitySchema
-    .merge(testMetadataSchema)
     .merge(recordNotesSchema)
     .extend({
         biomarkerId: z.string().uuid(),
         documentId: z.string().uuid().optional(),
-        value: z.number(),
+        value: z.number().optional(),
         unit: z.nativeEnum(Unit),
+        approved: z.boolean(),
+        latest: z.boolean(),
+        order: z.number().optional(),
     })
-
-export const createBiomarkerRecordSchema = (biomarkerType: BiomarkerType) =>
-    biomarkerRecordSchema.refine(
-        data => isUnitValidForBiomarker(biomarkerType, data.unit),
-        {
-            message: `Unit is not valid for biomarker type ${biomarkerType}`,
-            path: ['unit'],
-        },
-    )

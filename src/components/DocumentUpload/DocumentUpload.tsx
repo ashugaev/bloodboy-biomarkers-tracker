@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { UploadOutlined, FileOutlined, DeleteOutlined } from '@ant-design/icons'
 import { Button, Card, List, Typography, Tag, Space } from 'antd'
 
-import { createDocument, formatFileSize, getDocumentStatusColor, getDocumentTypeFromMimeType, DocumentStatus, getRecordsByDocument } from '@/db'
+import { createDocument, formatFileSize, getDocumentTypeFromMimeType, getRecordsByDocument } from '@/db'
 import { useDocuments, addDocument, deleteDocument } from '@/db/hooks'
 
 import { DocumentUploadProps } from './DocumentUpload.types'
@@ -28,27 +28,28 @@ export const DocumentUpload = (props: DocumentUploadProps) => {
         }
     }
 
-    const handleUpload = () => {
+    const handleUpload = async () => {
         if (!selectedFile) return
 
-        const newDocument = createDocument({
+        const filePath = URL.createObjectURL(selectedFile)
+
+        const newDocument = await createDocument({
             fileName: `${Date.now()}_${selectedFile.name}`,
             originalName: selectedFile.name,
             fileSize: selectedFile.size,
             mimeType: selectedFile.type,
             type: getDocumentTypeFromMimeType(selectedFile.type),
-            status: DocumentStatus.UPLOADED,
             uploadDate: new Date(),
+            filePath,
         })
 
-        void addDocument(newDocument).then(() => {
-            setSelectedFile(null)
+        await addDocument(newDocument)
+        setSelectedFile(null)
 
-            const fileInput = document.querySelector('input[type="file"]')
-            if (fileInput instanceof HTMLInputElement) {
-                fileInput.value = ''
-            }
-        })
+        const fileInput = document.querySelector('input[type="file"]')
+        if (fileInput instanceof HTMLInputElement) {
+            fileInput.value = ''
+        }
     }
 
     const loadRecordCounts = () => {
@@ -78,7 +79,7 @@ export const DocumentUpload = (props: DocumentUploadProps) => {
                         <Button
                             type='primary'
                             icon={<UploadOutlined/>}
-                            onClick={handleUpload}
+                            onClick={() => { void handleUpload() }}
                             disabled={!selectedFile}
                         >
                             Upload
@@ -124,8 +125,8 @@ export const DocumentUpload = (props: DocumentUploadProps) => {
                                         <Space>
                                             <Text strong>{doc.originalName}</Text>
                                             <Tag color='blue'>{doc.type}</Tag>
-                                            <Tag className={getDocumentStatusColor(doc.status)}>
-                                                {doc.status}
+                                            <Tag color={doc.approved ? 'green' : 'orange'}>
+                                                {doc.approved ? 'approved' : 'pending'}
                                             </Tag>
                                         </Space>
                                     )}

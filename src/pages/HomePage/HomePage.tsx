@@ -17,7 +17,7 @@ export const HomePage = (props: HomePageProps) => {
                     <div className='flex items-center'>
                         <Link className='flex items-center gap-2 rounded-md focus:outline-none focus:opacity-80' to='/' aria-label='Blood Test Tracker'>
                             <img src='/favicon.svg' alt='Blood Test Tracker' className='w-4 h-4'/>
-                            <span className='text-xl font-semibold text-gray-800'>Tracker</span>
+                            <span className='text-xl font-semibold text-gray-800'>Bloodboy</span>
                         </Link>
                     </div>
 
@@ -219,8 +219,8 @@ export const HomePage = (props: HomePageProps) => {
                                         />
                                     </div>
                                     <div>
-                                        <h4 className='font-bold'>Sarah Johnson</h4>
-                                        <span className='text-xs text-gray-600'>2 days ago</span>
+                                        <h4 className='font-bold'>Count V. Drake</h4>
+                                        <span className='text-xs text-gray-600'>2 nights ago</span>
                                     </div>
                                 </div>
                                 <div className='flex items-center space-x-2 text-yellow-500'>
@@ -231,7 +231,7 @@ export const HomePage = (props: HomePageProps) => {
                                 </div>
                             </div>
                             <div className='p-4 space-y-2 text-sm text-gray-600'>
-                                <p>This app has completely changed how I track my health. Easy to upload results and the insights are incredibly helpful.</p>
+                                <p>As a connoisseur of fine cuisine for centuries, I appreciate quality control in my dietary sources. Perfect for monitoring my... personal staff's wellness. After all, you are what you eat.</p>
                             </div>
                         </div>
 
@@ -246,7 +246,7 @@ export const HomePage = (props: HomePageProps) => {
                                         />
                                     </div>
                                     <div>
-                                        <h4 className='font-bold'>Michael Chen</h4>
+                                        <h4 className='font-bold'>Rajan Joharson</h4>
                                         <span className='text-xs text-gray-600'>5 days ago</span>
                                     </div>
                                 </div>
@@ -254,11 +254,11 @@ export const HomePage = (props: HomePageProps) => {
                                     <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' className='w-5 h-5 fill-current'>
                                         <path d='M494,198.671a40.536,40.536,0,0,0-32.174-27.592L345.917,152.242,292.185,47.828a40.7,40.7,0,0,0-72.37,0L166.083,152.242,50.176,171.079a40.7,40.7,0,0,0-22.364,68.827l82.7,83.368-17.9,116.055a40.672,40.672,0,0,0,58.548,42.538L256,428.977l104.843,52.89a40.69,40.69,0,0,0,58.548-42.538l-17.9-116.055,82.7-83.368A40.538,40.538,0,0,0,494,198.671Zm-32.53,18.7L367.4,312.2l20.364,132.01a8.671,8.671,0,0,1-12.509,9.088L256,393.136,136.744,453.3a8.671,8.671,0,0,1-12.509-9.088L144.6,312.2,50.531,217.37a8.7,8.7,0,0,1,4.778-14.706L187.15,181.238,248.269,62.471a8.694,8.694,0,0,1,15.462,0L324.85,181.238l131.841,21.426A8.7,8.7,0,0,1,461.469,217.37Z'/>
                                     </svg>
-                                    <span className='text-xl font-bold'>4.8</span>
+                                    <span className='text-xl font-bold'>4.5</span>
                                 </div>
                             </div>
                             <div className='p-4 space-y-2 text-sm text-gray-600'>
-                                <p>Great tool for monitoring my biomarkers over time. The PDF upload feature works flawlessly and saves me so much time.</p>
+                                <p>As a biohacker optimizing my biology to live forever, I love that there's no annual subscription. By 2140, that would add up significantly. Perfect for tracking my Bluedrink protocol.</p>
                             </div>
                         </div>
 
@@ -273,19 +273,19 @@ export const HomePage = (props: HomePageProps) => {
                                         />
                                     </div>
                                     <div>
-                                        <h4 className='font-bold'>Emma Wilson</h4>
+                                        <h4 className='font-bold'>Dr. Elizabeth</h4>
                                         <span className='text-xs text-gray-600'>1 week ago</span>
                                     </div>
                                 </div>
-                                <div className='flex items-center space-x-2 text-yellow-500'>
+                                <div className='flex items-center space-x-2 text-red-500'>
                                     <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' className='w-5 h-5 fill-current'>
                                         <path d='M494,198.671a40.536,40.536,0,0,0-32.174-27.592L345.917,152.242,292.185,47.828a40.7,40.7,0,0,0-72.37,0L166.083,152.242,50.176,171.079a40.7,40.7,0,0,0-22.364,68.827l82.7,83.368-17.9,116.055a40.672,40.672,0,0,0,58.548,42.538L256,428.977l104.843,52.89a40.69,40.69,0,0,0,58.548-42.538l-17.9-116.055,82.7-83.368A40.538,40.538,0,0,0,494,198.671Zm-32.53,18.7L367.4,312.2l20.364,132.01a8.671,8.671,0,0,1-12.509,9.088L256,393.136,136.744,453.3a8.671,8.671,0,0,1-12.509-9.088L144.6,312.2,50.531,217.37a8.7,8.7,0,0,1,4.778-14.706L187.15,181.238,248.269,62.471a8.694,8.694,0,0,1,15.462,0L324.85,181.238l131.841,21.426A8.7,8.7,0,0,1,461.469,217.37Z'/>
                                     </svg>
-                                    <span className='text-xl font-bold'>4.9</span>
+                                    <span className='text-xl font-bold'>1.0</span>
                                 </div>
                             </div>
                             <div className='p-4 space-y-2 text-sm text-gray-600'>
-                                <p>Finally, a simple way to keep track of all my blood work. The interface is intuitive and the data visualization is excellent.</p>
+                                <p>Recommended to my elderly patients, but most couldn't figure out how to get an OpenAI API key. Waiting for AGI agents to handle this step for us.</p>
                             </div>
                         </div>
                     </div>
@@ -301,8 +301,7 @@ export const HomePage = (props: HomePageProps) => {
 
                     <div className='flex justify-center'>
                         <div className='flex flex-col border border-gray-200 text-center rounded-xl p-8 bg-white max-w-sm w-full'>
-                            <h4 className='font-medium text-lg text-gray-800'>Free</h4>
-                            <span className='mt-7 font-bold text-5xl text-gray-800'>Free</span>
+                            <span className='font-bold text-5xl text-gray-800'>Free</span>
                             <p className='mt-2 text-sm text-gray-500'>Forever free</p>
 
                             <ul className='mt-7 space-y-2.5 text-sm'>
