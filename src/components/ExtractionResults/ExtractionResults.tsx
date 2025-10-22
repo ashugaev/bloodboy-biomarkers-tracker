@@ -25,6 +25,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
             valueGetter: (params) => params.data?.name,
             headerName: 'Name',
             flex: 1,
+            minWidth: 200,
             cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.name),
         },
         {
