@@ -1,0 +1,271 @@
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+
+import { CellValueChangedEvent, ColDef, ICellRendererParams } from '@ag-grid-community/core'
+import { AgGridReact } from '@ag-grid-community/react'
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import { Button } from 'antd'
+
+import { COLORS } from '@/constants/colors'
+import { addBiomarkerConfig, deleteBiomarkerConfig, updateBiomarkerConfig, useBiomarkerConfigs } from '@/db/hooks/useBiomarkerConfigs'
+import { useBiomarkerRecords } from '@/db/hooks/useBiomarkerRecords'
+import { Unit } from '@/db/types'
+import { createBiomarkerConfig } from '@/db/utils/biomarker.utils'
+import { getInvalidCellStyle } from '@/utils/cell-styles'
+
+import { BiomarkerRowData, BiomarkersDataTableProps } from './BiomarkersDataTable.types'
+
+const getStatsCellStyle = (value: number | undefined, normalRange?: { min?: number; max?: number }, targetRange?: { min?: number; max?: number }): Record<string, string> => {
+    if (value === undefined) return {}
+    
+    const isOutsideNormal = (normalRange?.min !== undefined && value < normalRange.min) || 
+                           (normalRange?.max !== undefined && value > normalRange.max)
+    
+    const isOutsideTarget = (targetRange?.min !== undefined && value < targetRange.min) || 
+                           (targetRange?.max !== undefined && value > targetRange.max)
+    
+    if (isOutsideNormal) {
+        return { backgroundColor: COLORS.OUT_OF_NORMAL_BG }
+    }
+    
+    if (isOutsideTarget) {
+        return { backgroundColor: COLORS.OUT_OF_TARGET_BG }
+    }
+    
+    return {}
+}
+
+export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
+    const { className } = props
+    const { configs } = useBiomarkerConfigs(true)
+    const { records } = useBiomarkerRecords()
+    
+    const [rowData, setRowData] = useState<BiomarkerRowData[]>([])
+
+    const handleDelete = useCallback(async (id: string) => {
+        await deleteBiomarkerConfig(id)
+    }, [])
+
+    const handleAddNew = useCallback(async () => {
+        const newConfig = await createBiomarkerConfig({
+            name: '',
+            approved: true,
+        })
+        await addBiomarkerConfig(newConfig)
+    }, [])
+
+    useEffect(() => {
+        const data: BiomarkerRowData[] = configs.map(config => {
+            const configRecords = records.filter(r => r.biomarkerId === config.id && r.approved)
+            const values = configRecords.map(r => r.value).filter((v): v is number => v !== undefined)
+            
+            return {
+                ...config,
+                stats: {
+                    lastMeasurement: values.length > 0 ? values[values.length - 1] : undefined,
+                    maxResult: values.length > 0 ? Math.max(...values) : undefined,
+                    minResult: values.length > 0 ? Math.min(...values) : undefined,
+                },
+            }
+        })
+        
+        setRowData(data)
+    }, [configs, records])
+
+    const DeleteButtonCellRenderer = useMemo(() => {
+        return memo((cellProps: ICellRendererParams<BiomarkerRowData>) => (
+            <Button
+                type='text'
+                danger
+                icon={<DeleteOutlined/>}
+                onClick={() => {
+                    if (cellProps.data?.id) {
+                        void handleDelete(cellProps.data.id)
+                    }
+                }}
+            />
+        ))
+    }, [handleDelete])
+
+    const columnDefs = useMemo<Array<ColDef<BiomarkerRowData>>>(() => [
+        {
+            field: 'name',
+            headerName: 'Name',
+            flex: 1.2,
+            minWidth: 180,
+            editable: true,
+            cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.name),
+        },
+        {
+            field: 'unit',
+            headerName: 'Unit',
+            flex: 0.7,
+            minWidth: 100,
+            editable: true,
+            cellEditor: 'agSelectCellEditor',
+            cellEditorParams: {
+                values: Object.values(Unit),
+            },
+            cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.unit),
+        },
+        {
+            field: 'normalRange.min',
+            headerName: 'Normal Min',
+            flex: 0.7,
+            minWidth: 100,
+            editable: true,
+            valueGetter: (params) => params.data?.normalRange?.min,
+            valueSetter: (params) => {
+                if (params.data) {
+                    if (!params.data.normalRange) {
+                        params.data.normalRange = {}
+                    }
+                    params.data.normalRange.min = Number(params.newValue)
+                    return true
+                }
+                return false
+            },
+        },
+        {
+            field: 'normalRange.max',
+            headerName: 'Normal Max',
+            flex: 0.7,
+            minWidth: 100,
+            editable: true,
+            valueGetter: (params) => params.data?.normalRange?.max,
+            valueSetter: (params) => {
+                if (params.data) {
+                    if (!params.data.normalRange) {
+                        params.data.normalRange = {}
+                    }
+                    params.data.normalRange.max = Number(params.newValue)
+                    return true
+                }
+                return false
+            },
+        },
+        {
+            field: 'targetRange.min',
+            headerName: 'Target Min',
+            flex: 0.7,
+            minWidth: 100,
+            editable: true,
+            valueGetter: (params) => params.data?.targetRange?.min ?? '',
+            valueSetter: (params) => {
+                if (params.data) {
+                    if (!params.data.targetRange) {
+                        params.data.targetRange = {}
+                    }
+                    params.data.targetRange.min = Number(params.newValue)
+                    return true
+                }
+                return false
+            },
+        },
+        {
+            field: 'targetRange.max',
+            headerName: 'Target Max',
+            flex: 0.7,
+            minWidth: 100,
+            editable: true,
+            valueGetter: (params) => params.data?.targetRange?.max ?? '',
+            valueSetter: (params) => {
+                if (params.data) {
+                    if (!params.data.targetRange) {
+                        params.data.targetRange = {}
+                    }
+                    params.data.targetRange.max = Number(params.newValue)
+                    return true
+                }
+                return false
+            },
+        },
+        {
+            field: 'stats.lastMeasurement',
+            headerName: 'Last',
+            flex: 0.6,
+            minWidth: 90,
+            editable: false,
+            valueGetter: (params) => params.data?.stats.lastMeasurement ?? '',
+            cellStyle: (params) => getStatsCellStyle(
+                params.data?.stats.lastMeasurement,
+                params.data?.normalRange,
+                params.data?.targetRange
+            ),
+        },
+        {
+            field: 'stats.maxResult',
+            headerName: 'Max',
+            flex: 0.6,
+            minWidth: 90,
+            editable: false,
+            valueGetter: (params) => params.data?.stats.maxResult ?? '',
+            cellStyle: (params) => getStatsCellStyle(
+                params.data?.stats.maxResult,
+                params.data?.normalRange,
+                params.data?.targetRange
+            ),
+        },
+        {
+            field: 'stats.minResult',
+            headerName: 'Min',
+            flex: 0.6,
+            minWidth: 90,
+            editable: false,
+            valueGetter: (params) => params.data?.stats.minResult ?? '',
+            cellStyle: (params) => getStatsCellStyle(
+                params.data?.stats.minResult,
+                params.data?.normalRange,
+                params.data?.targetRange
+            ),
+        },
+        {
+            colId: 'delete',
+            headerName: '',
+            minWidth: 80,
+            flex: 0.4,
+            suppressHeaderMenuButton: true,
+            sortable: false,
+            filter: false,
+            editable: false,
+            cellRenderer: DeleteButtonCellRenderer,
+        },
+    ], [DeleteButtonCellRenderer])
+
+    const onCellValueChanged = useCallback(async (event: CellValueChangedEvent<BiomarkerRowData>) => {
+        const row = event.data
+
+        if (row?.id) {
+            await updateBiomarkerConfig(row.id, {
+                name: row.name,
+                unit: row.unit,
+                normalRange: row.normalRange,
+                targetRange: row.targetRange,
+            })
+        }
+    }, [])
+
+    return (
+        <div className={`bg-white p-6 rounded-lg shadow-sm ${className ?? ''}`}>
+            <div className='mb-4'>
+                <div className='flex justify-between items-center mb-2'>
+                    <h3 className='text-lg font-medium'>Biomarkers ({configs.length})</h3>
+                    <Button icon={<PlusOutlined/>} onClick={() => { void handleAddNew() }}>
+                        Add New
+                    </Button>
+                </div>
+                <p className='text-sm text-gray-600'>Manage biomarker configurations and view statistics</p>
+            </div>
+
+            <div className='ag-theme-material h-[calc(100vh-250px)] mb-4'>
+                <AgGridReact
+                    rowData={rowData}
+                    columnDefs={columnDefs}
+                    domLayout='normal'
+                    getRowId={(params) => params.data.id}
+                    onCellValueChanged={(event) => { void onCellValueChanged(event) }}
+                />
+            </div>
+        </div>
+    )
+}
+

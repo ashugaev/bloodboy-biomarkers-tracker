@@ -7,13 +7,15 @@ export const useBiomarkerRecords = (biomarkerId?: string) => {
     const records = useLiveQuery(
         async () => {
             if (!biomarkerId) {
-                return await db.biomarkerRecords.toArray()
+                const allRecords = await db.biomarkerRecords.toArray()
+                return allRecords.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity))
             }
-            return await db.biomarkerRecords
+            const biomarkerRecords = await db.biomarkerRecords
                 .where('biomarkerId')
                 .equals(biomarkerId)
                 .reverse()
                 .sortBy('createdAt')
+            return biomarkerRecords.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity))
         },
         [biomarkerId],
     )
@@ -28,10 +30,11 @@ export const useDocumentRecords = (documentId?: string) => {
     const records = useLiveQuery(
         async () => {
             if (!documentId) return []
-            return await db.biomarkerRecords
+            const documentRecords = await db.biomarkerRecords
                 .where('documentId')
                 .equals(documentId)
                 .toArray()
+            return documentRecords.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity))
         },
         [documentId],
     )

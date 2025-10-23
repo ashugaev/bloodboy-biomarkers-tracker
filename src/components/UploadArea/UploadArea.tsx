@@ -208,6 +208,7 @@ export const UploadArea = () => {
                         max: biomarker.referenceRange.max,
                     } : undefined,
                     approved: false,
+                    order: biomarker?.order,
                     createdAt: now,
                     updatedAt: now,
                 })
@@ -229,6 +230,7 @@ export const UploadArea = () => {
                 unit: biomarker.unit as Unit,
                 approved: false,
                 latest: true,
+                order: biomarker.order,
                 createdAt: now,
                 updatedAt: now,
             })

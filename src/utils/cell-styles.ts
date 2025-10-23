@@ -1,7 +1,6 @@
 import { CellClassParams, CellStyle } from '@ag-grid-community/core'
 
-const invalidCellBackgroundColor = '#fee2e2'
-const invalidCellBorderColor = '#fca5a5'
+import { COLORS } from '@/constants/colors'
 
 export const getInvalidCellStyle = <T>(
     params: CellClassParams<T>,
@@ -12,7 +11,7 @@ export const getInvalidCellStyle = <T>(
     }
 
     return {
-        backgroundColor: invalidCellBackgroundColor,
-        border: `1px solid ${invalidCellBorderColor}`,
+        backgroundColor: COLORS.INVALID_CELL_BG,
+        border: `1px solid ${COLORS.INVALID_CELL_BORDER}`,
     }
 }

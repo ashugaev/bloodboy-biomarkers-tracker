@@ -33,7 +33,11 @@ export const BiomarkerConfigsConfirmation = (props: BiomarkerConfigsConfirmation
         defaultUnit: config.unit,
         normalRange: config.normalRange,
         targetRange: config.targetRange,
-    }))
+    })).sort((a, b) => {
+        const orderA = configs.find(c => c.id === a.id)?.order ?? Infinity
+        const orderB = configs.find(c => c.id === b.id)?.order ?? Infinity
+        return orderA - orderB
+    })
 
     return (
         <NewBiomarkersTable

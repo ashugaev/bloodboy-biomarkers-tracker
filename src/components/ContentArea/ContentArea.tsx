@@ -1,4 +1,5 @@
 import { useUnconfirmedDocuments } from '../../db/hooks'
+import { BiomarkersDataTable } from '../BiomarkersDataTable'
 import { PdfViewer } from '../PdfViewer'
 
 import { ContentAreaProps } from './ContentArea.types'
@@ -24,9 +25,7 @@ export const ContentArea = (props: ContentAreaProps) => {
 
     return (
         <div className={`overflow-y-auto ${className ?? ''}`}>
-            <div className='bg-white p-6 rounded-lg shadow-sm min-h-full flex items-center justify-center text-gray-400'>
-                Content area (reserved for future features)
-            </div>
+            <BiomarkersDataTable className='min-h-full' />
         </div>
     )
 }

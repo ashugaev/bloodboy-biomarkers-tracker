@@ -35,18 +35,3 @@ export const unlinkRecordFromDocument = async (
         updatedAt: new Date(),
     })
 }
-
-export const getDocumentStats = async (
-    documentId: string,
-): Promise<{
-    totalRecords: number
-    biomarkerTypes: Set<string>
-}> => {
-    const records = await getRecordsByDocument(documentId)
-    const biomarkerIds = new Set(records.map(r => r.biomarkerId))
-
-    return {
-        totalRecords: records.length,
-        biomarkerTypes: biomarkerIds,
-    }
-}

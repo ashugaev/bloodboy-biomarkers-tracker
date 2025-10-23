@@ -5,11 +5,12 @@ import { db } from '../services/db.service'
 export const useUnconfirmedBiomarkerConfigs = () => {
     const unconfirmedConfigs = useLiveQuery(
         async () => {
-            return await db.biomarkerConfigs
+            const configs = await db.biomarkerConfigs
                 .orderBy('createdAt')
                 .reverse()
                 .filter(config => !config.approved)
                 .toArray()
+            return configs.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity))
         },
         [],
     )

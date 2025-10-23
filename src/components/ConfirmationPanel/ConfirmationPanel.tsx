@@ -15,6 +15,10 @@ export const ConfirmationPanel = (props: ConfirmationPanelProps) => {
     const { unconfirmedConfigs, loading: configsLoading } = useUnconfirmedBiomarkerConfigs()
     const { unconfirmedRecords, loading: recordsLoading } = useUnconfirmedBiomarkerRecords()
 
+    console.log('unconfirmedConfigs', unconfirmedConfigs)
+    console.log('unconfirmedRecords', unconfirmedRecords)
+    console.log('unconfirmedDocuments', unconfirmedDocuments)
+    
     const loading = documentsLoading || configsLoading || recordsLoading
 
     if (loading) {

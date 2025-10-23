@@ -10,10 +10,10 @@ export const useBiomarkerConfigs = (approvedOnly: boolean = true) => {
 
             if (approvedOnly) {
                 const allConfigs = await query.toArray()
-                return allConfigs.filter(c => c.approved)
+                return allConfigs.filter(c => c.approved).sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity))
             }
 
-            return await db.biomarkerConfigs.toArray()
+            return (await db.biomarkerConfigs.toArray()).sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity))
         },
         [approvedOnly],
     )

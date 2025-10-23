@@ -1,5 +1,4 @@
 export * from './biomarker.utils'
-export * from './biomarker-units'
 export * from './document.utils'
 export * from './document-relations'
 export * from './db-operations'
