@@ -2,30 +2,67 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { CellValueChangedEvent, ColDef } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, message } from 'antd'
 
-import { modifyBiomarkerRecord } from '@/db/hooks/useBiomarkerRecords'
-import { BiomarkerRecord, Unit } from '@/db/types'
+import { ValidationWarning } from '@/components/ValidationWarning'
+import { modifyBiomarkerRecord, deleteBiomarkerRecord } from '@/db/hooks/useBiomarkerRecords'
+import { BiomarkerRecord } from '@/db/types'
 import { ExtractedBiomarker } from '@/openai/biomarkers'
 import { getInvalidCellStyle } from '@/utils/cellStyles'
 
 import { ExtractionResultsProps } from './ExtractionResults.types'
 
 export const ExtractionResults = (props: ExtractionResultsProps) => {
-    const { biomarkers, onSave, onCancel, onRetry, className } = props
+    const { biomarkers, configs, onSave, onCancel, onAddNew, className } = props
     const [rowData, setRowData] = useState<ExtractedBiomarker[]>(biomarkers)
 
+    const handleDelete = useCallback(async (id?: string) => {
+        if (id) {
+            await deleteBiomarkerRecord(id)
+        }
+    }, [])
+
     const hasInvalidBiomarkers = useMemo(() => {
-        return rowData.some(b => !b.name || b.value === undefined || !b.unit)
+        return rowData.some(b => !b.name || b.value === undefined)
     }, [rowData])
+
+    const biomarkerOptions = useMemo(() => {
+        return configs.map(config => ({
+            value: config.id,
+            label: `${config.name} (${config.unit ?? 'N/A'})`,
+        }))
+    }, [configs])
 
     const columnDefs = useMemo<Array<ColDef<ExtractedBiomarker>>>(() => [
         {
             field: 'name',
-            valueGetter: (params) => params.data?.name,
-            headerName: 'Name',
-            flex: 1,
-            minWidth: 200,
+            headerName: 'Biomarker',
+            flex: 1.5,
+            minWidth: 250,
+            editable: true,
+            cellEditor: 'agSelectCellEditor',
+            cellEditorParams: {
+                values: biomarkerOptions.map(opt => opt.label),
+            },
+            valueGetter: (params) => {
+                const config = configs.find(c => c.id === params.data?.biomarkerId)
+                return config ? `${config.name} (${config.unit ?? 'N/A'})` : params.data?.name
+            },
+            valueSetter: (params) => {
+                if (params.data) {
+                    const selectedOption = biomarkerOptions.find(opt => opt.label === params.newValue)
+                    if (selectedOption) {
+                        const config = configs.find(c => c.id === selectedOption.value)
+                        if (config) {
+                            params.data.biomarkerId = config.id
+                            params.data.name = config.name
+                            return true
+                        }
+                    }
+                }
+                return false
+            },
             cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.name),
         },
         {
@@ -33,19 +70,39 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
             headerName: 'Value',
             flex: 1,
             editable: true,
+            valueSetter: (params) => {
+                if (params.data) {
+                    const numValue = Number(params.newValue)
+                    if (!isNaN(numValue)) {
+                        params.data.value = numValue
+                        return true
+                    }
+                }
+                return false
+            },
             cellStyle: (params) => getInvalidCellStyle(params, (data) => data?.value === undefined),
         },
         {
-            field: 'unit',
-            headerName: 'Unit',
-            flex: 1,
-            cellEditor: 'agSelectCellEditor',
-            cellEditorParams: {
-                values: Object.values(Unit),
+            colId: 'delete',
+            headerName: '',
+            minWidth: 80,
+            flex: 0.4,
+            suppressMenu: true,
+            sortable: false,
+            filter: false,
+            editable: false,
+            cellRenderer: (params: { data: ExtractedBiomarker }) => {
+                return (
+                    <Button
+                        type='text'
+                        danger
+                        icon={<DeleteOutlined/>}
+                        onClick={() => { void handleDelete(params.data.id) }}
+                    />
+                )
             },
-            cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.unit),
         },
-    ], [])
+    ], [handleDelete, biomarkerOptions, configs])
 
     const onCellValueChanged = useCallback((event: CellValueChangedEvent<ExtractedBiomarker>) => {
         const data = event.data
@@ -53,14 +110,37 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
         const newValue = event.newValue as number | string | undefined
         const field = colDef.field as keyof BiomarkerRecord
 
-        if (data?.id && field && newValue !== undefined) {
+        setRowData(prev => [...prev])
+
+        if (!data?.id) {
+            void message.error('Failed to update biomarker record')
+            return
+        }
+
+        if (field === 'name') {
+            const selectedOption = biomarkerOptions.find(opt => opt.label === newValue)
+            if (selectedOption) {
+                const config = configs.find(c => c.id === selectedOption.value)
+                if (config?.unit) {
+                    void modifyBiomarkerRecord(data.id, (record: BiomarkerRecord) => {
+                        record.biomarkerId = config.id
+                        record.unit = config.unit
+                    })
+                }
+            }
+        } else if (field === 'value') {
+            const numValue = Number(newValue)
+            if (!isNaN(numValue)) {
+                void modifyBiomarkerRecord(data.id, (record: BiomarkerRecord) => {
+                    record.value = numValue
+                })
+            }
+        } else if (field && newValue !== undefined) {
             void modifyBiomarkerRecord(data.id, (record: BiomarkerRecord) => {
                 (record[field] as number | string) = newValue
             })
-        } else {
-            void message.error('Failed to update biomarker record')
         }
-    }, [])
+    }, [biomarkerOptions, configs])
 
     useEffect(() => {
         setRowData(biomarkers)
@@ -70,17 +150,28 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
         onSave(rowData)
     }
 
+    const handleAddNewClick = () => {
+        if (onAddNew) {
+            onAddNew()
+        }
+    }
+
     return (
         <div className={`bg-white p-4 rounded-lg shadow-sm flex flex-col ${className ?? ''}`}>
             <div className='mb-4'>
-                <h3 className='text-lg font-medium'>Extracted Biomarkers ({biomarkers.length})</h3>
-                <p className='text-sm text-gray-600 mt-1'>Click on any cell to edit values and correct results</p>
+                <div className='flex justify-between items-center mb-2'>
+                    <h3 className='text-lg font-medium'>Verify New Measurments ({biomarkers.length})</h3>
+                    {onAddNew && (
+                        <Button icon={<PlusOutlined/>} onClick={handleAddNewClick}>
+                            Add New
+                        </Button>
+                    )}
+                </div>
+                <p className='text-sm text-gray-600'>Click on any cell to edit values and correct results</p>
             </div>
 
             {hasInvalidBiomarkers && (
-                <div className='mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm'>
-                    Some values are empty. Please fill them manually or retry the extraction to continue.
-                </div>
+                <ValidationWarning message='Some values are empty. Please fill them manually or retry the extraction to continue.'/>
             )}
 
             <div className='ag-theme-material flex-grow min-h-96 mb-4'>
@@ -92,18 +183,13 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
                 />
             </div>
 
-            <div className='flex gap-2 justify-between'>
-                <Button onClick={onRetry}>
-                    Retry Extraction
+            <div className='flex gap-2 justify-end'>
+                <Button onClick={onCancel}>
+                    Cancel
                 </Button>
-                <div className='flex gap-2'>
-                    <Button onClick={onCancel}>
-                        Cancel
-                    </Button>
-                    <Button type='primary' onClick={handleSave} disabled={hasInvalidBiomarkers}>
-                        Save Results
-                    </Button>
-                </div>
+                <Button type='primary' onClick={handleSave} disabled={hasInvalidBiomarkers}>
+                    Save Results
+                </Button>
             </div>
         </div>
     )

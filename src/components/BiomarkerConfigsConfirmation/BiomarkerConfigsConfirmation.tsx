@@ -28,6 +28,7 @@ export const BiomarkerConfigsConfirmation = (props: BiomarkerConfigsConfirmation
     }
 
     const biomarkerRows: NewBiomarkerRow[] = configs.map(config => ({
+        id: config.id,
         name: config.name,
         defaultUnit: config.unit,
         normalRange: config.normalRange,

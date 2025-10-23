@@ -1,5 +1,6 @@
 import { useBiomarkerConfigs } from '@/db/hooks/useBiomarkerConfigs'
-import { updateBiomarkerRecord, deleteBiomarkerRecord } from '@/db/hooks/useBiomarkerRecords'
+import { updateBiomarkerRecord, deleteBiomarkerRecord, addBiomarkerRecord } from '@/db/hooks/useBiomarkerRecords'
+import { createBiomarkerRecord } from '@/db/utils/biomarker.utils'
 import { ExtractedBiomarker } from '@/openai/biomarkers'
 
 import { ExtractionResults } from '../ExtractionResults'
@@ -24,8 +25,15 @@ export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmation
         }
     }
 
-    const handleRetry = () => {
-        // TODO: Implement retry extraction
+    const handleAddNew = async () => {
+        if (configs.length === 0) return
+
+        const newRecord = await createBiomarkerRecord({
+            biomarkerId: undefined,
+            unit: undefined,
+            approved: false,
+        })
+        await addBiomarkerRecord(newRecord)
     }
 
     const extractedBiomarkers: ExtractedBiomarker[] = records.map(record => {
@@ -33,6 +41,7 @@ export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmation
 
         return {
             id: record.id,
+            biomarkerId: record.biomarkerId,
             name: config?.name,
             value: record.value,
             unit: record.unit,
@@ -44,9 +53,10 @@ export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmation
     return (
         <ExtractionResults
             biomarkers={extractedBiomarkers}
+            configs={configs}
             onSave={(biomarkers) => { void handleSave(biomarkers) }}
             onCancel={() => { void handleCancel() }}
-            onRetry={handleRetry}
+            onAddNew={() => { void handleAddNew() }}
             className={className}
         />
     )

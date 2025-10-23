@@ -10,6 +10,7 @@ import { useOpenAI } from './client'
 
 export interface ExtractedBiomarker {
     id?: string
+    biomarkerId?: string
     name?: string
     value?: number
     unit?: string

@@ -247,7 +247,7 @@ export const UploadArea = () => {
         )
     }
 
-    if(isDisabled) return null
+    if (isDisabled) return null
 
     return (
         <UploadDropZone

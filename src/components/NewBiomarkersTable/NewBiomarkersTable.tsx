@@ -1,10 +1,15 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { ColDef } from '@ag-grid-community/core'
+import { ColDef, CellValueChangedEvent } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button } from 'antd'
 
+import { ValidationWarning } from '@/components/ValidationWarning'
+import { updateBiomarkerConfig, deleteBiomarkerConfig, addBiomarkerConfig } from '@/db/hooks/useBiomarkerConfigs'
 import { Unit } from '@/db/types'
+import { createBiomarkerConfig } from '@/db/utils/biomarker.utils'
+import { getInvalidCellStyle } from '@/utils/cellStyles'
 
 import { NewBiomarkerRow, NewBiomarkersTableProps } from './NewBiomarkersTable.types'
 
@@ -12,9 +17,27 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
     const { biomarkers, onSave, onCancel, className } = props
     const [rowData, setRowData] = useState<NewBiomarkerRow[]>(biomarkers)
 
-    const handleDelete = useCallback((rowIndex: number) => {
-        setRowData(prev => prev.filter((_, index) => index !== rowIndex))
+    const handleDelete = useCallback(async (id?: string) => {
+        if (id) {
+            await deleteBiomarkerConfig(id)
+        }
     }, [])
+
+    const handleAddNew = useCallback(async () => {
+        const newConfig = await createBiomarkerConfig({
+            name: '',
+            approved: false,
+        })
+        await addBiomarkerConfig(newConfig)
+    }, [])
+
+    useEffect(() => {
+        setRowData(biomarkers)
+    }, [biomarkers])
+
+    const isValid = useMemo(() => {
+        return rowData.every(row => row.name && row.defaultUnit)
+    }, [rowData])
 
     const columnDefs = useMemo<Array<ColDef<NewBiomarkerRow>>>(() => [
         {
@@ -22,6 +45,8 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
             headerName: 'Name',
             flex: 1,
             editable: true,
+            minWidth: 200,
+            cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.name),
         },
         {
             field: 'defaultUnit',
@@ -32,11 +57,14 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
             cellEditorParams: {
                 values: Object.values(Unit),
             },
+            minWidth: 100,
+            cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.defaultUnit),
         },
         {
             field: 'normalRange.min',
-            headerName: 'Min',
+            headerName: 'Min.',
             flex: 0.6,
+            minWidth: 100,
             editable: true,
             valueGetter: (params) => params.data?.normalRange?.min,
             valueSetter: (params) => {
@@ -55,8 +83,9 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
         },
         {
             field: 'normalRange.max',
-            headerName: 'Max',
+            headerName: 'Max.',
             flex: 0.6,
+            minWidth: 100,
             editable: true,
             valueGetter: (params) => params.data?.normalRange?.max,
             valueSetter: (params) => {
@@ -75,7 +104,8 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
         },
         {
             field: 'targetRange.min',
-            headerName: 'Target Min',
+            minWidth: 130,
+            headerName: 'Optimal Min.',
             flex: 0.7,
             editable: true,
             valueGetter: (params) => params.data?.targetRange?.min ?? '',
@@ -95,7 +125,8 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
         },
         {
             field: 'targetRange.max',
-            headerName: 'Target Max',
+            minWidth: 130,
+            headerName: 'Optimal Max.',
             flex: 0.7,
             editable: true,
             valueGetter: (params) => params.data?.targetRange?.max ?? '',
@@ -114,24 +145,40 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
             },
         },
         {
+            colId: 'delete',
             headerName: '',
+            minWidth: 80,
             flex: 0.4,
-            cellRenderer: (params: { rowIndex: number }) => {
+            suppressMenu: true,
+            sortable: false,
+            filter: false,
+            editable: false,
+            cellRenderer: (params: { data: NewBiomarkerRow }) => {
                 return (
-                    <button
-                        onClick={() => { handleDelete(params.rowIndex) }}
-                        className='text-red-600 hover:text-red-800'
-                    >
-                        Delete
-                    </button>
+                    <Button
+                        type='text'
+                        danger
+                        icon={<DeleteOutlined/>}
+                        onClick={() => { void handleDelete(params.data.id) }}
+                    />
                 )
             },
         },
     ], [handleDelete])
 
-    const onCellValueChanged = useCallback(() => {
-        setRowData([...rowData])
-    }, [rowData])
+    const onCellValueChanged = useCallback(async (event: CellValueChangedEvent<NewBiomarkerRow>) => {
+        const row = event.data
+        setRowData(prev => [...prev])
+
+        if (row?.id) {
+            await updateBiomarkerConfig(row.id, {
+                name: row.name,
+                unit: row.defaultUnit,
+                normalRange: row.normalRange,
+                targetRange: row.targetRange,
+            })
+        }
+    }, [])
 
     const handleSave = () => {
         onSave(rowData)
@@ -140,16 +187,25 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
     return (
         <div className={`bg-white p-6 rounded-lg shadow-sm ${className ?? ''}`}>
             <div className='mb-4'>
-                <h3 className='text-lg font-medium'>New Biomarkers ({biomarkers.length})</h3>
-                <p className='text-sm text-gray-600 mt-1'>Review and configure new biomarkers to add to the database</p>
+                <div className='flex justify-between items-center mb-2'>
+                    <h3 className='text-lg font-medium'>Verify New Biomarker Configs ({biomarkers.length})</h3>
+                    <Button icon={<PlusOutlined/>} onClick={() => { void handleAddNew() }}>
+                        Add New
+                    </Button>
+                </div>
+                <p className='text-sm text-gray-600'>First review and configure new biomarker references and target ranges to add to the database</p>
             </div>
+
+            {!isValid && (
+                <ValidationWarning message='Some values are empty. Please fill them manually to continue.'/>
+            )}
 
             <div className='ag-theme-material h-96 mb-4'>
                 <AgGridReact
                     rowData={rowData}
                     columnDefs={columnDefs}
                     domLayout='normal'
-                    onCellValueChanged={onCellValueChanged}
+                    onCellValueChanged={(event) => { void onCellValueChanged(event) }}
                 />
             </div>
 
@@ -157,7 +213,7 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
                 <Button onClick={onCancel}>
                     Cancel
                 </Button>
-                <Button type='primary' onClick={handleSave}>
+                <Button type='primary' onClick={handleSave} disabled={!isValid}>
                     Continue
                 </Button>
             </div>
