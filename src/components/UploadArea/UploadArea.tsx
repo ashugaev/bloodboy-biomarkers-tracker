@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 
 import { message } from 'antd'
 import { RcFile } from 'antd/es/upload/interface'
+import * as pdfjsLib from 'pdfjs-dist'
 import { UploadRequestOption } from 'rc-upload/lib/interface'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -50,41 +51,42 @@ export const UploadArea = () => {
         return Promise.resolve()
     }
 
-    const processFile = async (data: UploadRequestOption) => {
-        const file = data.file as RcFile
-
-        try {
-            setUploadStage(UploadStage.UPLOADING)
-            const arrayBuffer = await file.arrayBuffer()
-
-            setUploadStage(UploadStage.PARSING)
-
-            if (hasApiKey) {
-                await performExtraction(file, arrayBuffer)
-            }
-
-            data.onSuccess?.({ success: true })
-        } catch (error) {
-            console.error('PDF parsing error:', error)
-            data.onError?.(error as Error)
-        } finally {
-            setUploadStage(null)
-            setCurrentPage(0)
-            setTotalPages(0)
-        }
-    }
-
     useEffect(() => {
+        const processFile = async (data: UploadRequestOption) => {
+            const file = data.file as RcFile
+
+            try {
+                setUploadStage(UploadStage.UPLOADING)
+                const arrayBuffer = await file.arrayBuffer()
+
+                setUploadStage(UploadStage.PARSING)
+
+                if (hasApiKey) {
+                    await performExtraction(file, arrayBuffer)
+                }
+
+                data.onSuccess?.({ success: true })
+            } catch (error) {
+                console.error('PDF parsing error:', error)
+                data.onError?.(error as Error)
+            } finally {
+                setUploadStage(null)
+                setCurrentPage(0)
+                setTotalPages(0)
+            }
+        }
+
         const processQueue = async () => {
             if (isProcessingRef.current || uploadQueueRef.current.length === 0) return
 
             isProcessingRef.current = true
+            const totalCount = uploadQueueRef.current.length
 
             while (uploadQueueRef.current.length > 0) {
                 const nextFile = uploadQueueRef.current.shift()
                 if (!nextFile) break
 
-                setCurrentFile(totalFiles - uploadQueueRef.current.length)
+                setCurrentFile(totalCount - uploadQueueRef.current.length)
                 await processFile(nextFile)
             }
 
@@ -94,7 +96,7 @@ export const UploadArea = () => {
         }
 
         void processQueue()
-    }, [queueTrigger])
+    }, [queueTrigger, hasApiKey])
 
     const renderPageToBase64 = async (page: pdfjsLib.PDFPageProxy): Promise<string> => {
         const viewport = page.getViewport({ scale: 2.0 })
@@ -190,7 +192,7 @@ export const UploadArea = () => {
         }
 
         if (allBiomarkers.length === 0) {
-            message.error('No biomarkers found in the document')
+            void message.error('No biomarkers found in the document')
             setUploadStage(null)
             setCurrentPage(0)
             setTotalPages(0)

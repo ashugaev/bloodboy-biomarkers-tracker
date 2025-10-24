@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 
 import { CellValueChangedEvent, ColDef, ICellRendererParams } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
@@ -18,23 +18,19 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
     const { records } = useBiomarkerRecords(biomarkerId)
     const { documents } = useDocuments()
 
-    const [rowData, setRowData] = useState<BiomarkerRecordRowData[]>([])
-
     const handleDelete = useCallback(async (id: string) => {
         await deleteBiomarkerRecord(id)
     }, [])
 
-    useEffect(() => {
+    const rowData = useMemo(() => {
         const approvedRecords = records.filter(r => r.approved)
-        const data: BiomarkerRecordRowData[] = approvedRecords.map(record => {
+        return approvedRecords.map(record => {
             const document = documents.find(d => d.id === record.documentId)
             return {
                 ...record,
                 date: document?.testDate ?? record.createdAt,
             }
         })
-
-        setRowData(data)
     }, [records, documents])
 
     const DeleteButtonCellRenderer = useMemo(() => {
@@ -61,7 +57,7 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
             editable: false,
             valueFormatter: (params) => {
                 if (!params.value) return ''
-                const date = new Date(params.value)
+                const date = new Date(params.value as string | number | Date)
                 return date.toLocaleDateString()
             },
         },

@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 
 import { CellValueChangedEvent, ColDef, ICellRendererParams } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
@@ -20,14 +20,12 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
     const { records } = useBiomarkerRecords()
     const navigate = useNavigate()
 
-    const [rowData, setRowData] = useState<BiomarkerRowData[]>([])
-
     const handleDelete = useCallback(async (id: string) => {
         await deleteBiomarkerConfig(id)
     }, [])
 
     const handleViewRecords = useCallback((id: string) => {
-        navigate(`/biomarker/${id}`)
+        void navigate(`/biomarker/${id}`)
     }, [navigate])
 
     const handleAddNew = useCallback(async () => {
@@ -38,8 +36,8 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
         await addBiomarkerConfig(newConfig)
     }, [])
 
-    useEffect(() => {
-        const data: BiomarkerRowData[] = configs.map(config => {
+    const rowData = useMemo(() => {
+        return configs.map(config => {
             const configRecords = records.filter(r => r.biomarkerId === config.id && r.approved)
             const values = configRecords.map(r => r.value).filter((v): v is number => v !== undefined)
 
@@ -52,8 +50,6 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
                 },
             }
         })
-
-        setRowData(data)
     }, [configs, records])
 
     const ViewButtonCellRenderer = useMemo(() => {

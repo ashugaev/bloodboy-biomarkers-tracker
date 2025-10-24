@@ -27,7 +27,7 @@ export const BiomarkerRecordsPage = (props: BiomarkerRecordsPageProps) => {
                 <div className='h-screen bg-gray-50 pt-16 flex items-center justify-center'>
                     <div className='text-center'>
                         <h2 className='text-2xl font-bold mb-4'>Biomarker not found</h2>
-                        <Button onClick={() => { navigate('/data') }}>
+                        <Button onClick={() => { void navigate('/data') }}>
                             Back to Data
                         </Button>
                     </div>
@@ -45,7 +45,7 @@ export const BiomarkerRecordsPage = (props: BiomarkerRecordsPageProps) => {
                         <div className='flex items-center gap-4'>
                             <Button
                                 icon={<ArrowLeftOutlined/>}
-                                onClick={() => { navigate('/data') }}
+                                onClick={() => { void navigate('/data') }}
                             >
                                 Back
                             </Button>

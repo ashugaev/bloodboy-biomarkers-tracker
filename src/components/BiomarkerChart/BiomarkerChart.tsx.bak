@@ -26,8 +26,7 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
             const date = document?.testDate ?? record.createdAt
             return {
                 date: new Date(date).toLocaleDateString(),
-                // eslint-disable-next-line
-                value: record.value as number,
+                value: record.value!,
                 timestamp: new Date(date).getTime(),
             }
         })
