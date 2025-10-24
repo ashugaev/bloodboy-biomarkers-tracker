@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 
+import { message } from 'antd'
 import { RcFile } from 'antd/es/upload/interface'
-import { PDFParse } from 'pdf-parse'
 import { UploadRequestOption } from 'rc-upload/lib/interface'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -15,7 +15,7 @@ import { getCurrentUserId } from '@/db/hooks/useUser'
 import { DocumentType, Unit } from '@/db/types'
 import { validateExtractionResult } from '@/db/utils'
 import { useExtractBiomarkers } from '@/openai'
-import { ExtractedBiomarker } from '@/openai/biomarkers'
+import { ExtractedBiomarker, ExtractionResult } from '@/openai/biomarkers'
 
 import { UploadDropZone } from '../UploadDropZone'
 import { UploadStatus, UploadStage } from '../UploadStatus'
@@ -52,28 +52,22 @@ export const UploadArea = () => {
 
     const processFile = async (data: UploadRequestOption) => {
         const file = data.file as RcFile
-        let parser: PDFParse | null = null
 
         try {
             setUploadStage(UploadStage.UPLOADING)
             const arrayBuffer = await file.arrayBuffer()
 
             setUploadStage(UploadStage.PARSING)
-            parser = new PDFParse({ data: arrayBuffer })
-            const pdfData = await parser.getText()
 
-            if (hasApiKey && pdfData.pages) {
-                await performExtraction(file, pdfData.pages)
+            if (hasApiKey) {
+                await performExtraction(file, arrayBuffer)
             }
 
-            data.onSuccess?.(pdfData)
+            data.onSuccess?.({ success: true })
         } catch (error) {
             console.error('PDF parsing error:', error)
             data.onError?.(error as Error)
         } finally {
-            if (parser) {
-                await parser.destroy()
-            }
             setUploadStage(null)
             setCurrentPage(0)
             setTotalPages(0)
@@ -102,9 +96,68 @@ export const UploadArea = () => {
         void processQueue()
     }, [queueTrigger])
 
-    const performExtraction = async (file: RcFile, pages: Array<{ text: string }>) => {
+    const renderPageToBase64 = async (page: pdfjsLib.PDFPageProxy): Promise<string> => {
+        const viewport = page.getViewport({ scale: 2.0 })
+        const canvas = document.createElement('canvas')
+        const context = canvas.getContext('2d')
+
+        if (!context) throw new Error('Cannot get canvas context')
+
+        canvas.width = viewport.width
+        canvas.height = viewport.height
+
+        await page.render({
+            canvasContext: context,
+            viewport,
+        }).promise
+
+        return canvas.toDataURL('image/png')
+    }
+
+    const performExtraction = async (file: RcFile, arrayBuffer: ArrayBuffer) => {
         setUploadStage(UploadStage.EXTRACTING)
-        setTotalPages(pages.length)
+
+        const pdfDocument = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+        setTotalPages(pdfDocument.numPages)
+
+        const pagePromises: Array<Promise<pdfjsLib.PDFPageProxy>> = []
+        for (let i = 1; i <= pdfDocument.numPages; i++) {
+            pagePromises.push(pdfDocument.getPage(i))
+        }
+        const pages = await Promise.all(pagePromises)
+
+        const MAX_RETRIES = 2
+        let completedPages = 0
+
+        const extractPage = async (page: pdfjsLib.PDFPageProxy, pageIndex: number): Promise<ExtractionResult | null> => {
+            const imageBase64 = await renderPageToBase64(page)
+            let retryCount = 0
+            let result: ExtractionResult | null = null
+
+            while (retryCount <= MAX_RETRIES) {
+                try {
+                    result = await extractBiomarkers(imageBase64)
+                    if (result) {
+                        const isValid = validateExtractionResult(result)
+                        if (!isValid) {
+                            throw new Error('Validation failed')
+                        }
+                        break
+                    }
+                } catch (error) {
+                    retryCount++
+                    if (retryCount > MAX_RETRIES) {
+                        console.error(`Failed to extract page ${pageIndex + 1} after ${MAX_RETRIES + 1} attempts:`, error)
+                    }
+                }
+            }
+
+            completedPages++
+            setCurrentPage(completedPages)
+            return result
+        }
+
+        const results = await Promise.all(pages.map((page, index) => extractPage(page, index)))
 
         const allBiomarkers: ExtractedBiomarker[] = []
         const metadata = {
@@ -113,44 +166,35 @@ export const UploadArea = () => {
             notes: undefined as string | undefined,
         }
 
-        const MAX_RETRIES = 2
+        let currentOrder = 0
+        for (const result of results) {
+            if (!result) continue
 
-        for (let i = 0; i < pages.length; i++) {
-            setCurrentPage(i + 1)
-            const pageText = pages[i].text
-            let retryCount = 0
-            let success = false
-
-            while (retryCount <= MAX_RETRIES && !success) {
-                try {
-                    const result = await extractBiomarkers(pageText)
-                    if (result) {
-                        const isValid = validateExtractionResult(result)
-                        if (!isValid) {
-                            throw new Error('Validation failed')
-                        }
-
-                        if (result.biomarkers.length) {
-                            allBiomarkers.push(...result.biomarkers)
-                        }
-                        if (result.testDate && !metadata.testDate) {
-                            metadata.testDate = result.testDate
-                        }
-                        if (result.labName && !metadata.labName) {
-                            metadata.labName = result.labName
-                        }
-                        if (result.notes) {
-                            metadata.notes = metadata.notes ? `${metadata.notes}\n${result.notes}` : result.notes
-                        }
-                        success = true
-                    }
-                } catch (error) {
-                    retryCount++
-                    if (retryCount > MAX_RETRIES) {
-                        console.error(`Failed to extract page ${i + 1} after ${MAX_RETRIES + 1} attempts:`, error)
-                    }
-                }
+            if (result.biomarkers.length) {
+                const biomarkersWithOrder = result.biomarkers.map((biomarker, index) => ({
+                    ...biomarker,
+                    order: currentOrder + index,
+                }))
+                allBiomarkers.push(...biomarkersWithOrder)
+                currentOrder += result.biomarkers.length
             }
+            if (result.testDate && !metadata.testDate) {
+                metadata.testDate = result.testDate
+            }
+            if (result.labName && !metadata.labName) {
+                metadata.labName = result.labName
+            }
+            if (result.notes) {
+                metadata.notes = metadata.notes ? `${metadata.notes}\n${result.notes}` : result.notes
+            }
+        }
+
+        if (allBiomarkers.length === 0) {
+            message.error('No biomarkers found in the document')
+            setUploadStage(null)
+            setCurrentPage(0)
+            setTotalPages(0)
+            return
         }
 
         await saveToDatabase(file, allBiomarkers, metadata)

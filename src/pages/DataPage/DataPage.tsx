@@ -39,8 +39,8 @@ export const DataPage = (props: DataPageProps) => {
                         <UploadArea/>
 
                         <div className='flex flex-col md:flex-row flex-1 gap-4 overflow-hidden'>
-                            <ConfirmationPanel className='w-full md:flex-[5] overflow-y-auto'/>
-                            <ContentArea className={`w-full ${hasPendingConfirmations ? 'md:flex-[5]' : 'md:flex-1'}`}/>
+                            <ConfirmationPanel className='w-full md:flex-[5] flex flex-col overflow-hidden'/>
+                            <ContentArea className={`w-full flex flex-col overflow-hidden ${hasPendingConfirmations ? 'md:flex-[5]' : 'md:flex-1'}`}/>
                         </div>
                     </div>
                 )}

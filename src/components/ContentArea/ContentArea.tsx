@@ -24,8 +24,8 @@ export const ContentArea = (props: ContentAreaProps) => {
     }
 
     return (
-        <div className={`overflow-y-auto ${className ?? ''}`}>
-            <BiomarkersDataTable className='min-h-full' />
+        <div className={`flex flex-col ${className ?? ''}`}>
+            <BiomarkersDataTable className='flex-1'/>
         </div>
     )
 }

@@ -13,4 +13,3 @@ export interface BiomarkerRowData extends BiomarkerConfig {
 export interface BiomarkersDataTableProps {
     className?: string
 }
-

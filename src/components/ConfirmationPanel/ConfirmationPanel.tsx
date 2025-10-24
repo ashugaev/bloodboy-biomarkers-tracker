@@ -18,7 +18,7 @@ export const ConfirmationPanel = (props: ConfirmationPanelProps) => {
     console.log('unconfirmedConfigs', unconfirmedConfigs)
     console.log('unconfirmedRecords', unconfirmedRecords)
     console.log('unconfirmedDocuments', unconfirmedDocuments)
-    
+
     const loading = documentsLoading || configsLoading || recordsLoading
 
     if (loading) {

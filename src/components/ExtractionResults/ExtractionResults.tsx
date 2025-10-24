@@ -174,7 +174,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
                 <ValidationWarning message='Some values are empty. Please fill them manually or retry the extraction to continue.'/>
             )}
 
-            <div className='ag-theme-material flex-grow min-h-96 mb-4'>
+            <div className='ag-theme-material flex-1 mb-4'>
                 <AgGridReact
                     rowData={rowData}
                     columnDefs={columnDefs}

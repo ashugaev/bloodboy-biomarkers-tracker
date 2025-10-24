@@ -5,7 +5,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 
 import { themeConfig } from '@/constants'
 import { useCurrentUser } from '@/db'
-import { HomePage, DataPage } from '@/pages'
+import { HomePage, DataPage, BiomarkerRecordsPage } from '@/pages'
 
 ModuleRegistry.registerModules([ClientSideRowModelModule])
 
@@ -19,6 +19,7 @@ export const App = () => {
                     <Routes>
                         <Route path='/' element={<HomePage/>}/>
                         <Route path='/data' element={<DataPage/>}/>
+                        <Route path='/biomarker/:id' element={<BiomarkerRecordsPage/>}/>
                     </Routes>
                 </BrowserRouter>
             </AntApp>

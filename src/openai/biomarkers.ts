@@ -4,7 +4,7 @@ import { ChatCompletion } from 'openai/resources'
 import { z } from 'zod'
 
 import { useBiomarkerConfigs } from '@/db/hooks/useBiomarkerConfigs'
-import { Range } from '@/db/types'
+import { Range, Unit } from '@/db/types'
 
 import { useOpenAI } from './client'
 
@@ -96,6 +96,29 @@ Examples of correct naming:
 - "White Blood Cells" (not "WBC", "Leukocytes", "Лейкоциты")
 - "Vitamin D" (not "Vit D", "vitamin d", "Витамин Д")
 
+Unit Normalization Rules (STRICT):
+- ALWAYS use English notation for units
+- Use ONLY units from the approved list below (HIGH PRIORITY)
+- Add new units ONLY if no suitable unit exists in the approved list
+
+Approved Units:
+${Object.values(Unit).join(', ')}
+
+Unit Normalization Examples:
+- "мг/дл", "мг/дЛ", "мг дл" → "mg/dL"
+- "ммоль/л", "ммоль л" → "mmol/L"
+- "мкмоль/л", "мкмоль л", "μмоль/л" → "μmol/L"
+- "г/дл", "г/дЛ" → "g/dL"
+- "г/л", "г л" → "g/L"
+- "Ед/л", "ед/л", "U/l" → "U/L"
+- "МЕ/л", "мЕ/л", "IU/l" → "IU/L"
+- "нг/мл", "ng/ml" → "ng/mL"
+- "пг/мл", "pg/ml" → "pg/mL"
+- "мкМЕ/мл", "μIU/ml" → "μIU/mL"
+- "мМЕ/л", "mIU/l" → "mIU/L"
+- "%" → "%"
+- "сек", "sec", "с" → "sec"
+
 General Rules:
 - Extract all numeric biomarker values
 - Include the unit of measurement for each biomarker
@@ -110,21 +133,33 @@ export const useExtractBiomarkers = () => {
     const { client, hasApiKey, loading } = useOpenAI()
     const { configs } = useBiomarkerConfigs()
 
-    const extractBiomarkers = useCallback(async (text: string): Promise<ExtractionResult | null> => {
+    const extractBiomarkers = useCallback(async (imageBase64: string): Promise<ExtractionResult | null> => {
         if (!client) return null
 
         const existingBiomarkerNames = configs.map(c => c.name)
+        const prompt = buildExtractionPrompt(existingBiomarkerNames)
 
         const completion = await client.chat.completions.create({
             model: 'gpt-5',
             messages: [
                 {
                     role: 'system',
-                    content: buildExtractionPrompt(existingBiomarkerNames),
+                    content: prompt,
                 },
                 {
                     role: 'user',
-                    content: `Extract biomarkers from this text:\n\n${text}`,
+                    content: [
+                        {
+                            type: 'text',
+                            text: 'Extract biomarkers from this image.',
+                        },
+                        {
+                            type: 'image_url',
+                            image_url: {
+                                url: imageBase64,
+                            },
+                        },
+                    ],
                 },
             ],
             temperature: 1,
