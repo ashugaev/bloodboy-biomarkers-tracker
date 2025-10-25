@@ -11,7 +11,7 @@ import { addBiomarkerConfig, deleteBiomarkerConfig, updateBiomarkerConfig, useBi
 import { useBiomarkerRecords } from '@/db/hooks/useBiomarkerRecords'
 import { useUnits } from '@/db/hooks/useUnits'
 import { createBiomarkerConfig } from '@/db/utils/biomarker.utils'
-import { getInvalidCellStyle, getRangeCellStyle } from '@/utils/cell-styles'
+import { getInvalidCellStyle, getRangeCellStyle } from '@/utils/cellStyle'
 
 import { BiomarkerRowData, BiomarkersDataTableProps } from './BiomarkersDataTable.types'
 

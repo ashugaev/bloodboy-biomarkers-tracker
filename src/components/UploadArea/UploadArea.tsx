@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 
 import { message } from 'antd'
 import { RcFile } from 'antd/es/upload/interface'
-import * as pdfjsLib from 'pdfjs-dist'
 import { UploadRequestOption } from 'rc-upload/lib/interface'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -15,13 +14,13 @@ import { useUnconfirmedDocuments } from '@/db/hooks/useUnconfirmedDocuments'
 import { addUnit, useUnits } from '@/db/hooks/useUnits'
 import { getCurrentUserId } from '@/db/hooks/useUser'
 import { DocumentType } from '@/db/types'
-import { validateExtractionResult } from '@/db/utils'
 import { useExtractBiomarkers } from '@/openai'
-import { ExtractedBiomarker, ExtractionResult } from '@/openai/biomarkers'
-import { validateUcumCode } from '@/utils/ucum'
+import { ExtractedBiomarker } from '@/openai/biomarkers'
 
 import { UploadDropZone } from '../UploadDropZone'
 import { UploadStatus, UploadStage } from '../UploadStatus'
+
+import { normalizeExtractionResults, usePdfExtraction } from './UploadArea.hooks'
 
 export const UploadArea = () => {
     const { extractBiomarkers, hasApiKey } = useExtractBiomarkers()
@@ -39,6 +38,12 @@ export const UploadArea = () => {
     const uploadQueueRef = useRef<UploadRequestOption[]>([])
     const isProcessingRef = useRef(false)
     const [queueTrigger, setQueueTrigger] = useState(0)
+
+    const { extractFromPdf } = usePdfExtraction({
+        extractBiomarkers,
+        onPageProgress: setCurrentPage,
+        onTotalPagesFound: setTotalPages,
+    })
 
     const isUploading = uploadStage !== null
     const hasUnconfirmed =
@@ -101,116 +106,12 @@ export const UploadArea = () => {
         void processQueue()
     }, [queueTrigger, hasApiKey])
 
-    const renderPageToBase64 = async (page: pdfjsLib.PDFPageProxy): Promise<string> => {
-        const viewport = page.getViewport({ scale: 2.0 })
-        const canvas = document.createElement('canvas')
-        const context = canvas.getContext('2d')
-
-        if (!context) throw new Error('Cannot get canvas context')
-
-        canvas.width = viewport.width
-        canvas.height = viewport.height
-
-        await page.render({
-            canvasContext: context,
-            viewport,
-        }).promise
-
-        return canvas.toDataURL('image/png')
-    }
-
     const performExtraction = async (file: RcFile, arrayBuffer: ArrayBuffer) => {
         setUploadStage(UploadStage.EXTRACTING)
 
-        const pdfDocument = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-        setTotalPages(pdfDocument.numPages)
+        const result = await extractFromPdf(arrayBuffer)
 
-        const pagePromises: Array<Promise<pdfjsLib.PDFPageProxy>> = []
-        for (let i = 1; i <= pdfDocument.numPages; i++) {
-            pagePromises.push(pdfDocument.getPage(i))
-        }
-        const pages = await Promise.all(pagePromises)
-
-        const MAX_RETRIES = 2
-        let completedPages = 0
-
-        const extractPage = async (page: pdfjsLib.PDFPageProxy, pageIndex: number): Promise<ExtractionResult | null> => {
-            const imageBase64 = await renderPageToBase64(page)
-            let retryCount = 0
-            let result: ExtractionResult | null = null
-            let followUpMessage: string | undefined
-
-            while (retryCount <= MAX_RETRIES) {
-                try {
-                    result = await extractBiomarkers(imageBase64, followUpMessage)
-                    if (result) {
-                        const isValid = validateExtractionResult(result)
-                        if (!isValid) {
-                            throw new Error('Validation failed')
-                        }
-
-                        const invalidUcumBiomarkers = result.biomarkers
-                            .filter(b => {
-                                if (!b.ucumCode) return false
-                                // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-                                return !validateUcumCode(b.ucumCode)
-                            })
-                            .map(b => b.name)
-                            .filter((name): name is string => !!name)
-
-                        if (invalidUcumBiomarkers.length > 0) {
-                            followUpMessage = `UCUM validation failed for the following biomarkers: ${invalidUcumBiomarkers.join(', ')}. Please provide valid UCUM csCode for these biomarkers.`
-                            throw new Error('Invalid UCUM codes')
-                        }
-
-                        break
-                    }
-                } catch (error) {
-                    retryCount++
-                    if (retryCount > MAX_RETRIES) {
-                        console.error(`Failed to extract page ${pageIndex + 1} after ${MAX_RETRIES + 1} attempts:`, error)
-                    }
-                }
-            }
-
-            completedPages++
-            setCurrentPage(completedPages)
-            return result
-        }
-
-        const results = await Promise.all(pages.map((page, index) => extractPage(page, index)))
-
-        const allBiomarkers: ExtractedBiomarker[] = []
-        const metadata = {
-            testDate: undefined as string | undefined,
-            labName: undefined as string | undefined,
-            notes: undefined as string | undefined,
-        }
-
-        let currentOrder = 0
-        for (const result of results) {
-            if (!result) continue
-
-            if (result.biomarkers.length) {
-                const biomarkersWithOrder = result.biomarkers.map((biomarker, index) => ({
-                    ...biomarker,
-                    order: currentOrder + index,
-                }))
-                allBiomarkers.push(...biomarkersWithOrder)
-                currentOrder += result.biomarkers.length
-            }
-            if (result.testDate && !metadata.testDate) {
-                metadata.testDate = result.testDate
-            }
-            if (result.labName && !metadata.labName) {
-                metadata.labName = result.labName
-            }
-            if (result.notes) {
-                metadata.notes = metadata.notes ? `${metadata.notes}\n${result.notes}` : result.notes
-            }
-        }
-
-        if (allBiomarkers.length === 0) {
+        if (result.biomarkers.length === 0) {
             void message.error('No biomarkers found in the document')
             setUploadStage(null)
             setCurrentPage(0)
@@ -218,7 +119,7 @@ export const UploadArea = () => {
             return
         }
 
-        await saveToDatabase(file, allBiomarkers, metadata)
+        await saveToDatabase(file, result)
 
         setUploadStage(null)
         setCurrentPage(0)
@@ -227,8 +128,7 @@ export const UploadArea = () => {
 
     const saveToDatabase = async (
         file: RcFile,
-        biomarkers: ExtractedBiomarker[],
-        metadata: { testDate?: string, labName?: string, notes?: string },
+        extractionResult: ExtractionResult,
     ) => {
         const now = new Date()
         const documentId = uuidv4()

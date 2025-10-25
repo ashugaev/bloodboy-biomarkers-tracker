@@ -15,7 +15,6 @@ export interface ExtractedBiomarker {
     value?: number
     unit?: string
     ucumCode?: string
-    date?: string
     referenceRange?: Partial<Range>
     order?: number
 }
@@ -24,7 +23,6 @@ export interface ExtractionResult {
     biomarkers: ExtractedBiomarker[]
     testDate?: string
     labName?: string
-    notes?: string
 }
 
 export const extractedBiomarkerSchema = z.object({
@@ -32,7 +30,6 @@ export const extractedBiomarkerSchema = z.object({
     value: z.number(),
     unit: z.string().min(1),
     ucumCode: z.string().min(1),
-    date: z.string().optional(),
     referenceRange: z.object({
         min: z.number(),
         max: z.number(),
@@ -44,7 +41,6 @@ export const extractionResultSchema = z.object({
     biomarkers: z.array(extractedBiomarkerSchema),
     testDate: z.string().optional(),
     labName: z.string().optional(),
-    notes: z.string().optional(),
 })
 
 const buildExtractionPrompt = (existingBiomarkers: Array<{
@@ -60,7 +56,6 @@ Return a JSON object with the following structure:
       "value": numeric value,
       "unit": "short unit label (e.g., 'mg/dL', 'μIU/mL', 'K/μL', 'cells/μL')",
       "ucumCode": "UCUM csCode string (e.g., mg/dL, mmol/L, [iU]/L, ug/mL)",
-      "date": "test date if available",
       "referenceRange": {
         "min": minimum reference value if available,
         "max": maximum reference value if available
@@ -119,7 +114,6 @@ General Rules:
 - Include reference ranges when available
 - Parse dates in ISO format (YYYY-MM-DD)
 - Extract laboratory name if mentioned
-- Extract any relevant notes or doctor's comments
 - If a value is not numeric or not available, skip that biomarker
 - Return only valid JSON, no additional text`
 
@@ -168,8 +162,11 @@ export const useExtractBiomarkers = () => {
             })
         }
 
+        console.log('AI Messages:', messages)
+
         const completion = await client.chat.completions.create({
-            model: 'gpt-5',
+            // model: 'gpt-5-nano',
+            model: 'gpt-5-mini',
             messages,
             reasoning_effort: 'low',
             temperature: 1,
@@ -180,7 +177,9 @@ export const useExtractBiomarkers = () => {
         const content = completion.choices[0]?.message.content
         if (!content) return null
 
-        return JSON.parse(content) as ExtractionResult
+        const result = JSON.parse(content) as ExtractionResult
+        console.log('AI Result:', result)
+        return result
     }, [client, configs])
 
     return {

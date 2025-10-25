@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { extractedBiomarkerSchema, extractionResultSchema } from '@/openai/biomarkers'
+import { extractedBiomarkerSchema } from '@/openai/biomarkers'
 
 import { BiomarkerConfig } from '../types/biomarker.types'
 
@@ -49,15 +49,6 @@ export const getValueStatus = (
 export const validateExtractedBiomarkers = (biomarkers: unknown): boolean => {
     try {
         z.array(extractedBiomarkerSchema).parse(biomarkers)
-        return true
-    } catch {
-        return false
-    }
-}
-
-export const validateExtractionResult = (result: unknown): boolean => {
-    try {
-        extractionResultSchema.parse(result)
         return true
     } catch {
         return false

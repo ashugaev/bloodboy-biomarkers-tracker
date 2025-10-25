@@ -10,7 +10,7 @@ import { UNIT_CONFIGS } from '@/constants/units'
 import { updateBiomarkerConfig, deleteBiomarkerConfig, addBiomarkerConfig } from '@/db/hooks/useBiomarkerConfigs'
 import { addUnit, useUnits } from '@/db/hooks/useUnits'
 import { createBiomarkerConfig } from '@/db/utils/biomarker.utils'
-import { getInvalidCellStyle } from '@/utils/cellStyles'
+import { getInvalidCellStyle } from '@/utils/cellStyle'
 import { validateUcumCode } from '@/utils/ucum'
 
 import { NewBiomarkerRow, NewBiomarkersTableProps } from './NewBiomarkersTable.types'

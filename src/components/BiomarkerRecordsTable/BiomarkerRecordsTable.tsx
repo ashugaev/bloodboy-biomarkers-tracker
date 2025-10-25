@@ -12,7 +12,7 @@ import { addBiomarkerRecord, deleteBiomarkerRecord, updateBiomarkerRecord, useBi
 import { useDocuments, updateDocument } from '@/db/hooks/useDocuments'
 import { useUnits } from '@/db/hooks/useUnits'
 import { createBiomarkerRecord } from '@/db/utils/biomarker.utils'
-import { getRangeCellStyle } from '@/utils/cell-styles'
+import { getRangeCellStyle } from '@/utils/cellStyle'
 
 import { BiomarkerRecordRowData, BiomarkerRecordsTableProps } from './BiomarkerRecordsTable.types'
 

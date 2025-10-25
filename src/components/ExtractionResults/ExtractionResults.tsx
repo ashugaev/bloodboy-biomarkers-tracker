@@ -10,7 +10,7 @@ import { modifyBiomarkerRecord, deleteBiomarkerRecord } from '@/db/hooks/useBiom
 import { useUnits } from '@/db/hooks/useUnits'
 import { BiomarkerRecord } from '@/db/types'
 import { ExtractedBiomarker } from '@/openai/biomarkers'
-import { getInvalidCellStyle } from '@/utils/cellStyles'
+import { getInvalidCellStyle } from '@/utils/cellStyle'
 
 import { ExtractionResultsProps } from './ExtractionResults.types'
 

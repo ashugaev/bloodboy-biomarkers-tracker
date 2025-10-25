@@ -114,15 +114,15 @@ export const UNIT_CONFIGS: UnitConfig[] = [
     },
     {
         title: 'ratio',
-        ucum: '1',
+        ucum: '{ratio}',
     },
     {
         title: 'index',
-        ucum: '1',
+        ucum: '{index}',
     },
     {
         title: 'score',
-        ucum: '1',
+        ucum: '{score}',
     },
     {
         title: 'sec',

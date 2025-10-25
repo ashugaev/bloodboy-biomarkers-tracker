@@ -11,6 +11,7 @@ export const PdfViewer = (props: PdfViewerProps) => {
     const [blobUrl, setBlobUrl] = useState<string | null>(null)
     const [containerWidth, setContainerWidth] = useState<number>(0)
     const [scale, setScale] = useState<number>(1)
+    const [numPages, setNumPages] = useState<number>(0)
     const containerRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -73,13 +74,20 @@ export const PdfViewer = (props: PdfViewerProps) => {
                             file={blobUrl}
                             loading={<div className='text-gray-500'>Loading PDF...</div>}
                             error={<div className='text-red-500'>Failed to load PDF</div>}
+                            onLoadSuccess={(pdf) => setNumPages(pdf.numPages)}
                             className='inline-block'
                         >
-                            <Page
-                                pageNumber={1}
-                                width={containerWidth || undefined}
-                                scale={scale}
-                            />
+                            {Array.from(new Array(numPages), (_, index) => (
+                                <Page
+                                    key={`page_${index + 1}`}
+                                    pageNumber={index + 1}
+                                    width={containerWidth || undefined}
+                                    scale={scale}
+                                    className='mb-4'
+                                    renderTextLayer={false}
+                                    renderAnnotationLayer={false}
+                                />
+                            ))}
                         </Document>
                     </div>
                 </div>
