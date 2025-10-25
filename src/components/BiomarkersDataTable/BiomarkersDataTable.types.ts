@@ -7,6 +7,7 @@ export interface BiomarkerStats {
 }
 
 export interface BiomarkerRowData extends BiomarkerConfig {
+    unitTitle?: string
     stats: BiomarkerStats
 }
 

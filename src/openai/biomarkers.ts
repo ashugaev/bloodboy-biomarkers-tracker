@@ -4,7 +4,7 @@ import { ChatCompletion } from 'openai/resources'
 import { z } from 'zod'
 
 import { useBiomarkerConfigs } from '@/db/hooks/useBiomarkerConfigs'
-import { Range, Unit } from '@/db/types'
+import { Range } from '@/db/types'
 
 import { useOpenAI } from './client'
 
@@ -14,6 +14,7 @@ export interface ExtractedBiomarker {
     name?: string
     value?: number
     unit?: string
+    ucumCode?: string
     date?: string
     referenceRange?: Partial<Range>
     order?: number
@@ -30,6 +31,7 @@ export const extractedBiomarkerSchema = z.object({
     name: z.string().min(1),
     value: z.number(),
     unit: z.string().min(1),
+    ucumCode: z.string().min(1),
     date: z.string().optional(),
     referenceRange: z.object({
         min: z.number(),
@@ -45,7 +47,10 @@ export const extractionResultSchema = z.object({
     notes: z.string().optional(),
 })
 
-const buildExtractionPrompt = (existingBiomarkers: string[]) => `You are a medical data extraction assistant. Extract all biomarker/blood test results from the provided text.
+const buildExtractionPrompt = (existingBiomarkers: Array<{
+    name: string
+    ucumCode?: string
+}>) => `You are a medical data extraction assistant. Extract all biomarker/blood test results from the provided text.
 
 Return a JSON object with the following structure:
 {
@@ -53,7 +58,8 @@ Return a JSON object with the following structure:
     {
       "name": "biomarker name",
       "value": numeric value,
-      "unit": "unit of measurement",
+      "unit": "short unit label (e.g., 'mg/dL', 'μIU/mL', 'K/μL', 'cells/μL')",
+      "ucumCode": "UCUM csCode string (e.g., mg/dL, mmol/L, [iU]/L, ug/mL)",
       "date": "test date if available",
       "referenceRange": {
         "min": minimum reference value if available,
@@ -68,7 +74,7 @@ Return a JSON object with the following structure:
 
 IMPORTANT: Preserve the order of biomarkers as they appear in the document. Assign sequential order numbers starting from 0.
 
-${existingBiomarkers.length > 0 ? `\nExisting biomarkers in the system:\n${existingBiomarkers.map(name => `- ${name}`).join('\n')}\n` : ''}
+${existingBiomarkers.length > 0 ? `\nExisting biomarkers in the system:\n${existingBiomarkers.map(b => `- ${b.name} | UCUM: ${b.ucumCode ?? 'N/A'}`).join('\n')}\n` : ''}
 Biomarker Naming Rules (STRICT):
 - ALWAYS use English names for biomarkers
 - Use standardized medical terminology:
@@ -96,28 +102,16 @@ Examples of correct naming:
 - "White Blood Cells" (not "WBC", "Leukocytes", "Лейкоциты")
 - "Vitamin D" (not "Vit D", "vitamin d", "Витамин Д")
 
-Unit Normalization Rules (STRICT):
-- ALWAYS use English notation for units
-- Use ONLY units from the approved list below (HIGH PRIORITY)
-- Add new units ONLY if no suitable unit exists in the approved list
+Unit and UCUM Rules (STRICT):
+- unit: provide a short label that approximates how the unit appears in the document, but normalized to English and consistent casing/font (e.g., "mg/dL", "μIU/mL", "K/μL", "cells/μL").
+- ucumCode: provide the UCUM csCode string (case-sensitive), e.g., mg/dL, mmol/L, [iU]/L, ug/mL.
+- Do not invent units. If unsure about ucumCode, leave it empty.
 
-Approved Units:
-${Object.values(Unit).join(', ')}
-
-Unit Normalization Examples:
-- "мг/дл", "мг/дЛ", "мг дл" → "mg/dL"
-- "ммоль/л", "ммоль л" → "mmol/L"
-- "мкмоль/л", "мкмоль л", "μмоль/л" → "μmol/L"
-- "г/дл", "г/дЛ" → "g/dL"
-- "г/л", "г л" → "g/L"
-- "Ед/л", "ед/л", "U/l" → "U/L"
-- "МЕ/л", "мЕ/л", "IU/l" → "IU/L"
-- "нг/мл", "ng/ml" → "ng/mL"
-- "пг/мл", "pg/ml" → "pg/mL"
-- "мкМЕ/мл", "μIU/ml" → "μIU/mL"
-- "мМЕ/л", "mIU/l" → "mIU/L"
-- "%" → "%"
-- "сек", "sec", "с" → "sec"
+Examples of unit vs ucumCode:
+- Glucose 5.2 mmol/L → unit: "mmol/L", ucumCode: "mmol/L"
+- TSH 2.1 μIU/mL → unit: "μIU/mL", ucumCode: "u[iU]/mL"
+- WBC 6.0 K/μL → unit: "K/μL", ucumCode: "10*3/uL"
+- WBC 6.0 cells/μL → unit: "cells/μL", ucumCode: "{cells}/uL"
 
 General Rules:
 - Extract all numeric biomarker values
@@ -133,35 +127,51 @@ export const useExtractBiomarkers = () => {
     const { client, hasApiKey, loading } = useOpenAI()
     const { configs } = useBiomarkerConfigs()
 
-    const extractBiomarkers = useCallback(async (imageBase64: string): Promise<ExtractionResult | null> => {
+    const extractBiomarkers = useCallback(async (imageBase64: string, followUpMessage?: string): Promise<ExtractionResult | null> => {
         if (!client) return null
 
-        const existingBiomarkerNames = configs.map(c => c.name)
-        const prompt = buildExtractionPrompt(existingBiomarkerNames)
+        const existingBiomarkers = configs.map(c => ({
+            name: c.name,
+            ucumCode: c.ucumCode,
+        }))
+        const prompt = buildExtractionPrompt(existingBiomarkers)
+
+        const messages: Array<{
+            role: 'system' | 'user' | 'assistant'
+            content: string | Array<{ type: 'text' | 'image_url', text?: string, image_url?: { url: string } }>
+        }> = [
+            {
+                role: 'system',
+                content: prompt,
+            },
+            {
+                role: 'user',
+                content: [
+                    {
+                        type: 'text',
+                        text: 'Extract biomarkers from this image.',
+                    },
+                    {
+                        type: 'image_url',
+                        image_url: {
+                            url: imageBase64,
+                        },
+                    },
+                ],
+            },
+        ]
+
+        if (followUpMessage) {
+            messages.push({
+                role: 'user',
+                content: followUpMessage,
+            })
+        }
 
         const completion = await client.chat.completions.create({
             model: 'gpt-5',
-            messages: [
-                {
-                    role: 'system',
-                    content: prompt,
-                },
-                {
-                    role: 'user',
-                    content: [
-                        {
-                            type: 'text',
-                            text: 'Extract biomarkers from this image.',
-                        },
-                        {
-                            type: 'image_url',
-                            image_url: {
-                                url: imageBase64,
-                            },
-                        },
-                    ],
-                },
-            ],
+            messages,
+            reasoning_effort: 'low',
             temperature: 1,
             response_format: { type: 'json_object' },
             stream: false,

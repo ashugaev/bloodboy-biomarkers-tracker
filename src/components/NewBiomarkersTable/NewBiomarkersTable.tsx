@@ -3,19 +3,36 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ColDef, CellValueChangedEvent } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
-import { Button } from 'antd'
+import { Button, Form, Input, message, Modal } from 'antd'
 
 import { ValidationWarning } from '@/components/ValidationWarning'
+import { UNIT_CONFIGS } from '@/constants/units'
 import { updateBiomarkerConfig, deleteBiomarkerConfig, addBiomarkerConfig } from '@/db/hooks/useBiomarkerConfigs'
-import { Unit } from '@/db/types'
+import { addUnit, useUnits } from '@/db/hooks/useUnits'
 import { createBiomarkerConfig } from '@/db/utils/biomarker.utils'
 import { getInvalidCellStyle } from '@/utils/cellStyles'
+import { validateUcumCode } from '@/utils/ucum'
 
 import { NewBiomarkerRow, NewBiomarkersTableProps } from './NewBiomarkersTable.types'
+
+interface NewUnitFormData {
+    title: string
+    ucumCode: string
+}
 
 export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
     const { biomarkers, onSave, onCancel, className } = props
     const [rowData, setRowData] = useState<NewBiomarkerRow[]>(biomarkers)
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [form] = Form.useForm<NewUnitFormData>()
+    const { units } = useUnits()
+
+    const availableUnits = useMemo(() => {
+        return [...UNIT_CONFIGS, ...units.map(u => ({
+            title: u.title,
+            ucum: u.ucumCode,
+        }))]
+    }, [units])
 
     const handleDelete = useCallback(async (id?: string) => {
         if (id) {
@@ -31,12 +48,31 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
         await addBiomarkerConfig(newConfig)
     }, [])
 
+    const handleCreateUnit = useCallback(async (values: NewUnitFormData) => {
+        try {
+            const now = new Date()
+            await addUnit({
+                ucumCode: values.ucumCode,
+                title: values.title,
+                approved: true,
+                createdAt: now,
+                updatedAt: now,
+            })
+            void message.success('Unit created successfully')
+            setIsModalOpen(false)
+            form.resetFields()
+        } catch (error) {
+            void message.error('Failed to create unit')
+            console.error('Failed to create unit:', error)
+        }
+    }, [form])
+
     useEffect(() => {
         setRowData(biomarkers)
     }, [biomarkers])
 
     const isValid = useMemo(() => {
-        return rowData.every(row => row.name && row.defaultUnit)
+        return rowData.every(row => row.name && row.ucumCode)
     }, [rowData])
 
     const columnDefs = useMemo<Array<ColDef<NewBiomarkerRow>>>(() => [
@@ -49,16 +85,20 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
             cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.name),
         },
         {
-            field: 'defaultUnit',
+            field: 'ucumCode',
             headerName: 'Unit',
             flex: 0.8,
             editable: true,
+            minWidth: 100,
+            cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.ucumCode),
             cellEditor: 'agSelectCellEditor',
             cellEditorParams: {
-                values: Object.values(Unit),
+                values: availableUnits.map(u => u.ucum),
             },
-            minWidth: 100,
-            cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.defaultUnit),
+            valueFormatter: (params) => {
+                const unit = availableUnits.find(u => u.ucum === params.value)
+                return unit?.title ?? (params.value as string)
+            },
         },
         {
             field: 'normalRange.min',
@@ -164,16 +204,17 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
                 )
             },
         },
-    ], [handleDelete])
+    ], [handleDelete, availableUnits])
 
     const onCellValueChanged = useCallback(async (event: CellValueChangedEvent<NewBiomarkerRow>) => {
         const row = event.data
+
         setRowData(prev => [...prev])
 
         if (row?.id) {
             await updateBiomarkerConfig(row.id, {
                 name: row.name,
-                unit: row.defaultUnit,
+                ucumCode: row.ucumCode,
                 normalRange: row.normalRange,
                 targetRange: row.targetRange,
             })
@@ -185,38 +226,108 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
     }
 
     return (
-        <div className={`bg-white p-6 rounded-lg shadow-sm flex flex-col ${className ?? ''}`}>
-            <div className='mb-4'>
-                <div className='flex justify-between items-center mb-2'>
-                    <h3 className='text-lg font-medium'>Verify New Biomarker Configs ({biomarkers.length})</h3>
-                    <Button icon={<PlusOutlined/>} onClick={() => { void handleAddNew() }}>
-                        Add New
+        <>
+            <div className={`bg-white p-6 rounded-lg shadow-sm flex flex-col ${className ?? ''}`}>
+                <div className='mb-4'>
+                    <div className='flex justify-between items-center mb-2'>
+                        <h3 className='text-lg font-medium'>Verify New Biomarker Configs ({biomarkers.length})</h3>
+                        <div className='flex gap-2'>
+                            <Button icon={<PlusOutlined/>} onClick={() => { setIsModalOpen(true) }}>
+                                Add Unit
+                            </Button>
+                            <Button icon={<PlusOutlined/>} onClick={() => { void handleAddNew() }}>
+                                Add Biomarker
+                            </Button>
+                        </div>
+                    </div>
+                    <p className='text-sm text-gray-600'>First review and configure new biomarker references and target ranges to add to the database</p>
+                </div>
+
+                {!isValid && (
+                    <ValidationWarning message='Some values are empty. Please fill them manually to continue.'/>
+                )}
+
+                <div className='ag-theme-material flex-1 mb-4'>
+                    <AgGridReact
+                        rowData={rowData}
+                        columnDefs={columnDefs}
+                        domLayout='normal'
+                        onCellValueChanged={(event) => { void onCellValueChanged(event) }}
+                    />
+                </div>
+
+                <div className='flex gap-2 justify-end'>
+                    <Button onClick={onCancel}>
+                        Cancel
+                    </Button>
+                    <Button type='primary' onClick={handleSave} disabled={!isValid}>
+                        Continue
                     </Button>
                 </div>
-                <p className='text-sm text-gray-600'>First review and configure new biomarker references and target ranges to add to the database</p>
             </div>
 
-            {!isValid && (
-                <ValidationWarning message='Some values are empty. Please fill them manually to continue.'/>
-            )}
+            <Modal
+                title='Create New Unit'
+                open={isModalOpen}
+                onCancel={() => {
+                    setIsModalOpen(false)
+                    form.resetFields()
+                }}
+                onOk={() => { form.submit() }}
+                okText='Create'
+                cancelText='Cancel'
+            >
+                <Form
+                    form={form}
+                    layout='vertical'
+                    onFinish={(values) => { void handleCreateUnit(values) }}
+                >
+                    <Form.Item
+                        name='title'
+                        label='Unit Title'
+                        rules={[
+                            {
+                                required: true,
+                                message: 'Please enter unit title',
+                            },
+                            {
+                                min: 1,
+                                message: 'Title must not be empty',
+                            },
+                        ]}
+                    >
+                        <Input placeholder='e.g., mg/dL, mmol/L'/>
+                    </Form.Item>
+                    <Form.Item
+                        name='ucumCode'
+                        label='UCUM Code'
+                        rules={[
+                            {
+                                required: true,
+                                message: 'Please enter UCUM code',
+                            },
+                            {
+                                validator: (_, value: string) => {
+                                    if (!value) return Promise.resolve()
 
-            <div className='ag-theme-material flex-1 mb-4'>
-                <AgGridReact
-                    rowData={rowData}
-                    columnDefs={columnDefs}
-                    domLayout='normal'
-                    onCellValueChanged={(event) => { void onCellValueChanged(event) }}
-                />
-            </div>
+                                    const existingUnit = availableUnits.find(u => u.ucum === value)
+                                    if (existingUnit) {
+                                        return Promise.reject(new Error(`Unit with code "${value}" already exists`))
+                                    }
 
-            <div className='flex gap-2 justify-end'>
-                <Button onClick={onCancel}>
-                    Cancel
-                </Button>
-                <Button type='primary' onClick={handleSave} disabled={!isValid}>
-                    Continue
-                </Button>
-            </div>
-        </div>
+                                    if (!validateUcumCode(value)) {
+                                        return Promise.reject(new Error('Invalid UCUM code'))
+                                    }
+
+                                    return Promise.resolve()
+                                },
+                            },
+                        ]}
+                    >
+                        <Input placeholder='e.g., mg/dL, mmol/L'/>
+                    </Form.Item>
+                </Form>
+            </Modal>
+        </>
     )
 }

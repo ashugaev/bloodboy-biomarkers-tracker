@@ -2,13 +2,14 @@ import { memo, useCallback, useMemo } from 'react'
 
 import { CellValueChangedEvent, ColDef, ICellRendererParams } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
-import { DeleteOutlined, PlusOutlined, RightOutlined } from '@ant-design/icons'
+import { DeleteOutlined, RightOutlined } from '@ant-design/icons'
 import { Button } from 'antd'
 import { useNavigate } from 'react-router-dom'
 
+import { AddNewButton } from '@/components/AddNewButton'
 import { addBiomarkerConfig, deleteBiomarkerConfig, updateBiomarkerConfig, useBiomarkerConfigs } from '@/db/hooks/useBiomarkerConfigs'
 import { useBiomarkerRecords } from '@/db/hooks/useBiomarkerRecords'
-import { Unit } from '@/db/types'
+import { useUnits } from '@/db/hooks/useUnits'
 import { createBiomarkerConfig } from '@/db/utils/biomarker.utils'
 import { getInvalidCellStyle, getRangeCellStyle } from '@/utils/cell-styles'
 
@@ -18,6 +19,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
     const { className } = props
     const { configs } = useBiomarkerConfigs(true)
     const { records } = useBiomarkerRecords()
+    const { units } = useUnits()
     const navigate = useNavigate()
 
     const handleDelete = useCallback(async (id: string) => {
@@ -40,9 +42,11 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
         return configs.map(config => {
             const configRecords = records.filter(r => r.biomarkerId === config.id && r.approved)
             const values = configRecords.map(r => r.value).filter((v): v is number => v !== undefined)
+            const unit = units.find(u => u.ucumCode === config.ucumCode)
 
             return {
                 ...config,
+                unitTitle: unit?.title,
                 stats: {
                     lastMeasurement: values.length > 0 ? values[values.length - 1] : undefined,
                     maxResult: values.length > 0 ? Math.max(...values) : undefined,
@@ -50,7 +54,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
                 },
             }
         })
-    }, [configs, records])
+    }, [configs, records, units])
 
     const ViewButtonCellRenderer = useMemo(() => {
         return memo((cellProps: ICellRendererParams<BiomarkerRowData>) => (
@@ -101,20 +105,33 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
             headerName: 'Name',
             flex: 1.2,
             minWidth: 180,
+            sortable: true,
+            sort: 'asc',
             editable: true,
             cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.name),
         },
         {
-            field: 'unit',
+            field: 'unitTitle',
             headerName: 'Unit',
             flex: 0.7,
             minWidth: 100,
             editable: true,
             cellEditor: 'agSelectCellEditor',
             cellEditorParams: {
-                values: Object.values(Unit),
+                values: units.map(u => u.title),
             },
-            cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.unit),
+            valueSetter: (params) => {
+                if (params.data) {
+                    const selectedUnit = units.find(u => u.title === params.newValue)
+                    if (selectedUnit) {
+                        params.data.ucumCode = selectedUnit.ucumCode
+                        params.data.unitTitle = selectedUnit.title
+                        return true
+                    }
+                }
+                return false
+            },
+            cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.unitTitle),
         },
         {
             field: 'normalRange.min',
@@ -228,7 +245,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
             editable: false,
             cellRenderer: DeleteButtonCellRenderer,
         },
-    ], [ViewButtonCellRenderer, DeleteButtonCellRenderer])
+    ], [ViewButtonCellRenderer, DeleteButtonCellRenderer, units])
 
     const onCellValueChanged = useCallback(async (event: CellValueChangedEvent<BiomarkerRowData>) => {
         const row = event.data
@@ -236,7 +253,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
         if (row?.id) {
             await updateBiomarkerConfig(row.id, {
                 name: row.name,
-                unit: row.unit,
+                ucumCode: row.ucumCode,
                 normalRange: row.normalRange,
                 targetRange: row.targetRange,
             })
@@ -248,9 +265,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
             <div className='mb-4'>
                 <div className='flex justify-between items-center mb-2'>
                     <h3 className='text-lg font-medium'>Biomarkers ({configs.length})</h3>
-                    <Button icon={<PlusOutlined/>} onClick={() => { void handleAddNew() }}>
-                        Add New
-                    </Button>
+                    <AddNewButton onClick={() => { void handleAddNew() }}/>
                 </div>
                 <p className='text-sm text-gray-600'>Manage biomarker configurations and view statistics</p>
             </div>

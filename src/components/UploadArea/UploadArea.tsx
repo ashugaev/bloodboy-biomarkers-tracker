@@ -12,11 +12,13 @@ import { addDocument } from '@/db/hooks/useDocuments'
 import { useUnconfirmedBiomarkerConfigs } from '@/db/hooks/useUnconfirmedBiomarkerConfigs'
 import { useUnconfirmedBiomarkerRecords } from '@/db/hooks/useUnconfirmedBiomarkerRecords'
 import { useUnconfirmedDocuments } from '@/db/hooks/useUnconfirmedDocuments'
+import { addUnit, useUnits } from '@/db/hooks/useUnits'
 import { getCurrentUserId } from '@/db/hooks/useUser'
-import { DocumentType, Unit } from '@/db/types'
+import { DocumentType } from '@/db/types'
 import { validateExtractionResult } from '@/db/utils'
 import { useExtractBiomarkers } from '@/openai'
 import { ExtractedBiomarker, ExtractionResult } from '@/openai/biomarkers'
+import { validateUcumCode } from '@/utils/ucum'
 
 import { UploadDropZone } from '../UploadDropZone'
 import { UploadStatus, UploadStage } from '../UploadStatus'
@@ -24,6 +26,7 @@ import { UploadStatus, UploadStage } from '../UploadStatus'
 export const UploadArea = () => {
     const { extractBiomarkers, hasApiKey } = useExtractBiomarkers()
     const { configs } = useBiomarkerConfigs()
+    const { units } = useUnits()
     const { unconfirmedDocuments } = useUnconfirmedDocuments()
     const { unconfirmedConfigs } = useUnconfirmedBiomarkerConfigs()
     const { unconfirmedRecords } = useUnconfirmedBiomarkerRecords()
@@ -135,15 +138,31 @@ export const UploadArea = () => {
             const imageBase64 = await renderPageToBase64(page)
             let retryCount = 0
             let result: ExtractionResult | null = null
+            let followUpMessage: string | undefined
 
             while (retryCount <= MAX_RETRIES) {
                 try {
-                    result = await extractBiomarkers(imageBase64)
+                    result = await extractBiomarkers(imageBase64, followUpMessage)
                     if (result) {
                         const isValid = validateExtractionResult(result)
                         if (!isValid) {
                             throw new Error('Validation failed')
                         }
+
+                        const invalidUcumBiomarkers = result.biomarkers
+                            .filter(b => {
+                                if (!b.ucumCode) return false
+                                // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+                                return !validateUcumCode(b.ucumCode)
+                            })
+                            .map(b => b.name)
+                            .filter((name): name is string => !!name)
+
+                        if (invalidUcumBiomarkers.length > 0) {
+                            followUpMessage = `UCUM validation failed for the following biomarkers: ${invalidUcumBiomarkers.join(', ')}. Please provide valid UCUM csCode for these biomarkers.`
+                            throw new Error('Invalid UCUM codes')
+                        }
+
                         break
                     }
                 } catch (error) {
@@ -234,6 +253,25 @@ export const UploadArea = () => {
             updatedAt: now,
         })
 
+        const uniqueExtractedUcumCodes = new Set(
+            biomarkers.map(b => b.ucumCode).filter((code): code is string => !!code),
+        )
+        const existingUnitCodes = new Set(units.map(u => u.ucumCode))
+
+        for (const ucumCode of uniqueExtractedUcumCodes) {
+            if (!existingUnitCodes.has(ucumCode)) {
+                const biomarkerWithUnit = biomarkers.find(b => b.ucumCode === ucumCode)
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+                await addUnit({
+                    ucumCode,
+                    title: biomarkerWithUnit?.unit ?? ucumCode,
+                    approved: false,
+                    createdAt: now,
+                    updatedAt: now,
+                })
+            }
+        }
+
         const uniqueExtractedBiomarkerNames = new Set(biomarkers.map(b => b.name))
         const existingBiomarkerConfigNames = new Set(configs.map(c => c.name))
         const newConfigIds: Record<string, string> = {}
@@ -248,7 +286,7 @@ export const UploadArea = () => {
                     id: configId,
                     userId,
                     name,
-                    unit: biomarker?.unit as Unit | undefined,
+                    ucumCode: biomarker?.ucumCode,
                     normalRange: biomarker?.referenceRange ? {
                         min: biomarker.referenceRange.min,
                         max: biomarker.referenceRange.max,
@@ -273,7 +311,7 @@ export const UploadArea = () => {
                 biomarkerId,
                 documentId,
                 value: biomarker.value,
-                unit: biomarker.unit as Unit,
+                ucumCode: biomarker.ucumCode ?? '',
                 approved: false,
                 latest: true,
                 order: biomarker.order,

@@ -1,7 +1,5 @@
 import { z } from 'zod'
 
-import { Unit } from '../types/biomarker.types'
-
 const rangeSchema = z.object({
     min: z.number().optional(),
     max: z.number().optional(),
@@ -36,7 +34,7 @@ export const biomarkerConfigSchema = baseEntitySchema
     .merge(biomarkerMetadataSchema)
     .merge(biomarkerRangesSchema)
     .extend({
-        unit: z.nativeEnum(Unit).optional(),
+        ucumCode: z.string().optional(),
         approved: z.boolean(),
     })
 
@@ -51,7 +49,7 @@ export const biomarkerRecordSchema = baseEntitySchema
         biomarkerId: z.string().uuid(),
         documentId: z.string().uuid().optional(),
         value: z.number().optional(),
-        unit: z.nativeEnum(Unit),
+        ucumCode: z.string().optional(),
         approved: z.boolean(),
         latest: z.boolean(),
         order: z.number().optional(),

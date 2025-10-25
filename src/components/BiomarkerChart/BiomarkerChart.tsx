@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 
+import cn from 'classnames'
 import { Bar, BarChart, CartesianGrid, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { COLORS } from '@/constants/colors'
@@ -14,20 +15,47 @@ interface ChartDataPoint {
     timestamp: number
 }
 
+interface RoundedBarProps {
+    fill: string
+    x: number
+    y: number
+    width: number
+    height: number
+}
+
+const RoundedBar = (props: RoundedBarProps) => {
+    const { fill, x, y, width, height } = props
+    const radius = 8
+
+    return (
+        <path
+            d={`
+                M ${x},${y + height}
+                L ${x},${y + radius}
+                Q ${x},${y} ${x + radius},${y}
+                L ${x + width - radius},${y}
+                Q ${x + width},${y} ${x + width},${y + radius}
+                L ${x + width},${y + height}
+                Z
+            `}
+            fill={fill}
+        />
+    )
+}
+
 export const BiomarkerChart = (props: BiomarkerChartProps) => {
     const { biomarkerId, biomarkerName, normalRange, targetRange, className } = props
     const { records } = useBiomarkerRecords(biomarkerId)
     const { documents } = useDocuments()
 
     const chartData = useMemo(() => {
-        const approvedRecords = records.filter(r => r.approved && r.value !== undefined)
+        const approvedRecords = records.filter((r): r is typeof r & { value: number } => r.approved && r.value !== undefined)
         const data: ChartDataPoint[] = approvedRecords.map(record => {
             const document = documents.find(d => d.id === record.documentId)
             const date = document?.testDate ?? record.createdAt
             return {
                 date: new Date(date).toLocaleDateString(),
-                // eslint-disable-next-line
-                value: record.value as number,
+                value: record.value,
                 timestamp: new Date(date).getTime(),
             }
         })
@@ -62,7 +90,7 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
     }, [chartData, normalRange, targetRange])
 
     return (
-        <div className={`bg-white p-6 rounded-lg shadow-sm flex flex-col ${className ?? ''}`}>
+        <div className={cn('bg-white p-6 rounded-lg shadow-sm flex flex-col', className)}>
             <div className='mb-4'>
                 <h3 className='text-lg font-medium'>{biomarkerName} Records ({chartData.length})</h3>
                 <p className='text-sm text-gray-600'>Visualize trends over time</p>
@@ -97,12 +125,10 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
                 <ResponsiveContainer width='100%' height='100%'>
                     <BarChart
                         data={chartData}
-                        margin={{
-                            top: 20,
-                            right: 30,
-                            left: 20,
-                            bottom: 5,
-                        }}
+                        maxBarSize={40}
+                        barGap={40}
+                        barCategoryGap={40}
+                        shape={<RoundedBar/>}
                     >
                         <CartesianGrid strokeDasharray='3 3'/>
                         <XAxis
@@ -132,7 +158,7 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
                             />
                         )}
 
-                        <Bar dataKey='value' fill={COLORS.PRIMARY}/>
+                        <Bar dataKey='value' fill='#3b82f6' maxBarSize={40} shape={<RoundedBar/>}/>
                     </BarChart>
                 </ResponsiveContainer>
             </div>

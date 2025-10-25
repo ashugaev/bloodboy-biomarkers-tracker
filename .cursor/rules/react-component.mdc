@@ -64,10 +64,12 @@ className='hover:bg-gray-100 focus:outline-none'
 ```
 
 ## Rules
+- One component = one folder (no standalone component files)
 - Use named exports only (no default exports)
-- Component name must match file name (PascalCase)
+- Component name must match file name and folder name (PascalCase)
 - Always include className prop for style composition
 - Use classnames (cn) for combining Tailwind classes
 - Keep component logic in the main file
 - Extract complex types to .types.ts file
 - Prefer Tailwind utility classes over custom CSS
+- All exports must go through index.ts file

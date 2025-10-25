@@ -7,6 +7,7 @@ import { Button, message } from 'antd'
 
 import { ValidationWarning } from '@/components/ValidationWarning'
 import { modifyBiomarkerRecord, deleteBiomarkerRecord } from '@/db/hooks/useBiomarkerRecords'
+import { useUnits } from '@/db/hooks/useUnits'
 import { BiomarkerRecord } from '@/db/types'
 import { ExtractedBiomarker } from '@/openai/biomarkers'
 import { getInvalidCellStyle } from '@/utils/cellStyles'
@@ -16,6 +17,7 @@ import { ExtractionResultsProps } from './ExtractionResults.types'
 export const ExtractionResults = (props: ExtractionResultsProps) => {
     const { biomarkers, configs, onSave, onCancel, onAddNew, className } = props
     const [rowData, setRowData] = useState<ExtractedBiomarker[]>(biomarkers)
+    const { units } = useUnits()
 
     const handleDelete = useCallback(async (id?: string) => {
         if (id) {
@@ -28,11 +30,14 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
     }, [rowData])
 
     const biomarkerOptions = useMemo(() => {
-        return configs.map(config => ({
-            value: config.id,
-            label: `${config.name} (${config.unit ?? 'N/A'})`,
-        }))
-    }, [configs])
+        return configs.map(config => {
+            const unit = units.find(u => u.ucumCode === config.ucumCode)
+            return {
+                value: config.id,
+                label: `${config.name} (${unit?.title ?? 'N/A'})`,
+            }
+        })
+    }, [configs, units])
 
     const columnDefs = useMemo<Array<ColDef<ExtractedBiomarker>>>(() => [
         {
@@ -47,7 +52,11 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
             },
             valueGetter: (params) => {
                 const config = configs.find(c => c.id === params.data?.biomarkerId)
-                return config ? `${config.name} (${config.unit ?? 'N/A'})` : params.data?.name
+                if (config) {
+                    const unit = units.find(u => u.ucumCode === config.ucumCode)
+                    return `${config.name} (${unit?.title ?? 'N/A'})`
+                }
+                return params.data?.name
             },
             valueSetter: (params) => {
                 if (params.data) {
@@ -121,10 +130,10 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
             const selectedOption = biomarkerOptions.find(opt => opt.label === newValue)
             if (selectedOption) {
                 const config = configs.find(c => c.id === selectedOption.value)
-                if (config?.unit) {
+                if (config?.ucumCode) {
                     void modifyBiomarkerRecord(data.id, (record: BiomarkerRecord) => {
                         record.biomarkerId = config.id
-                        record.unit = config.unit
+                        record.ucumCode = config.ucumCode ?? ''
                     })
                 }
             }

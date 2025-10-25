@@ -5,10 +5,13 @@ import { AgGridReact } from '@ag-grid-community/react'
 import { DeleteOutlined } from '@ant-design/icons'
 import { Button } from 'antd'
 
+import { dateComparator } from '@/aggrid/comparators/dateComprator'
+import { AddNewButton } from '@/components/AddNewButton'
 import { COLORS } from '@/constants/colors'
-import { deleteBiomarkerRecord, updateBiomarkerRecord, useBiomarkerRecords } from '@/db/hooks/useBiomarkerRecords'
-import { useDocuments } from '@/db/hooks/useDocuments'
-import { Unit } from '@/db/types'
+import { addBiomarkerRecord, deleteBiomarkerRecord, updateBiomarkerRecord, useBiomarkerRecords } from '@/db/hooks/useBiomarkerRecords'
+import { useDocuments, updateDocument } from '@/db/hooks/useDocuments'
+import { useUnits } from '@/db/hooks/useUnits'
+import { createBiomarkerRecord } from '@/db/utils/biomarker.utils'
 import { getRangeCellStyle } from '@/utils/cell-styles'
 
 import { BiomarkerRecordRowData, BiomarkerRecordsTableProps } from './BiomarkerRecordsTable.types'
@@ -17,21 +20,35 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
     const { biomarkerId, biomarkerName, normalRange, targetRange, className } = props
     const { records } = useBiomarkerRecords(biomarkerId)
     const { documents } = useDocuments()
+    const { units } = useUnits()
 
     const handleDelete = useCallback(async (id: string) => {
         await deleteBiomarkerRecord(id)
     }, [])
 
+    const handleAddNew = useCallback(async () => {
+        const defaultUcumCode = records.find(r => r.ucumCode)?.ucumCode
+        const newRecord = await createBiomarkerRecord({
+            biomarkerId,
+            ucumCode: defaultUcumCode ?? '',
+            approved: true,
+        })
+        await addBiomarkerRecord(newRecord)
+    }, [biomarkerId, records])
+
     const rowData = useMemo(() => {
         const approvedRecords = records.filter(r => r.approved)
         return approvedRecords.map(record => {
             const document = documents.find(d => d.id === record.documentId)
+            const unit = units.find(u => u.ucumCode === record.ucumCode)
             return {
                 ...record,
+                unitTitle: unit?.title,
                 date: document?.testDate ?? record.createdAt,
+                lab: document?.lab,
             }
         })
-    }, [records, documents])
+    }, [records, documents, units])
 
     const DeleteButtonCellRenderer = useMemo(() => {
         return memo((cellProps: ICellRendererParams<BiomarkerRecordRowData>) => (
@@ -55,11 +72,21 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
             flex: 1,
             minWidth: 150,
             editable: false,
+            sortable: true,
+            sort: 'desc',
+            comparator: dateComparator,
             valueFormatter: (params) => {
                 if (!params.value) return ''
                 const date = new Date(params.value as string | number | Date)
                 return date.toLocaleDateString()
             },
+        },
+        {
+            field: 'lab',
+            headerName: 'Lab',
+            flex: 1,
+            minWidth: 160,
+            editable: true,
         },
         {
             field: 'value',
@@ -74,14 +101,25 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
             ),
         },
         {
-            field: 'unit',
+            field: 'unitTitle',
             headerName: 'Unit',
             flex: 0.8,
             minWidth: 100,
             editable: true,
             cellEditor: 'agSelectCellEditor',
             cellEditorParams: {
-                values: Object.values(Unit),
+                values: units.map(u => u.title),
+            },
+            valueSetter: (params) => {
+                if (params.data) {
+                    const selectedUnit = units.find(u => u.title === params.newValue)
+                    if (selectedUnit) {
+                        params.data.ucumCode = selectedUnit.ucumCode
+                        params.data.unitTitle = selectedUnit.title
+                        return true
+                    }
+                }
+                return false
             },
         },
         {
@@ -95,15 +133,23 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
             editable: false,
             cellRenderer: DeleteButtonCellRenderer,
         },
-    ], [normalRange, targetRange, DeleteButtonCellRenderer])
+    ], [normalRange, targetRange, DeleteButtonCellRenderer, units])
 
     const onCellValueChanged = useCallback(async (event: CellValueChangedEvent<BiomarkerRecordRowData>) => {
         const row = event.data
+        const colId = event.column.getColId()
 
-        if (row?.id) {
+        if (!row) return
+
+        if (colId === 'lab' && row.documentId) {
+            await updateDocument(row.documentId, { lab: row.lab })
+            return
+        }
+
+        if (row.id && (colId === 'value' || colId === 'unitTitle')) {
             await updateBiomarkerRecord(row.id, {
                 value: row.value,
-                unit: row.unit,
+                ucumCode: row.ucumCode,
             })
         }
     }, [])
@@ -111,7 +157,10 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
     return (
         <div className={`bg-white p-6 rounded-lg shadow-sm flex flex-col ${className ?? ''}`}>
             <div className='mb-4'>
-                <h3 className='text-lg font-medium'>{biomarkerName} Records ({rowData.length})</h3>
+                <div className='flex justify-between items-center mb-2'>
+                    <h3 className='text-lg font-medium'>{biomarkerName} Records ({rowData.length})</h3>
+                    <AddNewButton onClick={() => { void handleAddNew() }} label='Add Record'/>
+                </div>
                 <p className='text-sm text-gray-600'>View and manage all records for this biomarker</p>
             </div>
 

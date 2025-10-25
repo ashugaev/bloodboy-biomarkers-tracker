@@ -13,7 +13,7 @@ export const BiomarkerConfigsConfirmation = (props: BiomarkerConfigsConfirmation
             if (config) {
                 await updateBiomarkerConfig(config.id, {
                     approved: true,
-                    unit: biomarker.defaultUnit,
+                    ucumCode: biomarker.ucumCode,
                     normalRange: biomarker.normalRange,
                     targetRange: biomarker.targetRange,
                 })
@@ -30,7 +30,7 @@ export const BiomarkerConfigsConfirmation = (props: BiomarkerConfigsConfirmation
     const biomarkerRows: NewBiomarkerRow[] = configs.map(config => ({
         id: config.id,
         name: config.name,
-        defaultUnit: config.unit,
+        ucumCode: config.ucumCode,
         normalRange: config.normalRange,
         targetRange: config.targetRange,
     })).sort((a, b) => {

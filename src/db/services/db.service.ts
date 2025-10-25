@@ -1,6 +1,6 @@
 import { Dexie, EntityTable } from 'dexie'
 
-import { AppSettings, BiomarkerConfig, BiomarkerRecord, UploadedDocument, User } from '../types'
+import { AppSettings, BiomarkerConfig, BiomarkerRecord, Unit, UploadedDocument, User } from '../types'
 
 let currentUserId: string | null = null
 
@@ -18,6 +18,7 @@ class BloodTestDatabase extends Dexie {
     uploadedFiles!: EntityTable<UploadedDocument, 'id'>
     appSettings!: EntityTable<AppSettings, 'id'>
     users!: EntityTable<User, 'id'>
+    units!: EntityTable<Unit, 'ucumCode'>
 
     constructor () {
         super('blood-test-db')
@@ -28,6 +29,15 @@ class BloodTestDatabase extends Dexie {
             uploadedFiles: 'id, userId, type, approved, uploadDate, createdAt, updatedAt',
             appSettings: 'id, createdAt, updatedAt',
             users: 'id, createdAt, updatedAt',
+        })
+
+        this.version(2).stores({
+            biomarkerConfigs: 'id, userId, approved, createdAt, updatedAt',
+            biomarkerRecords: 'id, userId, biomarkerId, documentId, approved, latest, createdAt, updatedAt',
+            uploadedFiles: 'id, userId, type, approved, uploadDate, createdAt, updatedAt',
+            appSettings: 'id, createdAt, updatedAt',
+            users: 'id, createdAt, updatedAt',
+            units: 'ucumCode, approved, createdAt, updatedAt',
         })
 
         const tablesWithUserId = [

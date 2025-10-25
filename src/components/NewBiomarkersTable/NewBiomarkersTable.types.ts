@@ -1,9 +1,9 @@
-import { Unit, Range } from '@/db/types'
+import { Range } from '@/db/types'
 
 export interface NewBiomarkerRow {
     id?: string
     name: string
-    defaultUnit?: Unit
+    ucumCode?: string
     normalRange?: Range
     targetRange?: Range
 }

@@ -1,0 +1,30 @@
+---
+alwaysApply: true
+---
+
+- don't use any adjectives in names like: "fast", "simple", "quick", "heavy"
+- Do not add fallbacks for legacy logic unless explicitly requested. Mention if backward compatibility is lost.
+- Do not create any example files unless asked.
+- Minimize your updates; make only necessary and important edits.
+- Do not add fallbacks unless explicitly requested.
+- Write all code comments in English, even if I speak in other languages.
+- Do not delete any logs.
+- Do not delete comments; modify only if needed.
+- Do not delete any comments; modify only if required.
+- Always minimize your updates; make only necessary and important edits.
+- Use English only for coding.
+- Do not use the ENV: prefix.
+- Do not create .md files unless asked.
+- Write less code to do less.
+- Try to minimally affect existing logic.
+- Avoid overhead in logs and try/catch.
+- Improve function and constant naming; avoid unnecessary comments.
+- Do not generate code that will not be used unless explicitly requested.
+- Do not use runtime imports unless strictly necessary.
+- Do not add any comments in code or change existing ones unless strictly necessary.
+- Do not write obvious documentation; do not add args, return, etc., when the function is simple. Avoid redundancy.
+- Use clean code principles.
+- Do not create any example files or .md files for new features.
+- Never use a fallback for a getter (`obj.get('field')`).
+- Never wrap imports in try/catch. Imports are always on top of the file.
+- One file — one utility.

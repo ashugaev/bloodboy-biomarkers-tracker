@@ -30,7 +30,7 @@ export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmation
 
         const newRecord = await createBiomarkerRecord({
             biomarkerId: undefined,
-            unit: undefined,
+            ucumCode: '',
             approved: false,
         })
         await addBiomarkerRecord(newRecord)
@@ -44,7 +44,7 @@ export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmation
             biomarkerId: record.biomarkerId,
             name: config?.name,
             value: record.value,
-            unit: record.unit,
+            ucumCode: record.ucumCode,
             referenceRange: config?.normalRange,
             order: record.order,
         }
