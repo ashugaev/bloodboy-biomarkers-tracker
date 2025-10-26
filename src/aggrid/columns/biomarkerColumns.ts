@@ -1,10 +1,9 @@
 import { ColDef, ICellRendererParams } from '@ag-grid-community/core'
 
+import { isRangeInvalid } from '@/aggrid/validators/rangeValidators'
 import { BiomarkerConfig } from '@/db/models/biomarkerConfig'
 import { Unit } from '@/db/models/unit'
 import { getInvalidCellStyle } from '@/utils/cellStyle'
-
-import { isRangeInvalid } from '../validators/rangeValidators'
 
 type BiomarkerWithRanges = Pick<BiomarkerConfig, 'id' | 'name' | 'ucumCode' | 'normalRange' | 'targetRange'>
 

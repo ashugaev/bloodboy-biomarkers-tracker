@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid'
 
 import { getCurrentUserId } from '@/db/models/user'
+// eslint-disable-next-line no-restricted-imports
 import { db } from '@/db/services/db.service'
 
 import { BIOMARKER_CONFIGS } from './biomarkerConfig.initial'

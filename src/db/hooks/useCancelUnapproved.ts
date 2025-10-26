@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 
+// eslint-disable-next-line no-restricted-imports
 import { db } from '@/db/services/db.service'
 
 export const useCancelUnapproved = () => {

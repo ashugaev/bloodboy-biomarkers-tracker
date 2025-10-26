@@ -46,7 +46,7 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
             return {
                 ...record,
                 unitTitle: unit?.title,
-                date: document?.testDate ?? record.createdAt,
+                date: document?.testDate,
                 lab: document?.lab,
             }
         })

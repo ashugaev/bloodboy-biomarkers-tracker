@@ -6,9 +6,14 @@ export interface BiomarkerStats {
     minResult?: number
 }
 
+export interface HistoryDataPoint {
+    value: number
+    date: string
+}
+
 export interface BiomarkerRowData extends BiomarkerConfig {
     unitTitle?: string
-    history: number[]
+    history: HistoryDataPoint[]
     stats: BiomarkerStats
 }
 

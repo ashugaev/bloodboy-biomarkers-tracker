@@ -16,13 +16,14 @@ import { useExtractBiomarkers } from '@/openai'
 import { ExtractionResult } from '@/openai/openai.biomarkers'
 
 import { usePdfExtraction } from './UploadArea.hooks'
-import { createRecordKey } from './UploadArea.utils'
+import { createRecordKey, createDocumentKey } from './UploadArea.utils'
 
 export const UploadArea = () => {
     const { extractBiomarkers, hasApiKey } = useExtractBiomarkers()
     const { data: configs } = useBiomarkerConfigs()
     const { data: records } = useBiomarkerRecords()
     const { data: units } = useUnits()
+    const { data: documents } = useDocuments()
     const { data: unconfirmedDocuments } = useDocuments({ filter: (item) => !item.approved })
     const { data: unconfirmedConfigs } = useBiomarkerConfigs({ filter: (item) => !item.approved })
     const { data: unconfirmedRecords } = useBiomarkerRecords({ filter: (item) => !item.approved })
@@ -101,7 +102,7 @@ export const UploadArea = () => {
         }
 
         void processQueue()
-    }, [queueTrigger, hasApiKey])
+    }, [queueTrigger, hasApiKey, documents, configs, records])
 
     const performExtraction = async (file: RcFile, arrayBuffer: ArrayBuffer) => {
         setUploadStage(UploadStage.EXTRACTING)
@@ -131,24 +132,7 @@ export const UploadArea = () => {
         const documentId = uuidv4()
         const userId = await getCurrentUserId()
         const fileData = await file.arrayBuffer()
-
-        await addDocument({
-            id: documentId,
-            userId,
-            type: DocumentType.PDF,
-            approved: false,
-            uploadDate: now,
-            fileName: file.name,
-            originalName: file.name,
-            fileSize: file.size,
-            mimeType: file.type,
-            fileData,
-            lab: extractionResult.labName,
-            testDate: extractionResult.testDate ? new Date(extractionResult.testDate) : undefined,
-            notes: '',
-            createdAt: now,
-            updatedAt: now,
-        })
+        const testDate = extractionResult.testDate ? new Date(extractionResult.testDate) : undefined
 
         const { biomarkers } = extractionResult
 
@@ -222,9 +206,55 @@ export const UploadArea = () => {
             })
             .filter((record): record is NonNullable<typeof record> => record !== null)
 
-        const existingKeys = new Set(records.map(createRecordKey))
+        const existingKeys = new Set(
+            records
+                .map(r => {
+                    const doc = documents.find(d => d.id === r.documentId)
+                    const date = doc?.testDate
+                    return createRecordKey(r, date)
+                }),
+        )
 
-        const newRecords = candidateRecords.filter(c => !existingKeys.has(createRecordKey(c)))
+        const newRecords = candidateRecords.filter(c => !existingKeys.has(createRecordKey(c, testDate)))
+
+        const duplicatesCount = candidateRecords.length - newRecords.length
+        if (duplicatesCount > 0) {
+            void message.warning(`${duplicatesCount} duplicate record${duplicatesCount > 1 ? 's' : ''} excluded`)
+        }
+
+        if (newRecords.length === 0 && newConfigs.length === 0 && newUnits.length === 0) {
+            void message.info('No new data to save')
+            return
+        }
+
+        const existingDocumentKeys = new Set(documents.map(createDocumentKey))
+        const currentDocKey = createDocumentKey({
+            fileName: file.name,
+            fileSize: file.size,
+        })
+        const isDuplicate = existingDocumentKeys.has(currentDocKey)
+
+        if (isDuplicate) {
+            void message.warning(`File "${file.name}" was already uploaded before`)
+        }
+
+        await addDocument({
+            id: documentId,
+            userId,
+            type: DocumentType.PDF,
+            approved: false,
+            uploadDate: now,
+            fileName: file.name,
+            originalName: file.name,
+            fileSize: file.size,
+            mimeType: file.type,
+            fileData,
+            lab: extractionResult.labName,
+            testDate,
+            notes: '',
+            createdAt: now,
+            updatedAt: now,
+        })
 
         const bulkOperations = []
 

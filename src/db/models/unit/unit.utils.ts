@@ -1,4 +1,5 @@
 import { UNIT_CONFIGS } from '@/constants/units'
+// eslint-disable-next-line no-restricted-imports
 import { db } from '@/db/services/db.service'
 
 import { Unit } from './unit.types'

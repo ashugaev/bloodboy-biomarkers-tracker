@@ -54,11 +54,11 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
         const approvedRecords = records.filter((r): r is typeof r & { value: number } => r.approved && r.value !== undefined)
         const data: ChartDataPoint[] = approvedRecords.map(record => {
             const document = documents.find(d => d.id === record.documentId)
-            const date = document?.testDate ?? record.createdAt
+            const date = document?.testDate
             return {
-                date: new Date(date).toLocaleDateString(),
+                date: date ? new Date(date).toLocaleDateString() : '',
                 value: record.value,
-                timestamp: new Date(date).getTime(),
+                timestamp: date?.getTime() ?? 0,
             }
         })
 

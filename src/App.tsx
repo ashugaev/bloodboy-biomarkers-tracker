@@ -8,7 +8,10 @@ import { themeConfig } from '@/constants'
 import { useCurrentUser } from '@/db'
 import { HomePage, DataPage, BiomarkerRecordsPage } from '@/pages'
 
-ModuleRegistry.registerModules([ClientSideRowModelModule, SparklinesModule])
+ModuleRegistry.registerModules([
+    ClientSideRowModelModule,
+    SparklinesModule,
+])
 
 export const App = () => {
     useCurrentUser()

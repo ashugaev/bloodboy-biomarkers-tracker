@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { v4 as uuidv4 } from 'uuid'
 
 import { createModelHooks } from '@/db/hooks/modelHooks.utils'
+// eslint-disable-next-line no-restricted-imports
 import { setCurrentUserId, db } from '@/db/services/db.service'
 
 import { User } from './user.types'
