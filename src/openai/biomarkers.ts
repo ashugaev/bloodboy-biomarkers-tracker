@@ -29,18 +29,18 @@ export const extractedBiomarkerSchema = z.object({
     name: z.string().min(1),
     value: z.number(),
     unit: z.string().min(1),
-    ucumCode: z.string().min(1),
+    ucumCode: z.string().optional().nullable(),
     referenceRange: z.object({
-        min: z.number(),
-        max: z.number(),
+        min: z.number().optional().nullable(),
+        max: z.number().optional().nullable(),
     }).partial().optional(),
-    order: z.number().optional(),
+    order: z.number(),
 })
 
 export const extractionResultSchema = z.object({
     biomarkers: z.array(extractedBiomarkerSchema),
-    testDate: z.string().optional(),
-    labName: z.string().optional(),
+    testDate: z.string().date().optional().nullable(),
+    labName: z.string().optional().nullable(),
 })
 
 const buildExtractionPrompt = (existingBiomarkers: Array<{
@@ -54,17 +54,17 @@ Return a JSON object with the following structure:
     {
       "name": "biomarker name",
       "value": numeric value,
-      "unit": "short unit label (e.g., 'mg/dL', 'μIU/mL', 'K/μL', 'cells/μL')",
-      "ucumCode": "UCUM csCode string (e.g., mg/dL, mmol/L, [iU]/L, ug/mL)",
+      "unit": "short unit label (e.g., 'mg/dL', 'μIU/mL', 'K/μL', 'cells/μL'). Set null of not available.",
+      "ucumCode": "UCUM csCode string (e.g., mg/dL, mmol/L, [iU]/L, ug/mL). Set null of not available.",
       "referenceRange": {
-        "min": minimum reference value if available,
-        "max": maximum reference value if available
+        "min": minimum reference value or null if not available,
+        "max": maximum reference value or null if not available
       },
       "order": order number starting from 0
     }
   ],
-  "testDate": "overall test date if available",
-  "labName": "laboratory name if available"
+  "testDate": "overall test date in YYYY-MM-DD format (omit if not found)",
+  "labName": "laboratory name (omit if not found)"
 }
 
 IMPORTANT: Preserve the order of biomarkers as they appear in the document. Assign sequential order numbers starting from 0.
@@ -98,15 +98,15 @@ Examples of correct naming:
 - "Vitamin D" (not "Vit D", "vitamin d", "Витамин Д")
 
 Unit and UCUM Rules (STRICT):
-- unit: provide a short label that approximates how the unit appears in the document, but normalized to English and consistent casing/font (e.g., "mg/dL", "μIU/mL", "K/μL", "cells/μL").
-- ucumCode: provide the UCUM csCode string (case-sensitive), e.g., mg/dL, mmol/L, [iU]/L, ug/mL.
-- Do not invent units. If unsure about ucumCode, leave it empty.
-
+- unit: provide a short label that approximates how the unit appears in the document, but normalized to English and consistent casing/font (e.g., "mg/dL", "μIU/mL", "K/μL", "cells/μL"). Use null if not available or for dimensionless values.
+- ucumCode: provide the UCUM csCode string (case-sensitive), e.g., mg/dL, mmol/L, [iU]/L, ug/mL. Use null if unsure or not available.
+- Do not invent units. If unsure about ucumCode, set null.
 Examples of unit vs ucumCode:
 - Glucose 5.2 mmol/L → unit: "mmol/L", ucumCode: "mmol/L"
 - TSH 2.1 μIU/mL → unit: "μIU/mL", ucumCode: "u[iU]/mL"
 - WBC 6.0 K/μL → unit: "K/μL", ucumCode: "10*3/uL"
 - WBC 6.0 cells/μL → unit: "cells/μL", ucumCode: "{cells}/uL"
+- INR 1.08 (dimensionless) → unit: null, ucumCode: null
 
 General Rules:
 - Extract all numeric biomarker values
@@ -114,6 +114,8 @@ General Rules:
 - Include reference ranges when available
 - Parse dates in ISO format (YYYY-MM-DD)
 - Extract laboratory name if mentioned
+- If testDate or labName are not found, omit them from the response
+- Use null instead of empty strings for unit, ucumCode, or referenceRange values when not available
 - If a value is not numeric or not available, skip that biomarker
 - Return only valid JSON, no additional text`
 
@@ -162,6 +164,7 @@ export const useExtractBiomarkers = () => {
             })
         }
 
+        // eslint-disable-next-line no-console
         console.log('AI Messages:', messages)
 
         const completion = await client.chat.completions.create({
@@ -178,6 +181,7 @@ export const useExtractBiomarkers = () => {
         if (!content) return null
 
         const result = JSON.parse(content) as ExtractionResult
+        // eslint-disable-next-line no-console
         console.log('AI Result:', result)
         return result
     }, [client, configs])

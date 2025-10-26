@@ -5,22 +5,22 @@ import { RcFile } from 'antd/es/upload/interface'
 import { UploadRequestOption } from 'rc-upload/lib/interface'
 import { v4 as uuidv4 } from 'uuid'
 
-import { addBiomarkerConfig, useBiomarkerConfigs } from '@/db/hooks/useBiomarkerConfigs'
-import { addBiomarkerRecord } from '@/db/hooks/useBiomarkerRecords'
+import { useBiomarkerConfigs } from '@/db/hooks/useBiomarkerConfigs'
 import { addDocument } from '@/db/hooks/useDocuments'
 import { useUnconfirmedBiomarkerConfigs } from '@/db/hooks/useUnconfirmedBiomarkerConfigs'
 import { useUnconfirmedBiomarkerRecords } from '@/db/hooks/useUnconfirmedBiomarkerRecords'
 import { useUnconfirmedDocuments } from '@/db/hooks/useUnconfirmedDocuments'
-import { addUnit, useUnits } from '@/db/hooks/useUnits'
+import { useUnits } from '@/db/hooks/useUnits'
 import { getCurrentUserId } from '@/db/hooks/useUser'
+import { db } from '@/db/services/db.service'
 import { DocumentType } from '@/db/types'
 import { useExtractBiomarkers } from '@/openai'
-import { ExtractedBiomarker } from '@/openai/biomarkers'
+import { ExtractionResult } from '@/openai/biomarkers'
 
 import { UploadDropZone } from '../UploadDropZone'
 import { UploadStatus, UploadStage } from '../UploadStatus'
 
-import { normalizeExtractionResults, usePdfExtraction } from './UploadArea.hooks'
+import { usePdfExtraction } from './UploadArea.hooks'
 
 export const UploadArea = () => {
     const { extractBiomarkers, hasApiKey } = useExtractBiomarkers()
@@ -146,43 +146,45 @@ export const UploadArea = () => {
             fileSize: file.size,
             mimeType: file.type,
             fileData,
-            lab: metadata.labName,
-            testDate: metadata.testDate ? new Date(metadata.testDate) : undefined,
-            notes: metadata.notes,
+            lab: extractionResult.labName,
+            testDate: extractionResult.testDate ? new Date(extractionResult.testDate) : undefined,
+            notes: '',
             createdAt: now,
             updatedAt: now,
         })
+
+        const { biomarkers } = extractionResult
 
         const uniqueExtractedUcumCodes = new Set(
             biomarkers.map(b => b.ucumCode).filter((code): code is string => !!code),
         )
         const existingUnitCodes = new Set(units.map(u => u.ucumCode))
 
-        for (const ucumCode of uniqueExtractedUcumCodes) {
-            if (!existingUnitCodes.has(ucumCode)) {
+        const newUnits = Array.from(uniqueExtractedUcumCodes)
+            .filter(ucumCode => !existingUnitCodes.has(ucumCode))
+            .map(ucumCode => {
                 const biomarkerWithUnit = biomarkers.find(b => b.ucumCode === ucumCode)
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-                await addUnit({
+                return {
                     ucumCode,
                     title: biomarkerWithUnit?.unit ?? ucumCode,
                     approved: false,
                     createdAt: now,
                     updatedAt: now,
-                })
-            }
-        }
+                }
+            })
 
         const uniqueExtractedBiomarkerNames = new Set(biomarkers.map(b => b.name))
         const existingBiomarkerConfigNames = new Set(configs.map(c => c.name))
         const newConfigIds: Record<string, string> = {}
 
-        for (const name of uniqueExtractedBiomarkerNames) {
-            if (!existingBiomarkerConfigNames.has(name)) {
+        const newConfigs = Array.from(uniqueExtractedBiomarkerNames)
+            .filter(name => !existingBiomarkerConfigNames.has(name))
+            .map(name => {
                 const biomarker = biomarkers.find(b => b.name === name)
                 const configId = uuidv4()
                 newConfigIds[name] = configId
 
-                await addBiomarkerConfig({
+                return {
                     id: configId,
                     userId,
                     name,
@@ -195,30 +197,47 @@ export const UploadArea = () => {
                     order: biomarker?.order,
                     createdAt: now,
                     updatedAt: now,
-                })
-            }
-        }
-
-        for (const biomarker of biomarkers) {
-            const existingConfig = configs.find(c => c.name === biomarker.name)
-            const biomarkerId = existingConfig?.id ?? newConfigIds[biomarker.name ?? '']
-
-            if (!biomarkerId) continue
-
-            await addBiomarkerRecord({
-                id: uuidv4(),
-                userId,
-                biomarkerId,
-                documentId,
-                value: biomarker.value,
-                ucumCode: biomarker.ucumCode ?? '',
-                approved: false,
-                latest: true,
-                order: biomarker.order,
-                createdAt: now,
-                updatedAt: now,
+                }
             })
+
+        const newRecords = biomarkers
+            .map(biomarker => {
+                const existingConfig = configs.find(c => c.name === biomarker.name)
+                const biomarkerId = existingConfig?.id ?? newConfigIds[biomarker.name ?? '']
+
+                if (!biomarkerId) return null
+
+                return {
+                    id: uuidv4(),
+                    userId,
+                    biomarkerId,
+                    documentId,
+                    value: biomarker.value,
+                    ucumCode: biomarker.ucumCode ?? '',
+                    approved: false,
+                    latest: true,
+                    order: biomarker.order,
+                    createdAt: now,
+                    updatedAt: now,
+                }
+            })
+            .filter((record): record is NonNullable<typeof record> => record !== null)
+
+        const bulkOperations = []
+
+        if (newUnits.length > 0) {
+            bulkOperations.push(db.units.bulkAdd(newUnits))
         }
+
+        if (newConfigs.length > 0) {
+            bulkOperations.push(db.biomarkerConfigs.bulkAdd(newConfigs))
+        }
+
+        if (newRecords.length > 0) {
+            bulkOperations.push(db.biomarkerRecords.bulkAdd(newRecords))
+        }
+
+        await Promise.all(bulkOperations)
     }
 
     if (uploadStage) {

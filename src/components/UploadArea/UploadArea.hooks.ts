@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 
 import * as pdfjsLib from 'pdfjs-dist'
+import { ZodError } from 'zod'
 
 import { ExtractionResult, extractionResultSchema, ExtractedBiomarker } from '@/openai/biomarkers'
 import { renderPageToBase64 } from '@/utils/pdf'
@@ -18,39 +19,41 @@ export const usePdfExtraction = ({ extractBiomarkers, onPageProgress, onTotalPag
         pageIndex: number,
         completedPagesRef: { current: number },
     ): Promise<ExtractionResult | null> => {
-        const MAX_RETRIES = 3
+        const MAX_RETRIES = 1
         const imageBase64 = await renderPageToBase64(page)
         let retryCount = 0
-        let result: ExtractionResult | null = null
+        let parsedExtractionResult: ExtractionResult | null = null
         const followUpMessage: string[] = []
 
         while (retryCount <= MAX_RETRIES) {
             try {
-                result = await extractBiomarkers(imageBase64, followUpMessage)
+                const extractionResult = await extractBiomarkers(imageBase64, followUpMessage)
 
-                if (result) {
+                if (extractionResult) {
                     try {
-                        extractionResultSchema.parse(result)
-                    } catch (error: ZodError) {
+                        parsedExtractionResult = extractionResultSchema.parse(extractionResult)
+                    } catch (error) {
                         let errorsInfo = ''
                         try {
-                            errorsInfo = JSON.stringify(error?.flatten())
-                        } catch (error) {
-                            console.error('Validator errors stringify failed', error)
+                            if (error instanceof ZodError) {
+                                errorsInfo = JSON.stringify(error.flatten())
+                            }
+                        } catch (stringifyError) {
+                            console.error('Validator errors stringify failed', stringifyError)
                         }
 
                         console.error('JSON Validation failed:', errorsInfo)
-                        
+
                         followUpMessage.push(`JSON Validation failed: ${errorsInfo}`)
                         throw new Error('Validation failed')
                     }
 
-                    const validBiomarkers = result.biomarkers.filter(b => {
+                    const validBiomarkers = parsedExtractionResult.biomarkers.filter(b => {
                         if (!b.ucumCode) return true
                         return validateUcumCode(b.ucumCode)
                     })
 
-                    const invalidUcumBiomarkers = result.biomarkers
+                    const invalidUcumBiomarkers = parsedExtractionResult.biomarkers
                         .filter(b => {
                             if (!b.ucumCode) return false
                             return !validateUcumCode(b.ucumCode)
@@ -63,8 +66,8 @@ export const usePdfExtraction = ({ extractBiomarkers, onPageProgress, onTotalPag
 
                         // Save valid for the case all retries failed
                         if (validBiomarkers.length > 0) {
-                            result = {
-                                ...result,
+                            parsedExtractionResult = {
+                                ...parsedExtractionResult,
                                 biomarkers: validBiomarkers,
                             }
                         }
@@ -85,7 +88,7 @@ export const usePdfExtraction = ({ extractBiomarkers, onPageProgress, onTotalPag
 
         completedPagesRef.current++
         onPageProgress(completedPagesRef.current)
-        return result
+        return parsedExtractionResult
     }, [extractBiomarkers, onPageProgress])
 
     const extractFromPdf = useCallback(async (arrayBuffer: ArrayBuffer) => {
@@ -105,7 +108,7 @@ export const usePdfExtraction = ({ extractBiomarkers, onPageProgress, onTotalPag
 
         let labName = ''
         let testDate = ''
-        let allBiomarkers: ExtractedBiomarker[] = []
+        const allBiomarkers: ExtractedBiomarker[] = []
         let prevPageOrder = 0
 
         for (const result of pagesExtractionResults) {
@@ -115,10 +118,10 @@ export const usePdfExtraction = ({ extractBiomarkers, onPageProgress, onTotalPag
             if (result?.testDate && !testDate) {
                 testDate = result.testDate
             }
-            if (result.biomarkers.length) {
+            if (result?.biomarkers.length) {
                 const biomarkersWithOrder = result.biomarkers.map((biomarker, index) => ({
                     ...biomarker,
-                    order: order + index + prevPageOrder,
+                    order: biomarker.order + index + prevPageOrder,
                 }))
                 allBiomarkers.push(...biomarkersWithOrder)
                 prevPageOrder += result.biomarkers.length
@@ -136,4 +139,3 @@ export const usePdfExtraction = ({ extractBiomarkers, onPageProgress, onTotalPag
 
     return { extractFromPdf }
 }
-

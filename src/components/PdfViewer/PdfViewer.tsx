@@ -74,7 +74,7 @@ export const PdfViewer = (props: PdfViewerProps) => {
                             file={blobUrl}
                             loading={<div className='text-gray-500'>Loading PDF...</div>}
                             error={<div className='text-red-500'>Failed to load PDF</div>}
-                            onLoadSuccess={(pdf) => setNumPages(pdf.numPages)}
+                            onLoadSuccess={(pdf) => { setNumPages(pdf.numPages) }}
                             className='inline-block'
                         >
                             {Array.from(new Array(numPages), (_, index) => (

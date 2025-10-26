@@ -80,14 +80,14 @@ export const UploadStatus = (props: UploadStatusProps) => {
                 <Spin/>
                 <span className='text-base font-medium'>{currentMessage}</span>
             </div>
-                <div>
-                    <Progress percent={progressPercent} status='active'/>
-                    {progressText && (
-                        <p className='text-sm text-gray-600 mt-2'>
-                            {progressText}
-                        </p>
-                    )}
-                </div>
+            <div>
+                <Progress percent={progressPercent} status='active'/>
+                {progressText && (
+                    <p className='text-sm text-gray-600 mt-2'>
+                        {progressText}
+                    </p>
+                )}
+            </div>
         </div>
     )
 }

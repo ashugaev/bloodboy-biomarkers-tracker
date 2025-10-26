@@ -124,14 +124,15 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
                 if (params.data) {
                     const selectedUnit = units.find(u => u.title === params.newValue)
                     if (selectedUnit) {
-                        params.data.ucumCode = selectedUnit.ucumCode
                         params.data.unitTitle = selectedUnit.title
                         return true
                     }
                 }
                 return false
             },
-            cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.unitTitle),
+            cellStyle: (params) => getInvalidCellStyle(params, (data) => {
+                return !data?.ucumCode?.trim()
+            }),
         },
         {
             field: 'normalRange.min',
