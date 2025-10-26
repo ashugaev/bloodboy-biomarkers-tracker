@@ -1,3 +1,5 @@
+import { useMemo } from 'react'
+
 import { EntityTable, IDType, UpdateSpec, InsertType } from 'dexie'
 import { useLiveQuery } from 'dexie-react-hooks'
 
@@ -18,17 +20,21 @@ export function createModelHooks<T extends object, K extends keyof T & string> (
 ) {
     return {
         useItems: (options?: UseItemsOptions<T>) => {
-            const data = useLiveQuery(async () => {
-                let items = await table.toArray()
+            const rawData = useLiveQuery(async () => await table.toArray(), [])
+
+            const data = useMemo(() => {
+                if (!rawData) return []
+                let items = rawData
                 if (options?.filter) {
                     items = items.filter(options.filter)
                 }
                 const sortFn = options?.sort ?? config?.defaultSort
                 return sortFn ? items.sort(sortFn) : items
-            }, [options?.filter, options?.sort])
+            }, [rawData, options?.filter, options?.sort])
+
             return {
-                data: data ?? [],
-                loading: data === undefined,
+                data,
+                loading: rawData === undefined,
             }
         },
 
