@@ -5,6 +5,7 @@ import { AgGridReact } from '@ag-grid-community/react'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, message } from 'antd'
 
+import { createOriginalNameColumn } from '@/aggrid/columns/biomarkerColumns'
 import { ValidationWarning } from '@/components/ValidationWarning'
 import { BiomarkerRecord, deleteBiomarkerRecord, modifyBiomarkerRecord } from '@/db/models/biomarkerRecord'
 import { useUnits } from '@/db/models/unit'
@@ -73,6 +74,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
             },
             cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.name),
         },
+        createOriginalNameColumn<ExtractedBiomarker>(),
         {
             field: 'value',
             headerName: 'Value',

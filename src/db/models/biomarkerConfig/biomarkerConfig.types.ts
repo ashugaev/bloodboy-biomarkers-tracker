@@ -3,6 +3,7 @@ import { Range } from '@/db/types/range.types'
 
 export interface BiomarkerConfig extends BaseEntity {
     name: string
+    originalName?: string
     description?: string
     normalRange?: Range
     targetRange?: Range

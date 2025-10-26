@@ -1,6 +1,7 @@
 import { ExtractionResults } from '@/components/ExtractionResults'
+import { useCancelUnapproved } from '@/db/hooks/useCancelUnapproved'
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
-import { addBiomarkerRecord, createBiomarkerRecord, deleteBiomarkerRecord, updateBiomarkerRecord } from '@/db/models/biomarkerRecord'
+import { bulkUpdateBiomarkerRecords, createBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { ExtractedBiomarker } from '@/openai/openai.biomarkers'
 
 import { BiomarkerRecordsConfirmationProps } from './BiomarkerRecordsConfirmation.types'
@@ -8,30 +9,29 @@ import { BiomarkerRecordsConfirmationProps } from './BiomarkerRecordsConfirmatio
 export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmationProps) => {
     const { records, className } = props
     const { data: configs } = useBiomarkerConfigs()
+    const { cancelAll } = useCancelUnapproved()
 
     const handleSave = async (biomarkers: ExtractedBiomarker[]) => {
-        for (let i = 0; i < biomarkers.length && i < records.length; i++) {
-            await updateBiomarkerRecord(records[i].id, {
+        const updatedRecords = records
+            .slice(0, biomarkers.length)
+            .map(record => ({
+                ...record,
                 approved: true,
-            })
-        }
-    }
+            }))
 
-    const handleCancel = async () => {
-        for (const record of records) {
-            await deleteBiomarkerRecord(record.id)
-        }
+        await bulkUpdateBiomarkerRecords(updatedRecords)
     }
 
     const handleAddNew = async () => {
         if (configs.length === 0) return
 
-        const newRecord = await createBiomarkerRecord({
+        await createBiomarkerRecords([{
             biomarkerId: undefined,
             ucumCode: '',
             approved: false,
-        })
-        await addBiomarkerRecord(newRecord)
+            testDate: new Date(),
+            latest: true,
+        }])
     }
 
     const extractedBiomarkers: ExtractedBiomarker[] = records.map(record => {
@@ -41,6 +41,7 @@ export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmation
             id: record.id,
             biomarkerId: record.biomarkerId,
             name: config?.name,
+            originalName: record.originalName,
             value: record.value,
             ucumCode: record.ucumCode,
             referenceRange: config?.normalRange,
@@ -53,7 +54,7 @@ export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmation
             biomarkers={extractedBiomarkers}
             configs={configs}
             onSave={(biomarkers) => { void handleSave(biomarkers) }}
-            onCancel={() => { void handleCancel() }}
+            onCancel={() => { void cancelAll() }}
             onAddNew={() => { void handleAddNew() }}
             className={className}
         />

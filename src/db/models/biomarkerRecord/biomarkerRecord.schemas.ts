@@ -7,6 +7,7 @@ export const biomarkerRecordSchema = baseEntitySchema.extend({
     documentId: z.string().uuid().optional(),
     value: z.number().optional(),
     ucumCode: z.string().optional(),
+    originalName: z.string().optional(),
     notes: z.string().optional(),
     doctorNotes: z.string().optional(),
     approved: z.boolean(),

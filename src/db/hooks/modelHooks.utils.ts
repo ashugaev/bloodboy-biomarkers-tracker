@@ -3,6 +3,8 @@ import { useMemo } from 'react'
 import { EntityTable, IDType, UpdateSpec, InsertType } from 'dexie'
 import { useLiveQuery } from 'dexie-react-hooks'
 
+import { createBaseEntity } from '@/db/utils/entity.utils'
+
 interface ModelHooksConfig<T> {
     defaultSort?: (a: T, b: T) => number
 }
@@ -49,6 +51,18 @@ export function createModelHooks<T extends object, K extends keyof T & string> (
             }
         },
 
+        createItems: async (partials: Array<Partial<T>>): Promise<T[]> => {
+            const baseEntities = await Promise.all(
+                partials.map(() => createBaseEntity()),
+            )
+            const items = partials.map((partial, index) => ({
+                ...baseEntities[index],
+                ...partial,
+            } as T))
+            await table.bulkAdd(items as Array<InsertType<T, K>>)
+            return items
+        },
+
         addItem: async (item: InsertType<T, K>): Promise<IDParam<T, K>> => {
             return await table.add(item)
         },
@@ -77,6 +91,19 @@ export function createModelHooks<T extends object, K extends keyof T & string> (
                         (item as T & { updatedAt: Date }).updatedAt = new Date()
                     }
                 })
+        },
+
+        bulkUpdate: async (items: T[]): Promise<void> => {
+            const updatedItems = items.map(item => {
+                if ('updatedAt' in item) {
+                    return {
+                        ...item,
+                        updatedAt: new Date(),
+                    } as T
+                }
+                return item
+            })
+            await table.bulkPut(updatedItems as Array<InsertType<T, K>>)
         },
     }
 }

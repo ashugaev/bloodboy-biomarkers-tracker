@@ -12,6 +12,7 @@ export interface ExtractedBiomarker {
     id?: string
     biomarkerId?: string
     name?: string
+    originalName?: string
     value?: number
     unit?: string
     ucumCode?: string
@@ -27,6 +28,7 @@ export interface ExtractionResult {
 
 export const extractedBiomarkerSchema = z.object({
     name: z.string().min(1),
+    originalName: z.string().min(1),
     value: z.number(),
     unit: z.string().min(1),
     ucumCode: z.string().optional().nullable(),
@@ -52,7 +54,8 @@ Return a JSON object with the following structure:
 {
   "biomarkers": [
     {
-      "name": "biomarker name",
+      "name": "normalized biomarker name (use rules bellow)",
+      "originalName": "exact biomarker name as it appears in the document",
       "value": numeric value,
       "unit": "short unit label (e.g., 'mg/dL', 'μIU/mL', 'K/μL', 'cells/μL'). Set null of not available.",
       "ucumCode": "UCUM csCode string (e.g., mg/dL, mmol/L, [iU]/L, ug/mL). Set null of not available.",
@@ -71,31 +74,35 @@ IMPORTANT: Preserve the order of biomarkers as they appear in the document. Assi
 
 ${existingBiomarkers.length > 0 ? `\nExisting biomarkers in the system:\n${existingBiomarkers.map(b => `- ${b.name} | UCUM: ${b.ucumCode ?? 'N/A'}`).join('\n')}\n` : ''}
 Biomarker Naming Rules (STRICT):
-- ALWAYS use English names for biomarkers
-- Use standardized medical terminology:
-  * Full names in Title Case: "Glucose", "Creatinine", "Vitamin D", "Vitamin B12"
-  * Medical abbreviations in UPPERCASE: "TSH", "ALT", "AST", "HDL", "LDL", "WBC", "RBC"
-  * Compound names: "Total Cholesterol", "HDL Cholesterol", "LDL Cholesterol", "White Blood Cells", "Red Blood Cells"
-- If the biomarker matches one from the existing list, use EXACTLY the same name and do not modify or normalize it. You should also match same tests written on different languages.
-- Normalize non-English names to their English equivalents:
-  * "Глюкоза" → "Glucose"
-  * "Гемоглобин" → "Hemoglobin"
-  * "Холестерин общий" → "Total Cholesterol"
-  * "Тиреотропный гормон" → "TSH"
-- Normalize variations to standard names:
-  * "glucose", "GLUCOSE", "Glu" → "Glucose"
-  * "cholesterol total", "Total chol" → "Total Cholesterol"
-  * "hemoglobin", "HGB", "Hb" → "Hemoglobin"
-  * "tsh", "Tsh" → "TSH"
+- originalName: extract EXACTLY as it appears in the document (preserve original language, case, spacing)
+  * If biomarker name appears in multiple languages, prioritize: English > Russian > other languages
+  * Example: if document has "Glucose / Глюкоза / 葡萄糖", use originalName: "Glucose"
+- name: normalized English standardized name following these rules:
+  * ALWAYS use English names for biomarkers
+  * Use standardized medical terminology:
+    - Full names in Title Case: "Glucose", "Creatinine", "Vitamin D", "Vitamin B12"
+    - Medical abbreviations in UPPERCASE: "TSH", "ALT", "AST", "HDL", "LDL", "WBC", "RBC"
+    - Compound names: "Total Cholesterol", "HDL Cholesterol", "LDL Cholesterol", "White Blood Cells", "Red Blood Cells"
+  * If the biomarker matches one from the existing list, use EXACTLY the same name and do not modify or normalize it. You should also match same tests written on different languages.
+  * Normalize non-English names to their English equivalents:
+    - "Глюкоза" → "Glucose"
+    - "Гемоглобин" → "Hemoglobin"
+    - "Холестерин общий" → "Total Cholesterol"
+    - "Тиреотропный гормон" → "TSH"
+  * Normalize variations to standard names:
+    - "glucose", "GLUCOSE", "Glu" → "Glucose"
+    - "cholesterol total", "Total chol" → "Total Cholesterol"
+    - "hemoglobin", "HGB", "Hb" → "Hemoglobin"
+    - "tsh", "Tsh" → "TSH"
 
 Examples of correct naming:
-- "Glucose" (not "glucose", "Glu", "Глюкоза")
-- "Total Cholesterol" (not "Cholesterol Total", "CHOL")
-- "HDL Cholesterol" (not "HDL-C", "hdl cholesterol")
-- "TSH" (not "tsh", "Thyroid Stimulating Hormone")
-- "ALT" (not "alt", "SGPT", "Alanine Aminotransferase")
-- "White Blood Cells" (not "WBC", "Leukocytes", "Лейкоциты")
-- "Vitamin D" (not "Vit D", "vitamin d", "Витамин Д")
+- "Глюкоза" → originalName: "Глюкоза", name: "Glucose"
+- "glucose" → originalName: "glucose", name: "Glucose"
+- "CHOL" → originalName: "CHOL", name: "Total Cholesterol"
+- "HDL-C" → originalName: "HDL-C", name: "HDL Cholesterol"
+- "tsh" → originalName: "tsh", name: "TSH"
+- "Лейкоциты" → originalName: "Лейкоциты", name: "White Blood Cells"
+- "Vit D" → originalName: "Vit D", name: "Vitamin D"
 
 Unit and UCUM Rules (STRICT):
 - unit: provide a short label that approximates how the unit appears in the document, but normalized to English and consistent casing/font (e.g., "mg/dL", "μIU/mL", "K/μL", "cells/μL"). Use null if not available or for dimensionless values.
@@ -117,7 +124,14 @@ General Rules:
 - If testDate or labName are not found, omit them from the response
 - Use null instead of empty strings for unit, ucumCode, or referenceRange values when not available
 - If a value is not numeric or not available, skip that biomarker
-- Return only valid JSON, no additional text`
+- Return only valid JSON, no additional text
+
+Duplicate Prevention Rules (CRITICAL):
+- NEVER include duplicate entries for the same biomarker
+- Each biomarker should appear ONLY ONCE in the results
+- If a biomarker has multiple values in different units, choose ONE:
+  * Prefer the unit that matches existing biomarkers from the system (if provided above)
+  * If no match, use the most common/standard unit for that biomarker type`
 
 export const useExtractBiomarkers = () => {
     const { client, hasApiKey, loading } = useOpenAI()

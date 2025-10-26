@@ -7,12 +7,11 @@ import { v4 as uuidv4 } from 'uuid'
 
 import { UploadDropZone } from '@/components/UploadDropZone'
 import { UploadStatus, UploadStage } from '@/components/UploadStatus'
-import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
-import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
+import { createBiomarkerConfigs, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
+import { createBiomarkerRecords, useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { addDocument, useDocuments, DocumentType } from '@/db/models/document'
-import { useUnits } from '@/db/models/unit'
+import { createUnits, useUnits } from '@/db/models/unit'
 import { getCurrentUserId } from '@/db/models/user'
-import { db } from '@/db/services/db.service'
 import { useExtractBiomarkers } from '@/openai'
 import { ExtractionResult } from '@/openai/openai.biomarkers'
 
@@ -186,6 +185,7 @@ export const UploadArea = () => {
                     id: configId,
                     userId,
                     name,
+                    originalName: biomarker?.originalName,
                     ucumCode: biomarker?.ucumCode,
                     normalRange: biomarker?.referenceRange ? {
                         min: biomarker.referenceRange.min,
@@ -212,6 +212,7 @@ export const UploadArea = () => {
                     documentId,
                     value: biomarker.value,
                     ucumCode: biomarker.ucumCode ?? '',
+                    originalName: biomarker.originalName,
                     approved: false,
                     latest: true,
                     order: biomarker.order,
@@ -228,15 +229,15 @@ export const UploadArea = () => {
         const bulkOperations = []
 
         if (newUnits.length > 0) {
-            bulkOperations.push(db.units.bulkAdd(newUnits))
+            bulkOperations.push(createUnits(newUnits))
         }
 
         if (newConfigs.length > 0) {
-            bulkOperations.push(db.biomarkerConfigs.bulkAdd(newConfigs))
+            bulkOperations.push(createBiomarkerConfigs(newConfigs))
         }
 
         if (newRecords.length > 0) {
-            bulkOperations.push(db.biomarkerRecords.bulkAdd(newRecords))
+            bulkOperations.push(createBiomarkerRecords(newRecords))
         }
 
         await Promise.all(bulkOperations)

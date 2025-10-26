@@ -4,9 +4,11 @@ import { db } from '@/db/services/db.service'
 export const {
     useItems: useBiomarkerConfigs,
     useItem: useBiomarkerConfig,
+    createItems: createBiomarkerConfigs,
     addItem: addBiomarkerConfig,
     updateItem: updateBiomarkerConfig,
     removeItem: deleteBiomarkerConfig,
+    bulkUpdate: bulkUpdateBiomarkerConfigs,
 } = createModelHooks(db.biomarkerConfigs, {
     defaultSort: (a, b) => (a.order ?? Infinity) - (b.order ?? Infinity),
 })

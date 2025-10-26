@@ -1,34 +1,35 @@
 import { NewBiomarkersTable, NewBiomarkerRow } from '@/components/NewBiomarkersTable'
-import { deleteBiomarkerConfig, updateBiomarkerConfig } from '@/db/models/biomarkerConfig'
+import { useCancelUnapproved } from '@/db/hooks/useCancelUnapproved'
+import { bulkUpdateBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 
 import { BiomarkerConfigsConfirmationProps } from './BiomarkerConfigsConfirmation.types'
 
 export const BiomarkerConfigsConfirmation = (props: BiomarkerConfigsConfirmationProps) => {
     const { configs, className } = props
+    const { cancelAll } = useCancelUnapproved()
 
     const handleSave = async (biomarkers: NewBiomarkerRow[]) => {
-        for (const biomarker of biomarkers) {
-            const config = configs.find(c => c.name === biomarker.name)
-            if (config) {
-                await updateBiomarkerConfig(config.id, {
+        const updatedConfigs = biomarkers
+            .map(biomarker => {
+                const config = configs.find(c => c.name === biomarker.name)
+                if (!config) return null
+                return {
+                    ...config,
                     approved: true,
                     ucumCode: biomarker.ucumCode,
                     normalRange: biomarker.normalRange,
                     targetRange: biomarker.targetRange,
-                })
-            }
-        }
-    }
+                }
+            })
+            .filter((config): config is NonNullable<typeof config> => config !== null)
 
-    const handleCancel = async () => {
-        for (const config of configs) {
-            await deleteBiomarkerConfig(config.id)
-        }
+        await bulkUpdateBiomarkerConfigs(updatedConfigs)
     }
 
     const biomarkerRows: NewBiomarkerRow[] = configs.map(config => ({
         id: config.id,
         name: config.name,
+        originalName: config.originalName,
         ucumCode: config.ucumCode,
         normalRange: config.normalRange,
         targetRange: config.targetRange,
@@ -42,7 +43,7 @@ export const BiomarkerConfigsConfirmation = (props: BiomarkerConfigsConfirmation
         <NewBiomarkersTable
             biomarkers={biomarkerRows}
             onSave={(biomarkers) => { void handleSave(biomarkers) }}
-            onCancel={() => { void handleCancel() }}
+            onCancel={() => { void cancelAll() }}
             className={className}
         />
     )

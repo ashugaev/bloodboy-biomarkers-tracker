@@ -3,15 +3,17 @@ import { memo, useCallback, useMemo } from 'react'
 import { CellValueChangedEvent, ColDef, ICellRendererParams } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
 import { DeleteOutlined, RightOutlined } from '@ant-design/icons'
-import { Button } from 'antd'
+import { Button, message } from 'antd'
 import { useNavigate } from 'react-router-dom'
 
+import { createNameColumn, createNormalRangeMaxColumn, createNormalRangeMinColumn, createTargetRangeMaxColumn, createTargetRangeMinColumn, createUnitColumn } from '@/aggrid/columns/biomarkerColumns'
+import { validateRanges } from '@/aggrid/validators/rangeValidators'
 import { AddNewButton } from '@/components/AddNewButton'
 import { COLORS } from '@/constants/colors'
-import { addBiomarkerConfig, createBiomarkerConfig, deleteBiomarkerConfig, updateBiomarkerConfig, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
+import { createBiomarkerConfigs, deleteBiomarkerConfig, updateBiomarkerConfig, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useUnits } from '@/db/models/unit'
-import { getInvalidCellStyle, getRangeCellStyle } from '@/utils/cellStyle'
+import { getRangeCellStyle } from '@/utils/cellStyle'
 
 import { BiomarkerRowData, BiomarkersDataTableProps } from './BiomarkersDataTable.types'
 
@@ -31,11 +33,10 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
     }, [navigate])
 
     const handleAddNew = useCallback(async () => {
-        const newConfig = await createBiomarkerConfig({
+        await createBiomarkerConfigs([{
             name: '',
             approved: true,
-        })
-        await addBiomarkerConfig(newConfig)
+        }])
     }, [])
 
     const sparklineTooltipRenderer = useCallback((params: { yValue?: number }) => {
@@ -111,111 +112,16 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
             cellRenderer: ViewButtonCellRenderer,
         },
         {
-            field: 'name',
-            headerName: 'Name',
-            flex: 1.2,
-            minWidth: 180,
-            sortable: true,
+            ...createNameColumn<BiomarkerRowData>(),
             sort: 'asc',
-            editable: true,
-            cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.name),
         },
         {
-            field: 'unitTitle',
-            headerName: 'Unit',
-            flex: 0.7,
-            minWidth: 100,
-            editable: true,
-            cellEditor: 'agSelectCellEditor',
-            cellEditorParams: {
-                values: units.map(u => u.title),
-            },
-            valueSetter: (params) => {
-                if (params.data) {
-                    const selectedUnit = units.find(u => u.title === params.newValue)
-                    if (selectedUnit) {
-                        params.data.unitTitle = selectedUnit.title
-                        return true
-                    }
-                }
-                return false
-            },
-            cellStyle: (params) => getInvalidCellStyle(params, (data) => {
-                return !data?.ucumCode?.trim()
-            }),
+            ...createUnitColumn<BiomarkerRowData>(units),
         },
-        {
-            field: 'normalRange.min',
-            headerName: 'Normal Min',
-            flex: 0.7,
-            minWidth: 100,
-            editable: true,
-            valueGetter: (params) => params.data?.normalRange?.min,
-            valueSetter: (params) => {
-                if (params.data) {
-                    if (!params.data.normalRange) {
-                        params.data.normalRange = {}
-                    }
-                    params.data.normalRange.min = Number(params.newValue)
-                    return true
-                }
-                return false
-            },
-        },
-        {
-            field: 'normalRange.max',
-            headerName: 'Normal Max',
-            flex: 0.7,
-            minWidth: 100,
-            editable: true,
-            valueGetter: (params) => params.data?.normalRange?.max,
-            valueSetter: (params) => {
-                if (params.data) {
-                    if (!params.data.normalRange) {
-                        params.data.normalRange = {}
-                    }
-                    params.data.normalRange.max = Number(params.newValue)
-                    return true
-                }
-                return false
-            },
-        },
-        {
-            field: 'targetRange.min',
-            headerName: 'Target Min',
-            flex: 0.7,
-            minWidth: 100,
-            editable: true,
-            valueGetter: (params) => params.data?.targetRange?.min ?? '',
-            valueSetter: (params) => {
-                if (params.data) {
-                    if (!params.data.targetRange) {
-                        params.data.targetRange = {}
-                    }
-                    params.data.targetRange.min = Number(params.newValue)
-                    return true
-                }
-                return false
-            },
-        },
-        {
-            field: 'targetRange.max',
-            headerName: 'Target Max',
-            flex: 0.7,
-            minWidth: 100,
-            editable: true,
-            valueGetter: (params) => params.data?.targetRange?.max ?? '',
-            valueSetter: (params) => {
-                if (params.data) {
-                    if (!params.data.targetRange) {
-                        params.data.targetRange = {}
-                    }
-                    params.data.targetRange.max = Number(params.newValue)
-                    return true
-                }
-                return false
-            },
-        },
+        createNormalRangeMinColumn<BiomarkerRowData>(),
+        createNormalRangeMaxColumn<BiomarkerRowData>(),
+        createTargetRangeMinColumn<BiomarkerRowData>(),
+        createTargetRangeMaxColumn<BiomarkerRowData>(),
         {
             field: 'stats.lastMeasurement',
             headerName: 'Last',
@@ -311,6 +217,13 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
         const row = event.data
 
         if (row?.id) {
+            const validation = validateRanges(row.normalRange, row.targetRange)
+
+            if (!validation.isValid) {
+                void message.error(validation.errors.join('. '))
+                return
+            }
+
             await updateBiomarkerConfig(row.id, {
                 name: row.name,
                 ucumCode: row.ucumCode,

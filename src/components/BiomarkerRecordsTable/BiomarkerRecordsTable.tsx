@@ -5,10 +5,11 @@ import { AgGridReact } from '@ag-grid-community/react'
 import { DeleteOutlined } from '@ant-design/icons'
 import { Button } from 'antd'
 
+import { createUnitColumn } from '@/aggrid/columns/biomarkerColumns'
 import { dateComparator } from '@/aggrid/comparators/dateComprator'
 import { AddNewButton } from '@/components/AddNewButton'
 import { COLORS } from '@/constants/colors'
-import { addBiomarkerRecord, createBiomarkerRecord, deleteBiomarkerRecord, updateBiomarkerRecord, useBiomarkerRecords } from '@/db/models/biomarkerRecord'
+import { createBiomarkerRecords, deleteBiomarkerRecord, updateBiomarkerRecord, useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments, updateDocument } from '@/db/models/document'
 import { useUnits } from '@/db/models/unit'
 import { getRangeCellStyle } from '@/utils/cellStyle'
@@ -29,12 +30,13 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
 
     const handleAddNew = useCallback(async () => {
         const defaultUcumCode = records.find(r => r.ucumCode)?.ucumCode
-        const newRecord = await createBiomarkerRecord({
+        await createBiomarkerRecords([{
             biomarkerId,
             ucumCode: defaultUcumCode ?? '',
             approved: true,
-        })
-        await addBiomarkerRecord(newRecord)
+            testDate: new Date(),
+            latest: true,
+        }])
     }, [biomarkerId, records])
 
     const rowData = useMemo(() => {
@@ -100,28 +102,7 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
                 targetRange,
             ),
         },
-        {
-            field: 'unitTitle',
-            headerName: 'Unit',
-            flex: 0.8,
-            minWidth: 100,
-            editable: true,
-            cellEditor: 'agSelectCellEditor',
-            cellEditorParams: {
-                values: units.map(u => u.title),
-            },
-            valueSetter: (params) => {
-                if (params.data) {
-                    const selectedUnit = units.find(u => u.title === params.newValue)
-                    if (selectedUnit) {
-                        params.data.ucumCode = selectedUnit.ucumCode
-                        params.data.unitTitle = selectedUnit.title
-                        return true
-                    }
-                }
-                return false
-            },
-        },
+        createUnitColumn<BiomarkerRecordRowData>(units),
         {
             colId: 'delete',
             headerName: '',

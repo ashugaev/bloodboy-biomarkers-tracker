@@ -2,19 +2,9 @@ import { v4 as uuidv4 } from 'uuid'
 
 import { getCurrentUserId } from '@/db/models/user'
 import { db } from '@/db/services/db.service'
-import { createBaseEntity } from '@/db/utils/entity.utils'
 
 import { BIOMARKER_CONFIGS } from './biomarkerConfig.initial'
 import { BiomarkerConfig } from './biomarkerConfig.types'
-
-export const createBiomarkerConfig = async (
-    partial: Partial<BiomarkerConfig>,
-): Promise<BiomarkerConfig> => {
-    return {
-        ...await createBaseEntity(),
-        ...partial,
-    } as BiomarkerConfig
-}
 
 export const preloadBiomarkerConfigs = async (): Promise<void> => {
     const existingConfigs = await db.biomarkerConfigs.toArray()

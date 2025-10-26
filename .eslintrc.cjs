@@ -111,6 +111,11 @@ module.exports = {
                         importNames: ['AgGridReactProps'],
                         message: 'Use AgGridTableProps instead (import { AgGridTableProps } from \'@/components/tables\')',
                     },
+                    {
+                        name: '@/db/services/db.service',
+                        importNames: ['db'],
+                        message: 'Do not use "db" directly. Use model hooks instead (e.g., useBiomarkerConfigs, updateBiomarkerConfig, bulkUpdateBiomarkerConfigs, etc.)',
+                    },
                 ],
                 patterns: [
                     {

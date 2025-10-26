@@ -16,6 +16,7 @@ const rangeSchema = z.object({
 
 export const biomarkerConfigSchema = baseEntitySchema.extend({
     name: z.string().min(1).max(100),
+    originalName: z.string().optional(),
     description: z.string().optional(),
     normalRange: rangeSchema.optional(),
     targetRange: rangeSchema.optional(),

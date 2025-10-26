@@ -5,11 +5,11 @@ import { AgGridReact } from '@ag-grid-community/react'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Form, Input, message, Modal } from 'antd'
 
+import { createNameColumn, createOriginalNameColumn, createNormalRangeMaxColumn, createNormalRangeMinColumn, createTargetRangeMaxColumn, createTargetRangeMinColumn, createUnitColumn } from '@/aggrid/columns/biomarkerColumns'
+import { validateRanges } from '@/aggrid/validators/rangeValidators'
 import { ValidationWarning } from '@/components/ValidationWarning'
-import { UNIT_CONFIGS } from '@/constants/units'
-import { addBiomarkerConfig, createBiomarkerConfig, deleteBiomarkerConfig, updateBiomarkerConfig } from '@/db/models/biomarkerConfig'
+import { createBiomarkerConfigs, deleteBiomarkerConfig, updateBiomarkerConfig } from '@/db/models/biomarkerConfig'
 import { addUnit, useUnits } from '@/db/models/unit'
-import { getInvalidCellStyle } from '@/utils/cellStyle'
 import { validateUcumCode } from '@/utils/ucum'
 
 import { NewBiomarkerRow, NewBiomarkersTableProps } from './NewBiomarkersTable.types'
@@ -26,13 +26,6 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
     const [form] = Form.useForm<NewUnitFormData>()
     const { data: units } = useUnits()
 
-    const availableUnits = useMemo(() => {
-        return [...UNIT_CONFIGS, ...units.map(u => ({
-            title: u.title,
-            ucum: u.ucumCode,
-        }))]
-    }, [units])
-
     const handleDelete = useCallback(async (id?: string) => {
         if (id) {
             await deleteBiomarkerConfig(id)
@@ -40,11 +33,10 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
     }, [])
 
     const handleAddNew = useCallback(async () => {
-        const newConfig = await createBiomarkerConfig({
+        await createBiomarkerConfigs([{
             name: '',
             approved: false,
-        })
-        await addBiomarkerConfig(newConfig)
+        }])
     }, [])
 
     const handleCreateUnit = useCallback(async (values: NewUnitFormData) => {
@@ -71,117 +63,30 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
     }, [biomarkers])
 
     const isValid = useMemo(() => {
-        return rowData.every(row => row.name && row.ucumCode)
+        return rowData.every(row => {
+            if (!row.name || !row.ucumCode) return false
+            const validation = validateRanges(row.normalRange, row.targetRange)
+            return validation.isValid
+        })
     }, [rowData])
 
     const columnDefs = useMemo<Array<ColDef<NewBiomarkerRow>>>(() => [
+        createNameColumn<NewBiomarkerRow>(),
+        createOriginalNameColumn<NewBiomarkerRow>(),
+        createUnitColumn<NewBiomarkerRow>(units),
         {
-            field: 'name',
-            headerName: 'Name',
-            flex: 1,
-            editable: true,
-            minWidth: 200,
-            cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.name),
+            ...createNormalRangeMinColumn<NewBiomarkerRow>(),
         },
         {
-            field: 'ucumCode',
-            headerName: 'Unit',
-            flex: 0.8,
-            editable: true,
-            minWidth: 100,
-            cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.ucumCode),
-            cellEditor: 'agSelectCellEditor',
-            cellEditorParams: {
-                values: availableUnits.map(u => u.ucum),
-            },
-            valueFormatter: (params) => {
-                const unit = availableUnits.find(u => u.ucum === params.value)
-                return unit?.title ?? (params.value as string)
-            },
+            ...createNormalRangeMaxColumn<NewBiomarkerRow>(),
+
         },
         {
-            field: 'normalRange.min',
-            headerName: 'Min.',
-            flex: 0.6,
-            minWidth: 100,
-            editable: true,
-            valueGetter: (params) => params.data?.normalRange?.min,
-            valueSetter: (params) => {
-                if (params.data) {
-                    if (!params.data.normalRange) {
-                        params.data.normalRange = {
-                            min: 0,
-                            max: 0,
-                        }
-                    }
-                    params.data.normalRange.min = Number(params.newValue)
-                    return true
-                }
-                return false
-            },
+            ...createTargetRangeMinColumn<NewBiomarkerRow>(),
         },
         {
-            field: 'normalRange.max',
-            headerName: 'Max.',
-            flex: 0.6,
-            minWidth: 100,
-            editable: true,
-            valueGetter: (params) => params.data?.normalRange?.max,
-            valueSetter: (params) => {
-                if (params.data) {
-                    if (!params.data.normalRange) {
-                        params.data.normalRange = {
-                            min: 0,
-                            max: 0,
-                        }
-                    }
-                    params.data.normalRange.max = Number(params.newValue)
-                    return true
-                }
-                return false
-            },
-        },
-        {
-            field: 'targetRange.min',
+            ...createTargetRangeMaxColumn<NewBiomarkerRow>(),
             minWidth: 130,
-            headerName: 'Optimal Min.',
-            flex: 0.7,
-            editable: true,
-            valueGetter: (params) => params.data?.targetRange?.min ?? '',
-            valueSetter: (params) => {
-                if (params.data) {
-                    if (!params.data.targetRange) {
-                        params.data.targetRange = {
-                            min: 0,
-                            max: 0,
-                        }
-                    }
-                    params.data.targetRange.min = Number(params.newValue)
-                    return true
-                }
-                return false
-            },
-        },
-        {
-            field: 'targetRange.max',
-            minWidth: 130,
-            headerName: 'Optimal Max.',
-            flex: 0.7,
-            editable: true,
-            valueGetter: (params) => params.data?.targetRange?.max ?? '',
-            valueSetter: (params) => {
-                if (params.data) {
-                    if (!params.data.targetRange) {
-                        params.data.targetRange = {
-                            min: 0,
-                            max: 0,
-                        }
-                    }
-                    params.data.targetRange.max = Number(params.newValue)
-                    return true
-                }
-                return false
-            },
         },
         {
             colId: 'delete',
@@ -203,10 +108,18 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
                 )
             },
         },
-    ], [handleDelete, availableUnits])
+    ], [handleDelete, units])
 
     const onCellValueChanged = useCallback(async (event: CellValueChangedEvent<NewBiomarkerRow>) => {
         const row = event.data
+
+        if (row) {
+            const validation = validateRanges(row.normalRange, row.targetRange)
+
+            if (!validation.isValid) {
+                void message.error(validation.errors.join('. '))
+            }
+        }
 
         setRowData(prev => [...prev])
 
@@ -309,7 +222,7 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
                                 validator: (_, value: string) => {
                                     if (!value) return Promise.resolve()
 
-                                    const existingUnit = availableUnits.find(u => u.ucum === value)
+                                    const existingUnit = units.find(u => u.ucumCode === value)
                                     if (existingUnit) {
                                         return Promise.reject(new Error(`Unit with code "${value}" already exists`))
                                     }

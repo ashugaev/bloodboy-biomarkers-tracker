@@ -1,10 +1,12 @@
 import { DocumentMetadataForm, DocumentMetadataFormData } from '@/components/DocumentMetadataForm'
-import { updateDocument, deleteDocument } from '@/db/models/document'
+import { useCancelUnapproved } from '@/db/hooks/useCancelUnapproved'
+import { updateDocument } from '@/db/models/document'
 
 import { DocumentConfirmationProps } from './DocumentConfirmation.types'
 
 export const DocumentConfirmation = (props: DocumentConfirmationProps) => {
     const { document, className } = props
+    const { cancelAll } = useCancelUnapproved()
 
     const handleSave = async (data: DocumentMetadataFormData) => {
         await updateDocument(document.id, {
@@ -13,10 +15,6 @@ export const DocumentConfirmation = (props: DocumentConfirmationProps) => {
             testDate: data.testDate ? new Date(data.testDate) : undefined,
             notes: data.notes,
         })
-    }
-
-    const handleCancel = async () => {
-        await deleteDocument(document.id)
     }
 
     const initialData: DocumentMetadataFormData = {
@@ -31,7 +29,7 @@ export const DocumentConfirmation = (props: DocumentConfirmationProps) => {
         <DocumentMetadataForm
             initialData={initialData}
             onSave={(data) => { void handleSave(data) }}
-            onCancel={() => { void handleCancel() }}
+            onCancel={() => { void cancelAll() }}
             className={className}
         />
     )
