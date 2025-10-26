@@ -7,9 +7,8 @@ import { Button, Form, Input, message, Modal } from 'antd'
 
 import { ValidationWarning } from '@/components/ValidationWarning'
 import { UNIT_CONFIGS } from '@/constants/units'
-import { updateBiomarkerConfig, deleteBiomarkerConfig, addBiomarkerConfig } from '@/db/hooks/useBiomarkerConfigs'
-import { addUnit, useUnits } from '@/db/hooks/useUnits'
-import { createBiomarkerConfig } from '@/db/utils/biomarker.utils'
+import { addBiomarkerConfig, createBiomarkerConfig, deleteBiomarkerConfig, updateBiomarkerConfig } from '@/db/models/biomarkerConfig'
+import { addUnit, useUnits } from '@/db/models/unit'
 import { getInvalidCellStyle } from '@/utils/cellStyle'
 import { validateUcumCode } from '@/utils/ucum'
 
@@ -25,7 +24,7 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
     const [rowData, setRowData] = useState<NewBiomarkerRow[]>(biomarkers)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [form] = Form.useForm<NewUnitFormData>()
-    const { units } = useUnits()
+    const { data: units } = useUnits()
 
     const availableUnits = useMemo(() => {
         return [...UNIT_CONFIGS, ...units.map(u => ({

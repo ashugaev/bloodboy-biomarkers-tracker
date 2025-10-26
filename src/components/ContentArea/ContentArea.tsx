@@ -1,12 +1,12 @@
-import { useUnconfirmedDocuments } from '../../db/hooks'
-import { BiomarkersDataTable } from '../BiomarkersDataTable'
-import { PdfViewer } from '../PdfViewer'
+import { BiomarkersDataTable } from '@/components/BiomarkersDataTable'
+import { PdfViewer } from '@/components/PdfViewer'
+import { useDocuments } from '@/db/models/document'
 
 import { ContentAreaProps } from './ContentArea.types'
 
 export const ContentArea = (props: ContentAreaProps) => {
     const { className } = props
-    const { unconfirmedDocuments } = useUnconfirmedDocuments()
+    const { data: unconfirmedDocuments } = useDocuments({ filter: (item) => !item.approved })
 
     const currentDocument = unconfirmedDocuments[0]
 

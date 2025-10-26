@@ -2,15 +2,15 @@ import { useState } from 'react'
 
 import { Button, Input } from 'antd'
 
-import { DBStore } from '@/db/constants/stores'
-import { useDb } from '@/db/hooks/useDb'
+import { MAIN_SETTINGS_ID } from '@/constants'
+import { addAppSettings, updateAppSettings, useAppSettings } from '@/db/models/appSettings'
 
 import { ApiKeyInputProps } from './ApiKeyInput.types'
 
 export const ApiKeyInput = (props: ApiKeyInputProps) => {
     const { className } = props
     const [apiKeyInput, setApiKeyInput] = useState('')
-    const { data: settings, add, update } = useDb(DBStore.APP_SETTINGS)
+    const { data: settings } = useAppSettings()
 
     const currentSettings = settings[0]
 
@@ -18,16 +18,16 @@ export const ApiKeyInput = (props: ApiKeyInputProps) => {
         if (!apiKeyInput.trim()) return
 
         const newSettings = {
-            id: 'main',
+            id: MAIN_SETTINGS_ID,
             openaiApiKey: apiKeyInput.trim(),
             createdAt: new Date(),
             updatedAt: new Date(),
         }
 
         if (currentSettings) {
-            await update('main', newSettings)
+            await updateAppSettings(MAIN_SETTINGS_ID, newSettings)
         } else {
-            await add(newSettings)
+            await addAppSettings(newSettings)
         }
 
         setApiKeyInput('')

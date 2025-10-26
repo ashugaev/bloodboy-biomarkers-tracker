@@ -1,15 +1,13 @@
-import { useBiomarkerConfigs } from '@/db/hooks/useBiomarkerConfigs'
-import { updateBiomarkerRecord, deleteBiomarkerRecord, addBiomarkerRecord } from '@/db/hooks/useBiomarkerRecords'
-import { createBiomarkerRecord } from '@/db/utils/biomarker.utils'
-import { ExtractedBiomarker } from '@/openai/biomarkers'
-
-import { ExtractionResults } from '../ExtractionResults'
+import { ExtractionResults } from '@/components/ExtractionResults'
+import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
+import { addBiomarkerRecord, createBiomarkerRecord, deleteBiomarkerRecord, updateBiomarkerRecord } from '@/db/models/biomarkerRecord'
+import { ExtractedBiomarker } from '@/openai/openai.biomarkers'
 
 import { BiomarkerRecordsConfirmationProps } from './BiomarkerRecordsConfirmation.types'
 
 export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmationProps) => {
     const { records, className } = props
-    const { configs } = useBiomarkerConfigs(false)
+    const { data: configs } = useBiomarkerConfigs()
 
     const handleSave = async (biomarkers: ExtractedBiomarker[]) => {
         for (let i = 0; i < biomarkers.length && i < records.length; i++) {

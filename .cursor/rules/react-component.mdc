@@ -1,14 +1,23 @@
 # React Component Structure
 
 ## Component Structure Pattern
-Components follow this structure:
+Every component in its own folder:
 
 ```
 ComponentName/
-├── ComponentName.tsx       # Main component file
-├── ComponentName.types.ts  # TypeScript types
-└── index.ts                # Exports
+├── ComponentName.tsx       # Main component file (required)
+├── ComponentName.types.ts  # TypeScript types (required)
+├── ComponentName.utils.ts  # ALL helper functions for this component (optional)
+├── ComponentName.hooks.ts  # Custom hooks (optional)
+└── index.ts                # Exports (required)
 ```
+
+### File Rules:
+- **ComponentName.tsx**: Component logic only
+- **ComponentName.types.ts**: All TypeScript interfaces/types
+- **ComponentName.utils.ts**: All helper functions (multiple allowed)
+- **ComponentName.hooks.ts**: All custom hooks (multiple allowed)
+- **index.ts**: Export all public APIs
 
 ## Component Template (ComponentName.tsx)
 
@@ -41,6 +50,7 @@ export interface ComponentNameProps {
 ```tsx
 export * from './ComponentName'
 export * from './ComponentName.types'
+export * from './ComponentName.utils'
 ```
 
 ## Styling with Tailwind CSS
@@ -64,12 +74,20 @@ className='hover:bg-gray-100 focus:outline-none'
 ```
 
 ## Rules
-- One component = one folder (no standalone component files)
-- Use named exports only (no default exports)
-- Component name must match file name and folder name (PascalCase)
-- Always include className prop for style composition
+
+### Structure:
+- One component = one folder (no standalone .tsx files)
+- All files named ComponentName.* (PascalCase)
+- All exports go through index.ts
+
+### Code Organization:
+- Component logic → ComponentName.tsx
+- All types → ComponentName.types.ts (one file)
+- All helper functions → ComponentName.utils.ts (one file, multiple functions allowed)
+- All custom hooks → ComponentName.hooks.ts (one file, multiple hooks allowed)
+
+### Code Style:
+- Named exports only (no default exports)
+- Always include className prop for composition
 - Use classnames (cn) for combining Tailwind classes
-- Keep component logic in the main file
-- Extract complex types to .types.ts file
-- Prefer Tailwind utility classes over custom CSS
-- All exports must go through index.ts file
+- Prefer Tailwind utilities over custom CSS

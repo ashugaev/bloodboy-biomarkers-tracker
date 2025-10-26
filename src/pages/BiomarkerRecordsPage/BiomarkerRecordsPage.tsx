@@ -7,7 +7,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { BiomarkerChart } from '@/components/BiomarkerChart'
 import { BiomarkerRecordsTable } from '@/components/BiomarkerRecordsTable'
 import { Header } from '@/components/Header'
-import { useBiomarkerConfigs } from '@/db/hooks/useBiomarkerConfigs'
+import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 
 import { BiomarkerRecordsPageProps } from './BiomarkerRecordsPage.types'
 
@@ -15,7 +15,7 @@ export const BiomarkerRecordsPage = (props: BiomarkerRecordsPageProps) => {
     const { className } = props
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const { configs } = useBiomarkerConfigs(true)
+    const { data: configs } = useBiomarkerConfigs({ filter: (c) => c.approved })
     const [viewMode, setViewMode] = useState<'table' | 'chart'>('table')
 
     const biomarker = configs.find(c => c.id === id)

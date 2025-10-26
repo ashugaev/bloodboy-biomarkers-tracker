@@ -1,4 +1,5 @@
-import { BiomarkerRecord, Range } from '@/db/types'
+import { BiomarkerRecord } from '@/db/models/biomarkerRecord'
+import { Range } from '@/db/types'
 
 export interface BiomarkerRecordRowData extends BiomarkerRecord {
     unitTitle?: string

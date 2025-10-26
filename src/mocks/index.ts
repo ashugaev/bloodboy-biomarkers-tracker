@@ -1,1 +1,1 @@
-export * from './biomarkers'
+export * from './mocks.biomarkers'

@@ -4,8 +4,8 @@ import cn from 'classnames'
 import { Bar, BarChart, CartesianGrid, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { COLORS } from '@/constants/colors'
-import { useBiomarkerRecords } from '@/db/hooks/useBiomarkerRecords'
-import { useDocuments } from '@/db/hooks/useDocuments'
+import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
+import { useDocuments } from '@/db/models/document'
 
 import { BiomarkerChartProps } from './BiomarkerChart.types'
 
@@ -45,8 +45,10 @@ const RoundedBar = (props: RoundedBarProps) => {
 
 export const BiomarkerChart = (props: BiomarkerChartProps) => {
     const { biomarkerId, biomarkerName, normalRange, targetRange, className } = props
-    const { records } = useBiomarkerRecords(biomarkerId)
-    const { documents } = useDocuments()
+    const { data: records } = useBiomarkerRecords({
+        filter: (item) => item.biomarkerId === biomarkerId,
+    })
+    const { data: documents } = useDocuments()
 
     const chartData = useMemo(() => {
         const approvedRecords = records.filter((r): r is typeof r & { value: number } => r.approved && r.value !== undefined)

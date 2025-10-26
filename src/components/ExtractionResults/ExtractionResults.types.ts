@@ -1,4 +1,4 @@
-import { BiomarkerConfig } from '@/db/types'
+import { BiomarkerConfig } from '@/db/models/biomarkerConfig'
 import { ExtractedBiomarker } from '@/openai'
 
 export interface ExtractionResultsProps {

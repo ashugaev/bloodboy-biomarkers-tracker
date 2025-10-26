@@ -3,9 +3,9 @@ import { ConfirmationPanel } from '@/components/ConfirmationPanel'
 import { ContentArea } from '@/components/ContentArea'
 import { Header } from '@/components/Header'
 import { UploadArea } from '@/components/UploadArea'
-import { useUnconfirmedBiomarkerConfigs } from '@/db/hooks/useUnconfirmedBiomarkerConfigs'
-import { useUnconfirmedBiomarkerRecords } from '@/db/hooks/useUnconfirmedBiomarkerRecords'
-import { useUnconfirmedDocuments } from '@/db/hooks/useUnconfirmedDocuments'
+import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
+import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
+import { useDocuments } from '@/db/models/document'
 import { useExtractBiomarkers } from '@/openai'
 
 import { DataPageProps } from './DataPage.types'
@@ -13,9 +13,9 @@ import { DataPageProps } from './DataPage.types'
 export const DataPage = (props: DataPageProps) => {
     const { className } = props
     const { hasApiKey, loading } = useExtractBiomarkers()
-    const { unconfirmedDocuments } = useUnconfirmedDocuments()
-    const { unconfirmedConfigs } = useUnconfirmedBiomarkerConfigs()
-    const { unconfirmedRecords } = useUnconfirmedBiomarkerRecords()
+    const { data: unconfirmedDocuments } = useDocuments({ filter: (item) => !item.approved })
+    const { data: unconfirmedConfigs } = useBiomarkerConfigs({ filter: (item) => !item.approved })
+    const { data: unconfirmedRecords } = useBiomarkerRecords({ filter: (item) => !item.approved })
 
     const hasPendingConfirmations =
         unconfirmedDocuments.length > 0 ||

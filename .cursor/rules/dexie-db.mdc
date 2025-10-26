@@ -1,9 +1,199 @@
 ---
 alwaysApply: true
-description: Apply it if you work with dexie library or hooks which using it API
+description: Apply it if you work with dexie library or data hooks which using it API
 ---
 
-Available commands
+## Database Structure
+
+**Pattern:** One Table = One Folder in `db/models/`
+
+```
+db/
+  ├── models/{modelName}/
+  │   ├── {modelName}.types.ts      # TypeScript interfaces
+  │   ├── {modelName}.schemas.ts    # Zod schemas
+  │   ├── {modelName}.hooks.ts      # useLiveQuery + CRUD
+  │   ├── {modelName}.utils.ts      # Helpers, preload
+  │   ├── {modelName}.initial.ts    # Initial data (optional)
+  │   ├── {modelName}.relations.ts  # Cross-model (optional)
+  │   └── index.ts                  # Exports
+  ├── types/       # Shared types
+  │   ├── base.types.ts             # BaseEntity interface
+  │   ├── range.types.ts            # Range interface
+  │   └── store.types.ts            # Store mappings
+  ├── schemas/     # Shared schemas
+  │   └── base.schemas.ts           # baseEntitySchema
+  ├── utils/       # Shared utilities
+  │   └── entity.utils.ts           # createBaseEntity
+  ├── constants/   # Shared constants
+  │   └── stores.constants.ts       # DBStore enum
+  ├── hooks/       # Generic hooks
+  │   └── useDb.ts                  # Generic DB hook
+  └── services/    # Dexie instance
+      └── db.service.ts             # Database config
+```
+
+**Naming:** `{scope}.{category}.ts` (e.g., `base.types.ts`, `entity.utils.ts`)
+
+**⚠️ Important:** Always use camelCase for file names. Examples:
+- ✅ `entity.utils.ts`, `format.utils.ts`, `stores.constants.ts`
+- ❌ `entity-utils.ts`, `format_utils.ts`, `stores-constants.ts`
+
+## BaseEntity Pattern
+
+User-scoped entities extend BaseEntity (id, userId, createdAt, updatedAt):
+
+```typescript
+// types/base.types.ts
+export interface BaseEntity {
+    id: string
+    userId: string
+    createdAt: Date
+    updatedAt: Date
+}
+
+// schemas/base.schemas.ts
+export const baseEntitySchema = z.object({
+    id: z.string().uuid(),
+    userId: z.string().uuid(),
+    createdAt: z.coerce.date(),
+    updatedAt: z.coerce.date(),
+})
+
+// Usage
+import { createBaseEntity } from '@/db/utils/entity.utils'
+const entity = await createBaseEntity() // Returns full BaseEntity
+```
+
+## Model File Templates
+
+**Types:** Extend BaseEntity with model fields
+```typescript
+export interface BiomarkerRecord extends BaseEntity {
+    biomarkerId?: string
+    value?: number
+    ucumCode: string
+    approved: boolean
+    order?: number
+    documentId?: string
+}
+```
+
+**Schemas:** Extend baseEntitySchema with Zod validation
+```typescript
+export const biomarkerRecordSchema = baseEntitySchema.extend({
+    biomarkerId: z.string().uuid().optional(),
+    value: z.number().optional(),
+    ucumCode: z.string(),
+    approved: z.boolean(),
+    order: z.number().optional(),
+    documentId: z.string().uuid().optional(),
+})
+```
+
+**Hooks:** Use createModelHooks generator (no intermediate variable)
+```typescript
+import { createModelHooks } from '../../hooks/modelHooks.utils'
+import { db } from '../../services/db.service'
+
+export const {
+    useItems: useBiomarkerRecords,
+    useItem: useBiomarkerRecord,
+    addItem: addBiomarkerRecord,
+    updateItem: updateBiomarkerRecord,
+    removeItem: deleteBiomarkerRecord,
+    modifyItem: modifyBiomarkerRecord,
+} = createModelHooks(db.biomarkerRecords, {
+    defaultSort: (a, b) => (a.order ?? Infinity) - (b.order ?? Infinity),
+})
+```
+
+**Utils:** Create helpers + preload data
+```typescript
+export const createBiomarkerRecord = async (
+    partial: Partial<BiomarkerRecord>
+): Promise<BiomarkerRecord> => {
+    return {
+        ...await createBaseEntity(),
+        biomarkerId: '',
+        value: undefined,
+        ucumCode: '',
+        approved: false,
+        order: undefined,
+        ...partial,
+    }
+}
+```
+
+## Usage Patterns
+
+```typescript
+// Get all items (auto-sorted by defaultSort)
+const { data, loading } = useBiomarkerRecords()
+
+// Get items with filter
+const { data } = useBiomarkerRecords({ filter: (item) => item.approved })
+
+// Get all items with custom sort
+const { data } = useBiomarkerRecords({ 
+    sort: (a, b) => b.createdAt.getTime() - a.createdAt.getTime() 
+})
+
+// Filter + sort
+const { data } = useBiomarkerRecords({ 
+    filter: (item) => item.biomarkerId === id && item.approved,
+    sort: (a, b) => b.createdAt.getTime() - a.createdAt.getTime() 
+})
+
+// Get single item
+const { data: record, loading } = useBiomarkerRecord(id)
+
+// Additional filtering in component if needed
+const approvedRecords = data.filter(item => item.approved)
+
+// CRUD operations
+await addBiomarkerRecord(newRecord)
+await updateBiomarkerRecord(id, { value: 10.5 })
+await deleteBiomarkerRecord(id)
+
+// Modify with callback
+await modifyBiomarkerRecord(id, (record) => {
+    record.value = 10.5
+    record.approved = true
+})
+
+// Bulk operations (use Dexie directly)
+await db.biomarkerRecords.bulkAdd(records)
+await db.biomarkerRecords.bulkPut(records)
+await db.biomarkerRecords.bulkDelete(['id1', 'id2'])
+```
+
+**Built-in features:**
+- Auto userId filtering: `db.service.ts` has reading hook filtering by currentUserId
+- Auto updates: useLiveQuery tracks changes automatically
+- Default sorting: configured per model in `modelHooks.utils.ts`
+
+## Import Patterns
+
+```typescript
+// From model folder
+import { 
+    BiomarkerRecord, 
+    useBiomarkerRecords, 
+    useBiomarkerRecord,
+    addBiomarkerRecord 
+} from '@/db/models/biomarkerRecord'
+
+// From root (re-exported)
+import { BiomarkerRecord, useBiomarkerRecords } from '@/db'
+
+// Shared types and schemas
+import { BaseEntity } from '@/db/types/base.types'
+import { baseEntitySchema } from '@/db/schemas/base.schemas'
+import { DBStore } from '@/db/constants/stores.constants'
+```
+
+## Dexie API Commands
 
 above(key): Collection;
 aboveOrEqual(key): Collection;

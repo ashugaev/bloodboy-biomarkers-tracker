@@ -8,19 +8,20 @@ import { Button } from 'antd'
 import { dateComparator } from '@/aggrid/comparators/dateComprator'
 import { AddNewButton } from '@/components/AddNewButton'
 import { COLORS } from '@/constants/colors'
-import { addBiomarkerRecord, deleteBiomarkerRecord, updateBiomarkerRecord, useBiomarkerRecords } from '@/db/hooks/useBiomarkerRecords'
-import { useDocuments, updateDocument } from '@/db/hooks/useDocuments'
-import { useUnits } from '@/db/hooks/useUnits'
-import { createBiomarkerRecord } from '@/db/utils/biomarker.utils'
+import { addBiomarkerRecord, createBiomarkerRecord, deleteBiomarkerRecord, updateBiomarkerRecord, useBiomarkerRecords } from '@/db/models/biomarkerRecord'
+import { useDocuments, updateDocument } from '@/db/models/document'
+import { useUnits } from '@/db/models/unit'
 import { getRangeCellStyle } from '@/utils/cellStyle'
 
 import { BiomarkerRecordRowData, BiomarkerRecordsTableProps } from './BiomarkerRecordsTable.types'
 
 export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
     const { biomarkerId, biomarkerName, normalRange, targetRange, className } = props
-    const { records } = useBiomarkerRecords(biomarkerId)
-    const { documents } = useDocuments()
-    const { units } = useUnits()
+    const { data: records } = useBiomarkerRecords({
+        filter: (item) => item.biomarkerId === biomarkerId && item.approved,
+    })
+    const { data: documents } = useDocuments()
+    const { data: units } = useUnits()
 
     const handleDelete = useCallback(async (id: string) => {
         await deleteBiomarkerRecord(id)
@@ -37,8 +38,7 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
     }, [biomarkerId, records])
 
     const rowData = useMemo(() => {
-        const approvedRecords = records.filter(r => r.approved)
-        return approvedRecords.map(record => {
+        return records.map(record => {
             const document = documents.find(d => d.id === record.documentId)
             const unit = units.find(u => u.ucumCode === record.ucumCode)
             return {

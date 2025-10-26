@@ -6,10 +6,9 @@ import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, message } from 'antd'
 
 import { ValidationWarning } from '@/components/ValidationWarning'
-import { modifyBiomarkerRecord, deleteBiomarkerRecord } from '@/db/hooks/useBiomarkerRecords'
-import { useUnits } from '@/db/hooks/useUnits'
-import { BiomarkerRecord } from '@/db/types'
-import { ExtractedBiomarker } from '@/openai/biomarkers'
+import { BiomarkerRecord, deleteBiomarkerRecord, modifyBiomarkerRecord } from '@/db/models/biomarkerRecord'
+import { useUnits } from '@/db/models/unit'
+import { ExtractedBiomarker } from '@/openai/openai.biomarkers'
 import { getInvalidCellStyle } from '@/utils/cellStyle'
 
 import { ExtractionResultsProps } from './ExtractionResults.types'
@@ -17,7 +16,7 @@ import { ExtractionResultsProps } from './ExtractionResults.types'
 export const ExtractionResults = (props: ExtractionResultsProps) => {
     const { biomarkers, configs, onSave, onCancel, onAddNew, className } = props
     const [rowData, setRowData] = useState<ExtractedBiomarker[]>(biomarkers)
-    const { units } = useUnits()
+    const { data: units } = useUnits()
 
     const handleDelete = useCallback(async (id?: string) => {
         if (id) {

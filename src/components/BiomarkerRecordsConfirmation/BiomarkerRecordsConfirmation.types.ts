@@ -1,4 +1,4 @@
-import { BiomarkerRecord } from '@/db/types'
+import { BiomarkerRecord } from '@/db/models/biomarkerRecord'
 
 export interface BiomarkerRecordsConfirmationProps {
     records: BiomarkerRecord[]

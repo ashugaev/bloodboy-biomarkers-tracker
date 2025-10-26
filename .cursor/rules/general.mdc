@@ -27,4 +27,33 @@ alwaysApply: true
 - Do not create any example files or .md files for new features.
 - Never use a fallback for a getter (`obj.get('field')`).
 - Never wrap imports in try/catch. Imports are always on top of the file.
-- One file — one utility.
+- **Always use camelCase for file names** (e.g., `recordKey.ts`, `entity.utils.ts`, not `record-key.ts`, `entity-utils.ts`)
+
+## Import Rules
+- **Always use absolute imports with `@/` alias** instead of relative imports
+- ✅ Good: `import { Button } from '@/components/Button'`
+- ❌ Bad: `import { Button } from '../Button'`
+- ✅ Good: `import { db } from '@/db/services/db.service'`
+- ❌ Bad: `import { db } from '../../services/db.service'`
+- Import order:
+  1. External packages (React, antd, etc.)
+  2. Components (`@/components/...`)
+  3. Database models (`@/db/...`)
+  4. Other imports (`@/utils/...`, `@/constants/...`, etc.)
+  5. Relative imports for local files (only `./ComponentName.types.ts`, `./ComponentName.utils.ts`)
+
+## File Structure Rules
+
+### Global Utilities (src/utils/, src/db/utils/, etc.)
+- **One file = one utility function**
+- Example: `src/utils/formatDate.ts` exports only `formatDate()`
+
+### React Component Utilities
+- **All component utilities in ComponentName.utils.ts**
+- Multiple helper functions allowed in one file
+- Example: `UploadArea/UploadArea.utils.ts` can export `createRecordKey()`, `validateFile()`, etc.
+
+## Colors
+- Always use color constants from `src/constants/colors.ts`
+- Import: `import { COLORS } from '@/constants/colors'`
+- Never use hardcoded color values like `#ff4d4f`, use `COLORS.ERROR` instead

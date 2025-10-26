@@ -1,6 +1,5 @@
-import { updateDocument, deleteDocument } from '@/db/hooks/useDocuments'
-
-import { DocumentMetadataForm, DocumentMetadataFormData } from '../DocumentMetadataForm'
+import { DocumentMetadataForm, DocumentMetadataFormData } from '@/components/DocumentMetadataForm'
+import { updateDocument, deleteDocument } from '@/db/models/document'
 
 import { DocumentConfirmationProps } from './DocumentConfirmation.types'
 

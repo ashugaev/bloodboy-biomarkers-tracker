@@ -1,4 +1,4 @@
-import { BiomarkerConfig } from '@/db/types'
+import { BiomarkerConfig } from '@/db/models/biomarkerConfig'
 
 export interface BiomarkerStats {
     lastMeasurement?: number
@@ -8,6 +8,7 @@ export interface BiomarkerStats {
 
 export interface BiomarkerRowData extends BiomarkerConfig {
     unitTitle?: string
+    history: number[]
     stats: BiomarkerStats
 }
 

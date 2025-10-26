@@ -1,6 +1,5 @@
-import { updateBiomarkerConfig, deleteBiomarkerConfig } from '@/db/hooks/useBiomarkerConfigs'
-
-import { NewBiomarkersTable, NewBiomarkerRow } from '../NewBiomarkersTable'
+import { NewBiomarkersTable, NewBiomarkerRow } from '@/components/NewBiomarkersTable'
+import { deleteBiomarkerConfig, updateBiomarkerConfig } from '@/db/models/biomarkerConfig'
 
 import { BiomarkerConfigsConfirmationProps } from './BiomarkerConfigsConfirmation.types'
 

@@ -7,19 +7,19 @@ import { Button } from 'antd'
 import { useNavigate } from 'react-router-dom'
 
 import { AddNewButton } from '@/components/AddNewButton'
-import { addBiomarkerConfig, deleteBiomarkerConfig, updateBiomarkerConfig, useBiomarkerConfigs } from '@/db/hooks/useBiomarkerConfigs'
-import { useBiomarkerRecords } from '@/db/hooks/useBiomarkerRecords'
-import { useUnits } from '@/db/hooks/useUnits'
-import { createBiomarkerConfig } from '@/db/utils/biomarker.utils'
+import { COLORS } from '@/constants/colors'
+import { addBiomarkerConfig, createBiomarkerConfig, deleteBiomarkerConfig, updateBiomarkerConfig, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
+import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
+import { useUnits } from '@/db/models/unit'
 import { getInvalidCellStyle, getRangeCellStyle } from '@/utils/cellStyle'
 
 import { BiomarkerRowData, BiomarkersDataTableProps } from './BiomarkersDataTable.types'
 
 export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
     const { className } = props
-    const { configs } = useBiomarkerConfigs(true)
-    const { records } = useBiomarkerRecords()
-    const { units } = useUnits()
+    const { data: configs } = useBiomarkerConfigs({ filter: (c) => c.approved })
+    const { data: records } = useBiomarkerRecords({ filter: (r) => r.approved })
+    const { data: units } = useUnits()
     const navigate = useNavigate()
 
     const handleDelete = useCallback(async (id: string) => {
@@ -38,15 +38,24 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
         await addBiomarkerConfig(newConfig)
     }, [])
 
+    const sparklineTooltipRenderer = useCallback((params: { yValue?: number }) => {
+        return {
+            title: '',
+            content: params.yValue?.toFixed(2) ?? 'N/A',
+        }
+    }, [])
+
     const rowData = useMemo(() => {
         return configs.map(config => {
-            const configRecords = records.filter(r => r.biomarkerId === config.id && r.approved)
+            const configRecords = records.filter(r => r.biomarkerId === config.id)
             const values = configRecords.map(r => r.value).filter((v): v is number => v !== undefined)
             const unit = units.find(u => u.ucumCode === config.ucumCode)
+            const lastFiveValues = values.slice(-5)
 
             return {
                 ...config,
                 unitTitle: unit?.title,
+                history: lastFiveValues,
                 stats: {
                     lastMeasurement: values.length > 0 ? values[values.length - 1] : undefined,
                     maxResult: values.length > 0 ? Math.max(...values) : undefined,
@@ -88,6 +97,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
         ))
     }, [handleDelete])
 
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     const columnDefs = useMemo<Array<ColDef<BiomarkerRowData>>>(() => [
         {
             colId: 'view',
@@ -236,6 +246,55 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
             valueGetter: (params) => params.data?.stats.minResult ?? '',
         },
         {
+            field: 'history',
+            headerName: 'History',
+            flex: 1,
+            minWidth: 150,
+            sortable: false,
+            filter: false,
+            cellRenderer: 'agSparklineCellRenderer',
+            cellStyle: { cursor: 'pointer' },
+            onCellClicked: (params) => {
+                if (params.data?.id) {
+                    handleViewRecords(params.data.id)
+                }
+            },
+            cellRendererParams: (params: ICellRendererParams<BiomarkerRowData>) => {
+                const normalRange = params.data?.normalRange
+                const targetRange = params.data?.targetRange
+
+                return {
+                    sparklineOptions: {
+                        type: 'bar',
+                        direction: 'horizontal',
+                        axis: {
+                            strokeWidth: 0,
+                        },
+                        tooltip: {
+                            renderer: sparklineTooltipRenderer,
+                        },
+                        formatter: (formatterParams: { yValue: number }) => {
+                            const value = formatterParams.yValue
+
+                            if (normalRange?.min !== undefined && normalRange?.max !== undefined) {
+                                if (value < normalRange.min || value > normalRange.max) {
+                                    return { fill: COLORS.ERROR }
+                                }
+                            }
+
+                            if (targetRange?.min !== undefined && targetRange?.max !== undefined) {
+                                if (value < targetRange.min || value > targetRange.max) {
+                                    return { fill: COLORS.WARNING }
+                                }
+                            }
+
+                            return { fill: COLORS.SUCCESS }
+                        },
+                    },
+                }
+            },
+        },
+        {
             colId: 'delete',
             headerName: '',
             minWidth: 80,
@@ -246,7 +305,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
             editable: false,
             cellRenderer: DeleteButtonCellRenderer,
         },
-    ], [ViewButtonCellRenderer, DeleteButtonCellRenderer, units])
+    ], [ViewButtonCellRenderer, DeleteButtonCellRenderer, units, sparklineTooltipRenderer])
 
     const onCellValueChanged = useCallback(async (event: CellValueChangedEvent<BiomarkerRowData>) => {
         const row = event.data

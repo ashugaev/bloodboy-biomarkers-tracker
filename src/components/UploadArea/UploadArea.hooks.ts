@@ -3,7 +3,7 @@ import { useCallback } from 'react'
 import * as pdfjsLib from 'pdfjs-dist'
 import { ZodError } from 'zod'
 
-import { ExtractionResult, extractionResultSchema, ExtractedBiomarker } from '@/openai/biomarkers'
+import { ExtractionResult, extractionResultSchema, ExtractedBiomarker } from '@/openai/openai.biomarkers'
 import { renderPageToBase64 } from '@/utils/pdf'
 import { validateUcumCode } from '@/utils/ucum'
 

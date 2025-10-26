@@ -112,10 +112,16 @@ module.exports = {
                         message: 'Use AgGridTableProps instead (import { AgGridTableProps } from \'@/components/tables\')',
                     },
                 ],
-                patterns: [{
-                    group: ['@mui/icons-material/*'],
-                    message: 'Use \'Icon\' component instead',
-                }],
+                patterns: [
+                    {
+                        group: ['@mui/icons-material/*'],
+                        message: 'Use \'Icon\' component instead',
+                    },
+                    {
+                        group: ['../*', '../../*', '../../../*'],
+                        message: 'Use absolute imports via @ alias instead of relative imports (e.g., @/utils/... instead of ../...)',
+                    },
+                ],
             },
         ],
         'import/order': [

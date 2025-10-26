@@ -5,30 +5,28 @@ import { RcFile } from 'antd/es/upload/interface'
 import { UploadRequestOption } from 'rc-upload/lib/interface'
 import { v4 as uuidv4 } from 'uuid'
 
-import { useBiomarkerConfigs } from '@/db/hooks/useBiomarkerConfigs'
-import { addDocument } from '@/db/hooks/useDocuments'
-import { useUnconfirmedBiomarkerConfigs } from '@/db/hooks/useUnconfirmedBiomarkerConfigs'
-import { useUnconfirmedBiomarkerRecords } from '@/db/hooks/useUnconfirmedBiomarkerRecords'
-import { useUnconfirmedDocuments } from '@/db/hooks/useUnconfirmedDocuments'
-import { useUnits } from '@/db/hooks/useUnits'
-import { getCurrentUserId } from '@/db/hooks/useUser'
+import { UploadDropZone } from '@/components/UploadDropZone'
+import { UploadStatus, UploadStage } from '@/components/UploadStatus'
+import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
+import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
+import { addDocument, useDocuments, DocumentType } from '@/db/models/document'
+import { useUnits } from '@/db/models/unit'
+import { getCurrentUserId } from '@/db/models/user'
 import { db } from '@/db/services/db.service'
-import { DocumentType } from '@/db/types'
 import { useExtractBiomarkers } from '@/openai'
-import { ExtractionResult } from '@/openai/biomarkers'
-
-import { UploadDropZone } from '../UploadDropZone'
-import { UploadStatus, UploadStage } from '../UploadStatus'
+import { ExtractionResult } from '@/openai/openai.biomarkers'
 
 import { usePdfExtraction } from './UploadArea.hooks'
+import { createRecordKey } from './UploadArea.utils'
 
 export const UploadArea = () => {
     const { extractBiomarkers, hasApiKey } = useExtractBiomarkers()
-    const { configs } = useBiomarkerConfigs()
-    const { units } = useUnits()
-    const { unconfirmedDocuments } = useUnconfirmedDocuments()
-    const { unconfirmedConfigs } = useUnconfirmedBiomarkerConfigs()
-    const { unconfirmedRecords } = useUnconfirmedBiomarkerRecords()
+    const { data: configs } = useBiomarkerConfigs()
+    const { data: records } = useBiomarkerRecords()
+    const { data: units } = useUnits()
+    const { data: unconfirmedDocuments } = useDocuments({ filter: (item) => !item.approved })
+    const { data: unconfirmedConfigs } = useBiomarkerConfigs({ filter: (item) => !item.approved })
+    const { data: unconfirmedRecords } = useBiomarkerRecords({ filter: (item) => !item.approved })
 
     const [uploadStage, setUploadStage] = useState<UploadStage | null>(null)
     const [currentPage, setCurrentPage] = useState<number>(0)
@@ -200,7 +198,7 @@ export const UploadArea = () => {
                 }
             })
 
-        const newRecords = biomarkers
+        const candidateRecords = biomarkers
             .map(biomarker => {
                 const existingConfig = configs.find(c => c.name === biomarker.name)
                 const biomarkerId = existingConfig?.id ?? newConfigIds[biomarker.name ?? '']
@@ -222,6 +220,10 @@ export const UploadArea = () => {
                 }
             })
             .filter((record): record is NonNullable<typeof record> => record !== null)
+
+        const existingKeys = new Set(records.map(createRecordKey))
+
+        const newRecords = candidateRecords.filter(c => !existingKeys.has(createRecordKey(c)))
 
         const bulkOperations = []
 

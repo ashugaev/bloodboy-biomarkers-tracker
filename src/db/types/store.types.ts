@@ -1,8 +1,8 @@
-import { DBStore } from '../constants/stores'
-
-import { BiomarkerConfig, BiomarkerRecord } from './biomarker.types'
-import { UploadedDocument } from './document.types'
-import { AppSettings } from './settings.types'
+import { DBStore } from '@/db/constants/stores.constants'
+import { AppSettings } from '@/db/models/appSettings'
+import { BiomarkerConfig } from '@/db/models/biomarkerConfig'
+import { BiomarkerRecord } from '@/db/models/biomarkerRecord'
+import { UploadedDocument } from '@/db/models/document'
 
 export interface StoreTypeMap {
     [DBStore.BIOMARKER_CONFIGS]: BiomarkerConfig

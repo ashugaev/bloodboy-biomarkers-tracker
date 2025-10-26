@@ -3,8 +3,7 @@ import { useState } from 'react'
 import { UploadOutlined, FileOutlined, DeleteOutlined } from '@ant-design/icons'
 import { Button, Card, List, Typography, Tag, Space } from 'antd'
 
-import { createDocument, formatFileSize, getDocumentTypeFromMimeType, getRecordsByDocument } from '@/db'
-import { useDocuments, addDocument, deleteDocument } from '@/db/hooks'
+import { createDocument, formatFileSize, getDocumentTypeFromMimeType, useDocuments, addDocument, deleteDocument, useBiomarkerRecords } from '@/db'
 
 import { DocumentUploadProps } from './DocumentUpload.types'
 
@@ -12,7 +11,8 @@ export const DocumentUpload = (props: DocumentUploadProps) => {
     const { className } = props
     const { Text } = Typography
 
-    const { documents, loading } = useDocuments()
+    const { data: documents, loading } = useDocuments()
+    const { data: allRecords } = useBiomarkerRecords()
 
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [recordCounts, setRecordCounts] = useState<Record<string, number>>({})
@@ -31,8 +31,6 @@ export const DocumentUpload = (props: DocumentUploadProps) => {
     const handleUpload = async () => {
         if (!selectedFile) return
 
-        const filePath = URL.createObjectURL(selectedFile)
-
         const newDocument = await createDocument({
             fileName: `${Date.now()}_${selectedFile.name}`,
             originalName: selectedFile.name,
@@ -40,7 +38,6 @@ export const DocumentUpload = (props: DocumentUploadProps) => {
             mimeType: selectedFile.type,
             type: getDocumentTypeFromMimeType(selectedFile.type),
             uploadDate: new Date(),
-            filePath,
         })
 
         await addDocument(newDocument)
@@ -53,14 +50,12 @@ export const DocumentUpload = (props: DocumentUploadProps) => {
     }
 
     const loadRecordCounts = () => {
-        void (async () => {
-            const counts: Record<string, number> = {}
-            for (const doc of documents) {
-                const records = await getRecordsByDocument(doc.id)
-                counts[doc.id] = records.length
-            }
-            setRecordCounts(counts)
-        })()
+        const counts: Record<string, number> = {}
+        for (const doc of documents) {
+            const records = allRecords.filter(r => r.documentId === doc.id)
+            counts[doc.id] = records.length
+        }
+        setRecordCounts(counts)
     }
 
     if (loading) return <div className='text-center py-8'>Loading documents...</div>
