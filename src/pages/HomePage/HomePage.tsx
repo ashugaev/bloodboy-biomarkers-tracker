@@ -22,7 +22,7 @@ export const HomePage = (props: HomePageProps) => {
                     </div>
 
                     <div className='flex items-center gap-1 md:order-4 md:ms-4'>
-                        <Link to='/data' className='w-full sm:w-auto whitespace-nowrap py-2 px-3 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-full border border-transparent bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:bg-indigo-700'>
+                        <Link to='/data' className='w-full sm:w-auto whitespace-nowrap py-2 px-3 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-full border border-transparent bg-indigo-600 text-white hover:bg-indigo-700 hover:text-white focus:outline-none focus:bg-indigo-700'>
                             Get Started
                         </Link>
 
@@ -77,14 +77,14 @@ export const HomePage = (props: HomePageProps) => {
 
                         <div className='mt-4 flex justify-center gap-4 sm:mt-6'>
                             <Link
-                                className='inline-block rounded border border-indigo-600 bg-indigo-600 px-5 py-3 font-medium text-white shadow-sm transition-colors hover:bg-indigo-700'
+                                className='inline-block rounded border border-indigo-600 bg-indigo-600 py-3 px-4 font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 hover:text-white'
                                 to='/data'
                             >
                                 Get Started
                             </Link>
 
                             <a
-                                className='inline-block rounded border border-gray-200 px-5 py-3 font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 hover:text-gray-900'
+                                className='inline-block rounded border border-gray-200 py-3 px-4 font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 hover:text-gray-900'
                                 href='#'
                             >
                                 Learn More
@@ -94,7 +94,7 @@ export const HomePage = (props: HomePageProps) => {
                 </div>
             </section>
 
-            <section id='features' className='bg-white py-10 sm:py-14'>
+            <section id='features' className='bg-gray-50 py-10 sm:py-14'>
                 <div className='max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto'>
                     <div className='max-w-2xl mx-auto text-center mb-10 lg:mb-14'>
                         <h2 className='text-2xl font-bold md:text-4xl md:leading-tight'>Features</h2>
@@ -202,7 +202,7 @@ export const HomePage = (props: HomePageProps) => {
                 </div>
             </section>
 
-            <section className='bg-gray-50 py-16'>
+            <section className='bg-white py-16'>
                 <div className='container mx-auto px-4'>
                     <h2 className='text-3xl font-bold text-center text-gray-900 mb-12'>
                         What Our Users Say
@@ -351,7 +351,7 @@ export const HomePage = (props: HomePageProps) => {
                                 </li>
                             </ul>
 
-                            <Link to='/data' className='mt-5 py-3 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:bg-indigo-700'>
+                            <Link to='/data' className='mt-5 inline-block rounded border border-indigo-600 bg-indigo-600 py-3 px-4 font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 hover:text-white'>
                                 Get Started
                             </Link>
                         </div>
