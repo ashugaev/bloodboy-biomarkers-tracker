@@ -1,4 +1,4 @@
-# Blood Test Tracker
+# Bloodboy
 
 Blood test results tracking application built with React, TypeScript, Vite, AntDesign, and AG-Grid.
 
@@ -74,7 +74,7 @@ src/
 Copy `.env.example` to `.env` and configure:
 
 ```env
-VITE_APP_TITLE=Blood Test Tracker
+VITE_APP_TITLE=Bloodboy
 VITE_API_URL=http://localhost:3000/api
 VITE_ENVIRONMENT=development
 

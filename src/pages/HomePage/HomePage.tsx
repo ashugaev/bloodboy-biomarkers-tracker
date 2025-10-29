@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 import { Tooltip } from 'antd'
 import { Link } from 'react-router-dom'
@@ -9,33 +9,95 @@ export const HomePage = (props: HomePageProps) => {
     const { className } = props
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [openFaq, setOpenFaq] = useState<string | null>('1')
+    const [activeSection, setActiveSection] = useState('home')
+
+    useEffect(() => {
+        const sections = ['home', 'features', 'pricing', 'faq']
+        const observerOptions = {
+            root: null,
+            rootMargin: '-50% 0px -50% 0px',
+            threshold: 0,
+        }
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    setActiveSection(entry.target.id || 'home')
+                }
+            })
+        }, observerOptions)
+
+        // Observe all sections
+        sections.forEach((sectionId) => {
+            const element = document.getElementById(sectionId)
+            if (element) {
+                observer.observe(element)
+            }
+        })
+
+        // Special handling for home section (top of page)
+        const handleScroll = () => {
+            if (window.scrollY < 100) {
+                setActiveSection('home')
+            }
+        }
+
+        window.addEventListener('scroll', handleScroll)
+
+        return () => {
+            observer.disconnect()
+            window.removeEventListener('scroll', handleScroll)
+        }
+    }, [])
+
+    const scrollToSection = (sectionId: string) => {
+        if (sectionId === 'home') {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth',
+            })
+        } else {
+            const element = document.getElementById(sectionId)
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth' })
+            }
+        }
+        setIsMenuOpen(false) // Close mobile menu after navigation
+    }
 
     return (
         <div className={className}>
             <header className='sticky top-0 inset-x-0 flex flex-wrap md:justify-start md:flex-nowrap z-50 w-full text-sm'>
                 <nav className='mt-4 relative max-w-2xl w-full bg-white border border-gray-200 rounded-[24px] mx-2 flex flex-wrap md:flex-nowrap items-center justify-between p-1 ps-4 md:py-0 sm:mx-auto'>
                     <div className='flex items-center'>
-                        <Link className='flex items-center gap-2 rounded-md focus:outline-none focus:opacity-80' to='/' aria-label='Blood Test Tracker'>
-                            <img src='/favicon.svg' alt='Blood Test Tracker' className='w-4 h-4'/>
+                        <Link className='flex items-center gap-2 rounded-md focus:outline-none focus:opacity-80' to='/' aria-label='Bloodboy'>
+                            <img src='/favicon.svg' alt='Bloodboy' className='w-4 h-4'/>
                             <span className='text-xl font-semibold text-gray-800'>Bloodboy</span>
                         </Link>
                     </div>
 
                     <div className='flex items-center gap-1 md:order-4 md:ms-4'>
-                        <Link to='/data' className='w-full sm:w-auto whitespace-nowrap py-2 px-3 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-full border border-transparent bg-indigo-600 text-white hover:bg-indigo-700 hover:text-white focus:outline-none focus:bg-indigo-700'>
+                        {/* Desktop button */}
+                        <Link to='/data' className='hidden md:w-full md:inline-flex whitespace-nowrap py-2 px-3 justify-center items-center gap-x-2 text-sm font-medium rounded-full border border-transparent bg-indigo-600 text-white hover:bg-indigo-700 hover:text-white focus:outline-none focus:bg-indigo-700'>
                             Get Started
                         </Link>
 
+                        {/* Mobile menu button */}
                         <div className='md:hidden'>
-                            <button type='button' onClick={() => { setIsMenuOpen(!isMenuOpen) }} className='flex justify-center items-center size-9.5 border border-gray-200 text-gray-500 rounded-full hover:bg-gray-200 focus:outline-none focus:bg-gray-200' aria-label='Toggle navigation'>
+                            <button
+                                type='button'
+                                onClick={() => { setIsMenuOpen(!isMenuOpen) }}
+                                className='flex justify-center items-center size-9 border rounded-full border-gray-200 text-gray-500 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-colors'
+                                aria-label='Toggle navigation'
+                            >
                                 {!isMenuOpen ? (
-                                    <svg className='shrink-0 size-3.5' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
+                                    <svg className='size-4' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
                                         <line x1='3' x2='21' y1='6' y2='6'/>
                                         <line x1='3' x2='21' y1='12' y2='12'/>
                                         <line x1='3' x2='21' y1='18' y2='18'/>
                                     </svg>
                                 ) : (
-                                    <svg className='shrink-0 size-4' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
+                                    <svg className='size-4' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
                                         <path d='M18 6 6 18'/>
                                         <path d='m6 6 12 12'/>
                                     </svg>
@@ -44,27 +106,68 @@ export const HomePage = (props: HomePageProps) => {
                         </div>
                     </div>
 
-                    <div className={`${isMenuOpen ? 'block' : 'hidden'} overflow-hidden transition-all duration-300 basis-full grow md:block`}>
+                    <div className={`${isMenuOpen ? 'block' : 'hidden'} overflow-hidden transition-all duration-300 basis-full grow md:block ml-5 mr-8`}>
                         <div className='flex flex-col md:flex-row md:items-center md:justify-end gap-2 md:gap-3 mt-3 md:mt-0 py-2 md:py-0 md:ps-7'>
-                            <a className='py-0.5 md:py-3 px-4 md:px-1 border-s-2 md:border-s-0 md:border-b-2 border-gray-800 font-medium text-gray-800 hover:text-gray-800 focus:outline-none' href='#' aria-current='page'>
+                            <button
+                                className={`py-0.5 md:py-3 px-4 md:px-1 md:border-b-2 font-medium focus:outline-none transition-colors ${
+                                    activeSection === 'home'
+                                        ? 'md:border-gray-800 md:text-gray-800 text-gray-800'
+                                        : 'md:border-transparent text-gray-500 hover:text-gray-800'
+                                }`}
+                                onClick={() => { scrollToSection('home') }}
+                                aria-current={activeSection === 'home' ? 'page' : undefined}
+                            >
                                 Home
-                            </a>
-                            <a className='py-0.5 md:py-3 px-4 md:px-1 border-s-2 md:border-s-0 md:border-b-2 border-transparent text-gray-500 hover:text-gray-800 focus:outline-none' href='#features'>
+                            </button>
+                            <button
+                                className={`py-0.5 md:py-3 px-4 md:px-1 md:border-b-2 font-medium focus:outline-none transition-colors ${
+                                    activeSection === 'features'
+                                        ? 'md:border-gray-800 md:text-gray-800 text-gray-800'
+                                        : 'md:border-transparent text-gray-500 hover:text-gray-800'
+                                }`}
+                                onClick={() => { scrollToSection('features') }}
+                                aria-current={activeSection === 'features' ? 'page' : undefined}
+                            >
                                 Features
-                            </a>
-                            <a className='py-0.5 md:py-3 px-4 md:px-1 border-s-2 md:border-s-0 md:border-b-2 border-transparent text-gray-500 hover:text-gray-800 focus:outline-none' href='#pricing'>
+                            </button>
+                            <button
+                                className={`py-0.5 md:py-3 px-4 md:px-1 md:border-b-2 font-medium focus:outline-none transition-colors ${
+                                    activeSection === 'pricing'
+                                        ? 'md:border-gray-800 md:text-gray-800 text-gray-800'
+                                        : 'md:border-transparent text-gray-500 hover:text-gray-800'
+                                }`}
+                                onClick={() => { scrollToSection('pricing') }}
+                                aria-current={activeSection === 'pricing' ? 'page' : undefined}
+                            >
                                 Pricing
-                            </a>
-                            <a className='py-0.5 md:py-3 px-4 md:px-1 border-s-2 md:border-s-0 md:border-b-2 border-transparent text-gray-500 hover:text-gray-800 focus:outline-none' href='#faq'>
+                            </button>
+                            <button
+                                className={`py-0.5 md:py-3 px-4 md:px-1 md:border-b-2 font-medium focus:outline-none transition-colors ${
+                                    activeSection === 'faq'
+                                        ? 'md:border-gray-800 md:text-gray-800 text-gray-800'
+                                        : 'md:border-transparent text-gray-500 hover:text-gray-800'
+                                }`}
+                                onClick={() => { scrollToSection('faq') }}
+                                aria-current={activeSection === 'faq' ? 'page' : undefined}
+                            >
                                 FAQ
-                            </a>
+                            </button>
+
+                            {/* Mobile CTA button */}
+                            <Link
+                                to='/data'
+                                className='md:hidden w-full mt-3 inline-flex justify-center items-center gap-x-2 py-3 px-4 text-sm font-medium rounded-full border border-transparent bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:bg-indigo-700 transition-colors'
+                                onClick={() => { setIsMenuOpen(false) }}
+                            >
+                                Get Started
+                            </Link>
                         </div>
                     </div>
                 </nav>
             </header>
 
-            <section className='bg-white lg:grid lg:min-h-screen lg:place-content-center'>
-                <div className='mx-auto w-screen max-w-screen-xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8 lg:py-32'>
+            <section id='home' className='bg-white lg:grid lg:min-h-screen lg:place-content-center'>
+                <div className='mx-auto w-screen max-w-screen-xl px-4 py-32 sm:px-6 sm:py-48 lg:px-8 lg:py-64'>
                     <div className='mx-auto max-w-prose text-center'>
                         <h1 className='text-4xl font-bold text-gray-900 sm:text-5xl'>
                             Track <Tooltip title="or your bloodboy's"><span className='underline decoration-dashed underline-offset-4 cursor-help'>your</span></Tooltip> <strong className='text-indigo-600'>biomarkers</strong> and understand <strong className='text-indigo-600'>health</strong>
@@ -83,21 +186,21 @@ export const HomePage = (props: HomePageProps) => {
                                 Get Started
                             </Link>
 
-                            <a
+                            <button
                                 className='inline-block rounded border border-gray-200 py-3 px-4 font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 hover:text-gray-900'
-                                href='#'
+                                onClick={() => { scrollToSection('features') }}
                             >
                                 Learn More
-                            </a>
+                            </button>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <section id='features' className='bg-gray-50 py-10 sm:py-14'>
+            <section id='features' className='bg-gray-50 py-20 sm:py-28'>
                 <div className='max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto'>
                     <div className='max-w-2xl mx-auto text-center mb-10 lg:mb-14'>
-                        <h2 className='text-2xl font-bold md:text-4xl md:leading-tight'>Features</h2>
+                        <h2 className='text-3xl font-bold sm:text-4xl'>Features</h2>
                         <p className='mt-1 text-gray-600'>Everything you need to track and understand your blood test results.</p>
                     </div>
 
@@ -117,36 +220,38 @@ export const HomePage = (props: HomePageProps) => {
                                             PDF Upload
                                         </h3>
                                         <p className='mt-1 text-gray-600'>
-                                            Upload your blood test PDFs and automatically extract biomarker data with our intelligent parser.
+                                            Upload blood test results, including scans. An intelligent parser automatically extracts biomarker data without needing OCR software.
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className='flex gap-x-5 sm:gap-x-8'>
                                     <svg className='shrink-0 mt-2 size-8 text-gray-800' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
-                                        <line x1='12' y1='1' x2='12' y2='23'/>
-                                        <path d='M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'/>
+                                        <polyline points='23 6 13.5 15.5 8.5 10.5 1 18'/>
+                                        <polyline points='17 6 23 6 23 12'/>
                                     </svg>
                                     <div className='grow'>
                                         <h3 className='text-base sm:text-lg font-semibold text-gray-800'>
-                                            Track Changes
+                                            Track Changes Over Time
                                         </h3>
                                         <p className='mt-1 text-gray-600'>
-                                            Monitor how your biomarkers change over time with visual charts and historical comparisons.
+                                            Monitor how biomarkers change over time with historical comparisons. Visually track your health progress using data from different dates.
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className='flex gap-x-5 sm:gap-x-8'>
                                     <svg className='shrink-0 mt-2 size-8 text-gray-800' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
-                                        <polyline points='22 12 18 12 15 21 9 3 6 12 2 12'/>
+                                        <line x1='18' y1='20' x2='18' y2='10'/>
+                                        <line x1='12' y1='20' x2='12' y2='4'/>
+                                        <line x1='6' y1='20' x2='6' y2='14'/>
                                     </svg>
                                     <div className='grow'>
                                         <h3 className='text-base sm:text-lg font-semibold text-gray-800'>
-                                            Health Insights
+                                            Interactive Visualization
                                         </h3>
                                         <p className='mt-1 text-gray-600'>
-                                            Get instant insights into your health metrics and understand what your test results mean.
+                                            Explore your health data through interactive charts. Each biomarker gets a dedicated graph, helping you visualize trends and patterns clearly.
                                         </p>
                                     </div>
                                 </div>
@@ -160,39 +265,42 @@ export const HomePage = (props: HomePageProps) => {
                                     </svg>
                                     <div className='grow'>
                                         <h3 className='text-base sm:text-lg font-semibold text-gray-800'>
-                                            Secure Storage
+                                            You Control Your Data
                                         </h3>
                                         <p className='mt-1 text-gray-600'>
-                                            Your health data is stored securely in your browser. No cloud uploads, complete privacy.
+                                            Your health data is yours, stored locally, and never sent to servers. You control storage and can easily export everything to Excel.
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className='flex gap-x-5 sm:gap-x-8'>
                                     <svg className='shrink-0 mt-2 size-8 text-gray-800' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
-                                        <circle cx='12' cy='12' r='10'/>
-                                        <polyline points='12 6 12 12 16 14'/>
+                                        <polyline points='17 1 21 5 17 9'/>
+                                        <path d='M3 11V9a4 4 0 0 1 4-4h14'/>
+                                        <polyline points='7 23 3 19 7 15'/>
+                                        <path d='M21 13v2a4 4 0 0 1-4 4H3'/>
                                     </svg>
                                     <div className='grow'>
                                         <h3 className='text-base sm:text-lg font-semibold text-gray-800'>
-                                            Historical Data
+                                            Automatic Units Conversion
                                         </h3>
                                         <p className='mt-1 text-gray-600'>
-                                            Keep all your blood test results in one place and easily compare them across different time periods.
+                                            Automatically convert and standardize biomarker units across all your test reports. This allows
+                                            for seamless comparison of values from different labs and countries.
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className='flex gap-x-5 sm:gap-x-8'>
                                     <svg className='shrink-0 mt-2 size-8 text-gray-800' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
-                                        <path d='M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'/>
+                                        <path d='M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4'/>
                                     </svg>
                                     <div className='grow'>
                                         <h3 className='text-base sm:text-lg font-semibold text-gray-800'>
-                                            Free to Use
+                                            Free with Your API Key
                                         </h3>
                                         <p className='mt-1 text-gray-600'>
-                                            All features are completely free. No subscriptions, no hidden costs, just your health data at your fingertips.
+                                            The core application is free. For optional PDF data extraction, simply connect your personal OpenAI API key for processing.
                                         </p>
                                     </div>
                                 </div>
@@ -202,12 +310,17 @@ export const HomePage = (props: HomePageProps) => {
                 </div>
             </section>
 
-            <section className='bg-white py-16'>
-                <div className='container mx-auto px-4'>
-                    <h2 className='text-3xl font-bold text-center text-gray-900 mb-12'>
-                        What Our Users Say
-                    </h2>
-                    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto'>
+            <section className='bg-white py-32'>
+                <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
+                    <div className='max-w-2xl mx-auto text-center mb-10 lg:mb-14'>
+                        <h2 className='text-2xl font-bold sm:text-4xl text-gray-900'>
+                            What Our Users Say
+                        </h2>
+                        <p className='mt-1 text-gray-600'>
+                            Stories from <Tooltip title='Assuming infinite multiverse exists, making all stories technically real'><span className='underline decoration-dashed underline-offset-4 cursor-help text-indigo-600'>real</span></Tooltip> people
+                        </p>
+                    </div>
+                    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-[85rem] mx-auto'>
                         <div className='flex flex-col w-full p-6 divide-y rounded-md bg-white border border-gray-200'>
                             <div className='flex justify-between p-4'>
                                 <div className='flex space-x-4'>
@@ -292,19 +405,18 @@ export const HomePage = (props: HomePageProps) => {
                 </div>
             </section>
 
-            <section id='pricing' className='bg-gray-50 py-10 sm:py-14'>
-                <div className='max-w-[85rem] px-4 sm:px-6 lg:px-8 lg:py-14 mx-auto'>
+            <section id='pricing' className='bg-gray-50 py-20 sm:py-28'>
+                <div className='max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto'>
                     <div className='max-w-2xl mx-auto text-center mb-10 lg:mb-14'>
-                        <h2 className='text-2xl font-bold md:text-4xl md:leading-tight'>Pricing</h2>
-                        <p className='mt-1 text-gray-600'>All features are completely free, forever.</p>
+                        <h2 className='text-2xl font-bold sm:text-4xl'>Pricing</h2>
+                        <p className='mt-1 text-gray-600'>My app is free. OpenAI API is not</p>
                     </div>
 
                     <div className='flex justify-center'>
                         <div className='flex flex-col border border-gray-200 text-center rounded-xl p-8 bg-white max-w-sm w-full'>
                             <span className='font-bold text-5xl text-gray-800'>Free</span>
-                            <p className='mt-2 text-sm text-gray-500'>Forever free</p>
 
-                            <ul className='mt-7 space-y-2.5 text-sm'>
+                            <ul className='mt-7 mb-7 space-y-2.5 text-sm'>
                                 <li className='flex gap-x-2'>
                                     <svg className='shrink-0 mt-0.5 size-4 text-indigo-600' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
                                         <polyline points='20 6 9 17 4 12'/>
@@ -351,7 +463,7 @@ export const HomePage = (props: HomePageProps) => {
                                 </li>
                             </ul>
 
-                            <Link to='/data' className='mt-5 inline-block rounded border border-indigo-600 bg-indigo-600 py-3 px-4 font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 hover:text-white'>
+                            <Link to='/data' className='mt-3 inline-block rounded border border-indigo-600 bg-indigo-600 py-3 px-4 font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 hover:text-white'>
                                 Get Started
                             </Link>
                         </div>
@@ -359,12 +471,12 @@ export const HomePage = (props: HomePageProps) => {
                 </div>
             </section>
 
-            <section id='faq' className='bg-white py-10 sm:py-14'>
+            <section id='faq' className='bg-white py-20 sm:py-28'>
                 <div className='max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto'>
                     <div className='grid md:grid-cols-5 gap-10'>
                         <div className='md:col-span-2'>
                             <div className='max-w-xs'>
-                                <h2 className='text-2xl font-bold md:text-4xl md:leading-tight'>
+                                <h2 className='text-2xl font-bold sm:text-4xl'>
                                     Frequently<br/>asked questions
                                 </h2>
                                 <p className='mt-1 hidden md:block text-gray-600'>
@@ -388,7 +500,7 @@ export const HomePage = (props: HomePageProps) => {
                                     {openFaq === '1' && (
                                         <div className='w-full overflow-hidden transition-all duration-300'>
                                             <p className='text-gray-600'>
-                                                Yes, absolutely. All your health data is stored locally in your browser using IndexedDB. We never upload your data to any cloud servers, ensuring complete privacy and security.
+                                                You are in complete control of your data. All information is processed and stored locally in your browser, and nothing is ever sent to our servers. After your documents are processed, you can download the normalized results. You are solely responsible for the storage and security of your downloaded data.
                                             </p>
                                         </div>
                                     )}
@@ -426,7 +538,11 @@ export const HomePage = (props: HomePageProps) => {
                                     {openFaq === '3' && (
                                         <div className='w-full overflow-hidden transition-all duration-300'>
                                             <p className='text-gray-600'>
-                                                Yes, Blood Test Tracker is completely free to use. There are no subscriptions, no hidden costs, and no premium tiers. All features are available to everyone.
+                                                Yes, the application is completely free to use. However, for
+                                                the automated data extraction feature from PDF files, you will need to provide
+                                                your own OpenAI API key. This means you are responsible for the costs associated
+                                                with the OpenAI API usage, but the application itself has no fees,
+                                                subscriptions, or hidden costs.
                                             </p>
                                         </div>
                                     )}
@@ -469,25 +585,6 @@ export const HomePage = (props: HomePageProps) => {
                                         </div>
                                     )}
                                 </div>
-
-                                <div className='pt-6 pb-3'>
-                                    <button
-                                        className='group pb-3 inline-flex items-center justify-between gap-x-3 w-full md:text-lg font-semibold text-start text-gray-800 rounded-lg transition hover:text-gray-500 focus:outline-none focus:text-gray-500'
-                                        onClick={() => { setOpenFaq(openFaq === '6' ? null : '6') }}
-                                    >
-                                        What browsers are supported?
-                                        <svg className={`shrink-0 size-5 text-gray-600 ${openFaq === '6' ? 'rotate-180' : ''} transition-transform`} xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
-                                            <path d='m6 9 6 6 6-6'/>
-                                        </svg>
-                                    </button>
-                                    {openFaq === '6' && (
-                                        <div className='w-full overflow-hidden transition-all duration-300'>
-                                            <p className='text-gray-600'>
-                                                Blood Test Tracker works on all modern browsers including Chrome, Firefox, Safari, and Edge. We recommend using the latest version for the best experience.
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -499,7 +596,7 @@ export const HomePage = (props: HomePageProps) => {
                     <div className='flex flex-wrap justify-between items-center gap-2'>
                         <div>
                             <p className='text-xs text-gray-600'>
-                                © 2025 Blood Test Tracker
+                                © 2025 Bloodboy
                             </p>
                         </div>
 
