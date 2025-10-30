@@ -154,23 +154,25 @@ export const UploadArea = () => {
                 }
             })
 
-        const uniqueExtractedBiomarkerNames = new Set(biomarkers.map(b => b.name))
+        const uniqueExtractedBiomarkerNames = new Set(biomarkers.map(b => b.name).filter((n): n is string => !!n))
         const existingBiomarkerConfigNames = new Set(configs.map(c => c.name))
         const newConfigIds: Record<string, string> = {}
 
         const newConfigs = Array.from(uniqueExtractedBiomarkerNames)
-            .filter(name => !existingBiomarkerConfigNames.has(name))
+            .filter((name): name is string => !existingBiomarkerConfigNames.has(name))
             .map(name => {
                 const biomarker = biomarkers.find(b => b.name === name)
                 const configId = uuidv4()
                 newConfigIds[name] = configId
 
+                const biomarkerName = name ?? ''
+                const biomarkerUcumCode = biomarker?.ucumCode ?? ''
                 return {
                     id: configId,
                     userId,
-                    name,
+                    name: biomarkerName,
                     originalName: biomarker?.originalName,
-                    ucumCode: biomarker?.ucumCode,
+                    ucumCode: biomarkerUcumCode,
                     normalRange: biomarker?.referenceRange ? {
                         min: biomarker.referenceRange.min,
                         max: biomarker.referenceRange.max,
@@ -211,8 +213,9 @@ export const UploadArea = () => {
                 .map(r => {
                     const doc = documents.find(d => d.id === r.documentId)
                     const date = doc?.testDate
-                    return createRecordKey(r, date)
-                }),
+                    return date ? createRecordKey(r, date) : null
+                })
+                .filter((key): key is string => key !== null),
         )
 
         const newRecords = candidateRecords.filter(c => !existingKeys.has(createRecordKey(c, testDate)))

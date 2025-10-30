@@ -20,8 +20,8 @@ export const preloadBiomarkerConfigs = async (): Promise<void> => {
     const configs: BiomarkerConfig[] = BIOMARKER_CONFIGS.map(config => ({
         id: uuidv4(),
         userId,
-        name: config.name,
-        ucumCode: config.ucumCode,
+        name: config.name ?? '',
+        ucumCode: config.ucumCode ?? '',
         normalRange: config.normalRange,
         description: config.description,
         order: config.order,

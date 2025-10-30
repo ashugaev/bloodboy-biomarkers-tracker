@@ -4,6 +4,7 @@ export const COLORS = {
     SUCCESS: '#10b981',
     WARNING: '#f59e0b',
     ERROR: '#ef4444',
+    CHART_BAR: '#3b82f6',
     INVALID_CELL_BG: '#fee2e2',
     INVALID_CELL_BORDER: '#fca5a5',
     OUT_OF_NORMAL_BG: '#ffebee',

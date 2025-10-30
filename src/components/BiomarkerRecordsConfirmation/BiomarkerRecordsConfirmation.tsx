@@ -26,10 +26,9 @@ export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmation
         if (configs.length === 0) return
 
         await createBiomarkerRecords([{
-            biomarkerId: undefined,
+            biomarkerId: '',
             ucumCode: '',
             approved: false,
-            testDate: new Date(),
             latest: true,
         }])
     }

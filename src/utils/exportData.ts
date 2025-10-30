@@ -1,7 +1,6 @@
 import { message } from 'antd'
 import { exportDB } from 'dexie-export-import'
 
-import { AppSettings } from '@/db/models/appSettings'
 import { BiomarkerConfig } from '@/db/models/biomarkerConfig'
 import { BiomarkerRecord } from '@/db/models/biomarkerRecord'
 import { UploadedDocument } from '@/db/models/document'
@@ -65,14 +64,16 @@ export const exportData = async (data: ExportDataParams) => {
         const date = new Date().toISOString().split('T')[0]
 
         const jsonBlob = await exportDB(db, {
-            filter: (table: string, value: unknown) => {
+            transform: (table: string, value: unknown) => {
                 if (table === 'appSettings' && value && typeof value === 'object' && 'openaiApiKey' in value) {
                     return {
-                        ...value as AppSettings,
-                        openaiApiKey: '',
+                        value: {
+                            ...value as Record<string, unknown>,
+                            openaiApiKey: '',
+                        },
                     }
                 }
-                return value
+                return { value }
             },
         })
         downloadBlob(jsonBlob, `bloodboy_db_backup_${date}.json`)

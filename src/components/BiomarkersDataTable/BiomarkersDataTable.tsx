@@ -70,7 +70,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
                     .slice(-5)
                     .map(item => ({
                         value: item.record.value,
-                        date: new Date(item.date).toLocaleDateString(),
+                        date: item.date ? item.date.toLocaleDateString() : '',
                     }))
 
                 return {

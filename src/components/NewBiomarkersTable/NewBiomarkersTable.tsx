@@ -74,20 +74,13 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
         createNameColumn<NewBiomarkerRow>(),
         createOriginalNameColumn<NewBiomarkerRow>(),
         createUnitColumn<NewBiomarkerRow>(units),
-        {
-            ...createNormalRangeMinColumn<NewBiomarkerRow>(),
-        },
-        {
-            ...createNormalRangeMaxColumn<NewBiomarkerRow>(),
-
-        },
-        {
-            ...createTargetRangeMinColumn<NewBiomarkerRow>(),
-        },
+        createNormalRangeMinColumn<NewBiomarkerRow>(),
+        createNormalRangeMaxColumn<NewBiomarkerRow>(),
+        createTargetRangeMinColumn<NewBiomarkerRow>(),
         {
             ...createTargetRangeMaxColumn<NewBiomarkerRow>(),
             minWidth: 130,
-        },
+        } as ColDef<NewBiomarkerRow>,
         {
             colId: 'delete',
             headerName: '',

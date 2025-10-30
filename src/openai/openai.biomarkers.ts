@@ -31,18 +31,18 @@ export const extractedBiomarkerSchema = z.object({
     originalName: z.string().min(1),
     value: z.number(),
     unit: z.string().min(1),
-    ucumCode: z.string().optional().nullable(),
+    ucumCode: z.string().optional(),
     referenceRange: z.object({
-        min: z.number().optional().nullable(),
-        max: z.number().optional().nullable(),
+        min: z.number().optional(),
+        max: z.number().optional(),
     }).partial().optional(),
     order: z.number(),
 })
 
 export const extractionResultSchema = z.object({
     biomarkers: z.array(extractedBiomarkerSchema),
-    testDate: z.string().date().optional().nullable(),
-    labName: z.string().optional().nullable(),
+    testDate: z.string().date().optional(),
+    labName: z.string().optional(),
 })
 
 const buildExtractionPrompt = (existingBiomarkers: Array<{
@@ -147,23 +147,20 @@ export const useExtractBiomarkers = () => {
         }))
         const prompt = buildExtractionPrompt(existingBiomarkers)
 
-        const messages: Array<{
-            role: 'system' | 'user' | 'assistant'
-            content: string | Array<{ type: 'text' | 'image_url', text?: string, image_url?: { url: string } }>
-        }> = [
+        const messages = [
             {
-                role: 'system',
+                role: 'system' as const,
                 content: prompt,
             },
             {
-                role: 'user',
+                role: 'user' as const,
                 content: [
                     {
-                        type: 'text',
+                        type: 'text' as const,
                         text: 'Extract biomarkers from this image.',
                     },
                     {
-                        type: 'image_url',
+                        type: 'image_url' as const,
                         image_url: {
                             url: imageBase64,
                         },
@@ -174,8 +171,13 @@ export const useExtractBiomarkers = () => {
 
         if (followUpMessage) {
             messages.push({
-                role: 'user',
-                content: followUpMessage,
+                role: 'user' as const,
+                content: [
+                    {
+                        type: 'text' as const,
+                        text: followUpMessage,
+                    },
+                ],
             })
         }
 
@@ -183,9 +185,8 @@ export const useExtractBiomarkers = () => {
         console.log('AI Messages:', messages)
 
         const completion = await client.chat.completions.create({
-            // model: 'gpt-5-nano',
             model: 'gpt-5-mini',
-            messages,
+            messages: messages as never,
             reasoning_effort: 'low',
             temperature: 1,
             response_format: { type: 'json_object' },

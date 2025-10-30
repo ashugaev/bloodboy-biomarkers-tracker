@@ -27,7 +27,7 @@ export const themeConfig: ThemeConfig = {
             controlHeightSM: 32,
             borderRadiusLG: 9999,
             borderRadius: 4,
-            borderRadiusSM: 8,
+            borderRadiusSM: 4,
             primaryShadow: 'none',
         },
         Input: {

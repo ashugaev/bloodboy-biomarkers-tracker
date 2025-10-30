@@ -35,6 +35,7 @@ export const ImportButton = (props: ImportButtonProps) => {
                 onChange={(e) => { void handleFileChange(e) }}
             />
             <Button
+                size='small'
                 icon={<UploadOutlined/>}
                 onClick={handleClick}
                 className={className}

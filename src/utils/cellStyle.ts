@@ -22,7 +22,12 @@ export const getRangeCellStyle = (
     normalRange?: Range,
     targetRange?: Range,
 ): Record<string, string> => {
-    if (value === undefined) return {}
+    if (value === undefined) {
+        return {
+            backgroundColor: COLORS.INVALID_CELL_BG,
+            border: `1px solid ${COLORS.INVALID_CELL_BORDER}`,
+        }
+    }
 
     const isOutsideNormal =
         (normalRange?.min !== undefined && value < normalRange.min) ||

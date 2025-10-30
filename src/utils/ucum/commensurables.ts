@@ -5,5 +5,5 @@ const utils = UcumLhcUtils.getInstance()
 
 export const getCommensurableUnits = (code: string): string[] => {
     const res = utils.getCommensurables(code)
-    return res.map(u => u.csCode).filter(Boolean)
+    return res.map((u: { csCode?: string }) => u.csCode).filter(Boolean) as string[]
 }

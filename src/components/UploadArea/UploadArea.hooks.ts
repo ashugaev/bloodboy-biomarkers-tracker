@@ -27,7 +27,7 @@ export const usePdfExtraction = ({ extractBiomarkers, onPageProgress, onTotalPag
 
         while (retryCount <= MAX_RETRIES) {
             try {
-                const extractionResult = await extractBiomarkers(imageBase64, followUpMessage)
+                const extractionResult = await extractBiomarkers(imageBase64, followUpMessage.join('\n'))
 
                 if (extractionResult) {
                     try {
@@ -121,7 +121,7 @@ export const usePdfExtraction = ({ extractBiomarkers, onPageProgress, onTotalPag
             if (result?.biomarkers.length) {
                 const biomarkersWithOrder = result.biomarkers.map((biomarker, index) => ({
                     ...biomarker,
-                    order: biomarker.order + index + prevPageOrder,
+                    order: (biomarker.order ?? 0) + index + prevPageOrder,
                 }))
                 allBiomarkers.push(...biomarkersWithOrder)
                 prevPageOrder += result.biomarkers.length

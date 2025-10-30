@@ -36,6 +36,7 @@ export const ResetDbButton = (props: ResetDbButtonProps) => {
     return (
         <>
             <Button
+                size='small'
                 icon={<DeleteOutlined/>}
                 onClick={() => { setIsModalVisible(true) }}
                 danger

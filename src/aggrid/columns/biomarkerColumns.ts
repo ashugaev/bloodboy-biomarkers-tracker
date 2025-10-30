@@ -1,14 +1,19 @@
 import { ColDef, ICellRendererParams } from '@ag-grid-community/core'
 
 import { isRangeInvalid } from '@/aggrid/validators/rangeValidators'
-import { BiomarkerConfig } from '@/db/models/biomarkerConfig'
 import { Unit } from '@/db/models/unit'
 import { getInvalidCellStyle } from '@/utils/cellStyle'
 
-type BiomarkerWithRanges = Pick<BiomarkerConfig, 'id' | 'name' | 'ucumCode' | 'normalRange' | 'targetRange'>
+interface BiomarkerWithRanges {
+    id?: string
+    name?: string
+    ucumCode?: string
+    normalRange?: { min?: number, max?: number }
+    targetRange?: { min?: number, max?: number }
+}
 
 export const createNameColumn = <T extends BiomarkerWithRanges>(): ColDef<T> => ({
-    field: 'name',
+    field: 'name' as never,
     headerName: 'Name',
     flex: 1,
     minWidth: 180,
@@ -18,7 +23,7 @@ export const createNameColumn = <T extends BiomarkerWithRanges>(): ColDef<T> => 
 })
 
 export const createOriginalNameColumn = <T extends { originalName?: string }>(): ColDef<T> => ({
-    field: 'originalName',
+    field: 'originalName' as never,
     headerName: 'Original Name',
     flex: 0.8,
     minWidth: 150,
@@ -27,7 +32,7 @@ export const createOriginalNameColumn = <T extends { originalName?: string }>():
 })
 
 export const createNormalRangeMinColumn = <T extends BiomarkerWithRanges>(): ColDef<T> => ({
-    field: 'normalRange.min',
+    field: 'normalRange' as never,
     headerName: 'Normal Min',
     flex: 0.7,
     minWidth: 100,
@@ -49,7 +54,7 @@ export const createNormalRangeMinColumn = <T extends BiomarkerWithRanges>(): Col
 })
 
 export const createNormalRangeMaxColumn = <T extends BiomarkerWithRanges>(): ColDef<T> => ({
-    field: 'normalRange.max',
+    field: 'normalRange' as never,
     headerName: 'Normal Max',
     flex: 0.7,
     minWidth: 100,
@@ -71,7 +76,7 @@ export const createNormalRangeMaxColumn = <T extends BiomarkerWithRanges>(): Col
 })
 
 export const createTargetRangeMinColumn = <T extends BiomarkerWithRanges>(): ColDef<T> => ({
-    field: 'targetRange.min',
+    field: 'targetRange' as never,
     headerName: 'Target Min',
     flex: 0.7,
     minWidth: 100,
@@ -93,7 +98,7 @@ export const createTargetRangeMinColumn = <T extends BiomarkerWithRanges>(): Col
 })
 
 export const createTargetRangeMaxColumn = <T extends BiomarkerWithRanges>(): ColDef<T> => ({
-    field: 'targetRange.max',
+    field: 'targetRange' as never,
     headerName: 'Target Max',
     flex: 0.7,
     minWidth: 100,
@@ -115,9 +120,9 @@ export const createTargetRangeMaxColumn = <T extends BiomarkerWithRanges>(): Col
 })
 
 export const createUnitColumn = <T extends { ucumCode?: string, unitTitle?: string }>(
-    units: Unit[], field: string = 'ucumCode',
+    units: Unit[], field: keyof T = 'ucumCode' as keyof T,
 ): ColDef<T> => ({
-    field,
+    field: field as never,
     headerName: 'Unit',
     flex: 0.8,
     minWidth: 100,
@@ -130,7 +135,7 @@ export const createUnitColumn = <T extends { ucumCode?: string, unitTitle?: stri
         if (params.data) {
             const selectedUnit = units.find(u => u.title === params.newValue)
             if (selectedUnit) {
-                params.data[field] = selectedUnit.ucumCode
+                (params.data as Record<string, unknown>)[field as string] = selectedUnit.ucumCode
                 return true
             }
         }
@@ -144,7 +149,6 @@ export const createUnitColumn = <T extends { ucumCode?: string, unitTitle?: stri
 })
 
 export const createDeleteColumn = <T extends { id: string }>(
-    onDelete: (id: string) => void,
     DeleteButtonComponent: React.ComponentType<ICellRendererParams<T>>,
 ): ColDef<T> => ({
     colId: 'delete',

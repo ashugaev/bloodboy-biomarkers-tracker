@@ -7,9 +7,8 @@ import { Button } from 'antd'
 
 import { createUnitColumn } from '@/aggrid/columns/biomarkerColumns'
 import { dateComparator } from '@/aggrid/comparators/dateComprator'
-import { AddNewButton } from '@/components/AddNewButton'
 import { COLORS } from '@/constants/colors'
-import { createBiomarkerRecords, deleteBiomarkerRecord, updateBiomarkerRecord, useBiomarkerRecords } from '@/db/models/biomarkerRecord'
+import { deleteBiomarkerRecord, updateBiomarkerRecord, useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments, updateDocument } from '@/db/models/document'
 import { useUnits } from '@/db/models/unit'
 import { getRangeCellStyle } from '@/utils/cellStyle'
@@ -17,7 +16,7 @@ import { getRangeCellStyle } from '@/utils/cellStyle'
 import { BiomarkerRecordRowData, BiomarkerRecordsTableProps } from './BiomarkerRecordsTable.types'
 
 export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
-    const { biomarkerId, biomarkerName, normalRange, targetRange, className } = props
+    const { biomarkerId, normalRange, targetRange, className } = props
     const { data: records } = useBiomarkerRecords({
         filter: (item) => item.biomarkerId === biomarkerId && item.approved,
     })
@@ -27,17 +26,6 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
     const handleDelete = useCallback(async (id: string) => {
         await deleteBiomarkerRecord(id)
     }, [])
-
-    const handleAddNew = useCallback(async () => {
-        const defaultUcumCode = records.find(r => r.ucumCode)?.ucumCode
-        await createBiomarkerRecords([{
-            biomarkerId,
-            ucumCode: defaultUcumCode ?? '',
-            approved: true,
-            testDate: new Date(),
-            latest: true,
-        }])
-    }, [biomarkerId, records])
 
     const rowData = useMemo(() => {
         return records.map(record => {
@@ -137,14 +125,6 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
 
     return (
         <div className={`bg-white p-6 rounded-lg shadow-sm flex flex-col ${className ?? ''}`}>
-            <div className='mb-4'>
-                <div className='flex justify-between items-center mb-2'>
-                    <h3 className='text-lg font-medium'>{biomarkerName} Records ({rowData.length})</h3>
-                    <AddNewButton onClick={() => { void handleAddNew() }} label='Add Record'/>
-                </div>
-                <p className='text-sm text-gray-600'>View and manage all records for this biomarker</p>
-            </div>
-
             <div className='mb-4 flex gap-6'>
                 {normalRange && (normalRange.min !== undefined || normalRange.max !== undefined) && (
                     <div className='flex items-center gap-2'>

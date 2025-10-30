@@ -13,6 +13,7 @@ export const renderPageToBase64 = async (page: pdfjsLib.PDFPageProxy, scale = 2.
     await page.render({
         canvasContext: context,
         viewport,
+        canvas,
     }).promise
 
     return canvas.toDataURL('image/png')

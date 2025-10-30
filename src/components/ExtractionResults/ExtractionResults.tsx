@@ -118,7 +118,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
         const data = event.data
         const colDef = event.colDef
         const newValue = event.newValue as number | string | undefined
-        const field = colDef.field as keyof BiomarkerRecord
+        const field = colDef.field as string
 
         setRowData(prev => [...prev])
 
@@ -132,9 +132,9 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
             if (selectedOption) {
                 const config = configs.find(c => c.id === selectedOption.value)
                 if (config?.ucumCode) {
-                    void modifyBiomarkerRecord(data.id, (record: BiomarkerRecord) => {
-                        record.biomarkerId = config.id
-                        record.ucumCode = config.ucumCode ?? ''
+                    void modifyBiomarkerRecord(data.id, (record) => {
+                        (record as unknown as Record<string, unknown>).biomarkerId = config.id;
+                        (record as unknown as Record<string, unknown>).ucumCode = config.ucumCode ?? ''
                     })
                 }
             }
@@ -146,8 +146,8 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
                 })
             }
         } else if (field && newValue !== undefined) {
-            void modifyBiomarkerRecord(data.id, (record: BiomarkerRecord) => {
-                (record[field] as number | string) = newValue
+            void modifyBiomarkerRecord(data.id, (record) => {
+                (record as unknown as Record<string, unknown>)[field] = newValue
             })
         }
     }, [biomarkerOptions, configs])

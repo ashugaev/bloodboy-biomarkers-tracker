@@ -10,7 +10,7 @@
     "build": "tsc && vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint ./src --ext .js,.ts,.tsx --quiet --max-warnings 0",
-    "lint:fix": "eslint ./src --ext .js,.ts,.tsx --fix",
+    "lint:fix": "npm run typecheck && eslint ./src --ext .js,.ts,.tsx --fix",
     "preview": "vite preview"
   },
   "dependencies": {

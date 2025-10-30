@@ -33,6 +33,7 @@ export const ExportButton = (props: ExportButtonProps) => {
             icon={<DownloadOutlined/>}
             onClick={handleExport}
             className={className}
+            size='small'
         >
             Export
         </Button>

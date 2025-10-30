@@ -84,7 +84,7 @@ export function createModelHooks<T extends object, K extends keyof T & string> (
         ): Promise<number> => {
             return await table
                 .where(table.schema.primKey.keyPath as K)
-                .equals(id)
+                .equals(id as never)
                 .modify((item) => {
                     callback(item)
                     if ('updatedAt' in item) {

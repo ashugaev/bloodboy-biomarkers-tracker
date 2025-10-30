@@ -44,7 +44,7 @@ const RoundedBar = (props: RoundedBarProps) => {
 }
 
 export const BiomarkerChart = (props: BiomarkerChartProps) => {
-    const { biomarkerId, biomarkerName, normalRange, targetRange, className } = props
+    const { biomarkerId, normalRange, targetRange, className } = props
     const { data: records } = useBiomarkerRecords({
         filter: (item) => item.biomarkerId === biomarkerId,
     })
@@ -93,11 +93,6 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
 
     return (
         <div className={cn('bg-white p-6 rounded-lg shadow-sm flex flex-col', className)}>
-            <div className='mb-4'>
-                <h3 className='text-lg font-medium'>{biomarkerName} Records ({chartData.length})</h3>
-                <p className='text-sm text-gray-600'>Visualize trends over time</p>
-            </div>
-
             <div className='mb-4 flex gap-6'>
                 {normalRange && (normalRange.min !== undefined || normalRange.max !== undefined) && (
                     <div className='flex items-center gap-2'>
@@ -130,7 +125,6 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
                         maxBarSize={40}
                         barGap={40}
                         barCategoryGap={40}
-                        shape={<RoundedBar/>}
                     >
                         <CartesianGrid strokeDasharray='3 3'/>
                         <XAxis
@@ -160,7 +154,7 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
                             />
                         )}
 
-                        <Bar dataKey='value' fill='#3b82f6' maxBarSize={40} shape={<RoundedBar/>}/>
+                        <Bar dataKey='value' fill={COLORS.CHART_BAR} maxBarSize={40} shape={RoundedBar as never}/>
                     </BarChart>
                 </ResponsiveContainer>
             </div>
