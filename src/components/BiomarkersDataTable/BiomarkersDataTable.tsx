@@ -91,6 +91,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
     const ViewButtonCellRenderer = useMemo(() => {
         return memo((cellProps: ICellRendererParams<BiomarkerRowData>) => (
             <Button
+                size='small'
                 icon={<RightOutlined/>}
                 iconPosition='end'
                 type='link'
@@ -237,13 +238,12 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
     }, [])
 
     return (
-        <div className={`bg-white p-6 rounded-lg shadow-sm flex flex-col ${className ?? ''}`}>
+        <div className={`bg-white p-6 rounded shadow-sm border border-gray-100 flex flex-col ${className ?? ''}`}>
             <div className='mb-4'>
                 <div className='flex justify-between items-center mb-2'>
                     <h3 className='text-lg font-medium'>Biomarkers ({rowData.length})</h3>
                     <AddNewButton onClick={() => { void handleAddNew() }}/>
                 </div>
-                <p className='text-sm text-gray-600'>Manage biomarker configurations and view statistics</p>
             </div>
 
             <div className='ag-theme-material flex-1'>

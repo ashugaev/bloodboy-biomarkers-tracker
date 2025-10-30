@@ -1,3 +1,4 @@
+import { UploadOutlined } from '@ant-design/icons'
 import { Button, Flex, Typography, Upload, message } from 'antd'
 import Dragger from 'antd/es/upload/Dragger'
 import { RcFile } from 'antd/es/upload/interface'
@@ -64,6 +65,7 @@ export const UploadDropZone = (props: UploadDropZoneProps) => {
             style={{
                 flexDirection: 'row',
                 backgroundColor: 'white',
+                borderRadius: '4px',
             }}
             beforeUpload={handleBeforeUpload}
             customRequest={draggerCustomRequest}
@@ -93,7 +95,7 @@ export const UploadDropZone = (props: UploadDropZoneProps) => {
                     </Flex>
                 </Flex>
                 {button && (
-                    <Button type='primary' disabled={props.disabled}>
+                    <Button type='primary' size='small' disabled={props.disabled} icon={<UploadOutlined/>}>
                         Select File
                     </Button>
                 )}

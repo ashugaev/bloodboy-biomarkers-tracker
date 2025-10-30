@@ -73,6 +73,7 @@ export const DocumentUpload = (props: DocumentUploadProps) => {
                         />
                         <Button
                             type='primary'
+                            size='small'
                             icon={<UploadOutlined/>}
                             onClick={() => { void handleUpload() }}
                             disabled={!selectedFile}
