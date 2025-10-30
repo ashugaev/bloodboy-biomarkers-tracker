@@ -91,7 +91,7 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
         {
             colId: 'delete',
             headerName: '',
-            minWidth: 80,
+            minWidth: 90,
             flex: 0.4,
             suppressMenu: true,
             sortable: false,

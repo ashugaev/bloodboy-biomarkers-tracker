@@ -3,14 +3,13 @@ import { useRef } from 'react'
 import { UploadOutlined } from '@ant-design/icons'
 import { Button } from 'antd'
 
-import { useImportData } from '@/utils/importFromExcel'
+import { importData } from '@/utils/importData'
 
 import { ImportButtonProps } from './ImportButton.types'
 
 export const ImportButton = (props: ImportButtonProps) => {
     const { className } = props
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const { existingIds, importFromExcel } = useImportData()
 
     const handleClick = () => {
         fileInputRef.current?.click()
@@ -19,7 +18,7 @@ export const ImportButton = (props: ImportButtonProps) => {
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
         if (file) {
-            await importFromExcel(file, existingIds)
+            await importData(file)
             if (fileInputRef.current) {
                 fileInputRef.current.value = ''
             }
@@ -31,7 +30,7 @@ export const ImportButton = (props: ImportButtonProps) => {
             <input
                 ref={fileInputRef}
                 type='file'
-                accept='.xlsx,.xls'
+                accept='.json'
                 style={{ display: 'none' }}
                 onChange={(e) => { void handleFileChange(e) }}
             />
@@ -40,7 +39,7 @@ export const ImportButton = (props: ImportButtonProps) => {
                 onClick={handleClick}
                 className={className}
             >
-                Import Excel
+                Import
             </Button>
         </>
     )

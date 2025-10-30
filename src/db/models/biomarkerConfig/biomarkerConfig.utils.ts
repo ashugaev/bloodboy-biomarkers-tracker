@@ -25,6 +25,7 @@ export const preloadBiomarkerConfigs = async (): Promise<void> => {
         normalRange: config.normalRange,
         description: config.description,
         order: config.order,
+        isDefault: config.isDefault,
         approved: true,
         createdAt: now,
         updatedAt: now,

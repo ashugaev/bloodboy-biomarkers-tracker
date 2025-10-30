@@ -6,6 +6,7 @@ import { BiomarkerRecord } from '@/db/models/biomarkerRecord'
 import { UploadedDocument } from '@/db/models/document'
 import { Unit } from '@/db/models/unit'
 import { User } from '@/db/models/user'
+import { DB_NAME } from '@/constants'
 
 let currentUserId: string | null = null
 
@@ -26,7 +27,7 @@ class BloodTestDatabase extends Dexie {
     units!: EntityTable<Unit, 'ucumCode'>
 
     constructor () {
-        super('blood-test-db')
+        super(DB_NAME)
 
         this.version(1).stores({
             biomarkerConfigs: 'id, userId, approved, createdAt, updatedAt',

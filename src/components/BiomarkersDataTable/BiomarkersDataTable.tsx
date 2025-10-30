@@ -14,6 +14,7 @@ import { createBiomarkerConfigs, deleteBiomarkerConfig, updateBiomarkerConfig, u
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments } from '@/db/models/document'
 import { useUnits } from '@/db/models/unit'
+import { ViewMode } from '@/types/viewMode.types'
 import { getRangeCellStyle } from '@/utils/cellStyle'
 
 import { BiomarkerRowData, BiomarkersDataTableProps } from './BiomarkersDataTable.types'
@@ -30,8 +31,8 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
         await deleteBiomarkerConfig(id)
     }, [])
 
-    const handleViewRecords = useCallback((id: string) => {
-        void navigate(`/biomarker/${id}`)
+    const handleViewRecords = useCallback((id: string, mode: ViewMode = 'table') => {
+        void navigate(`/biomarker/${id}`, { state: { viewMode: mode } })
     }, [navigate])
 
     const handleAddNew = useCallback(async () => {
@@ -42,46 +43,49 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
     }, [])
 
     const rowData = useMemo(() => {
-        return configs.map(config => {
-            const configRecords = records.filter(r => r.biomarkerId === config.id)
+        return configs
+            .map(config => {
+                const configRecords = records.filter(r => r.biomarkerId === config.id)
 
-            const sortedData = configRecords
-                .map(record => {
-                    const document = documents.find(d => d.id === record.documentId)
-                    const date = document?.testDate
-                    return {
-                        record,
-                        date,
-                        timestamp: date?.getTime() ?? 0,
-                    }
-                })
-                .sort((a, b) => a.timestamp - b.timestamp)
+                const sortedData = configRecords
+                    .map(record => {
+                        const document = documents.find(d => d.id === record.documentId)
+                        const date = document?.testDate
+                        return {
+                            record,
+                            date,
+                            timestamp: date?.getTime() ?? 0,
+                        }
+                    })
+                    .sort((a, b) => a.timestamp - b.timestamp)
 
-            const values = sortedData
-                .map(item => item.record.value)
-                .filter((v): v is number => v !== undefined)
+                const values = sortedData
+                    .map(item => item.record.value)
+                    .filter((v): v is number => v !== undefined)
 
-            const unit = units.find(u => u.ucumCode === config.ucumCode)
+                const unit = units.find(u => u.ucumCode === config.ucumCode)
 
-            const lastFiveData = sortedData
-                .filter((item): item is typeof item & { record: { value: number } } => item.record.value !== undefined)
-                .slice(-5)
-                .map(item => ({
-                    value: item.record.value,
-                    date: new Date(item.date).toLocaleDateString(),
-                }))
+                const lastFiveData = sortedData
+                    .filter((item): item is typeof item & { record: { value: number } } => item.record.value !== undefined)
+                    .slice(-5)
+                    .map(item => ({
+                        value: item.record.value,
+                        date: new Date(item.date).toLocaleDateString(),
+                    }))
 
-            return {
-                ...config,
-                unitTitle: unit?.title,
-                history: lastFiveData,
-                stats: {
-                    lastMeasurement: values.length > 0 ? values[values.length - 1] : undefined,
-                    maxResult: values.length > 0 ? Math.max(...values) : undefined,
-                    minResult: values.length > 0 ? Math.min(...values) : undefined,
-                },
-            }
-        })
+                return {
+                    ...config,
+                    unitTitle: unit?.title,
+                    history: lastFiveData,
+                    stats: {
+                        lastMeasurement: values.length > 0 ? values[values.length - 1] : undefined,
+                        maxResult: values.length > 0 ? Math.max(...values) : undefined,
+                        minResult: values.length > 0 ? Math.min(...values) : undefined,
+                    },
+                    hasRecords: configRecords.length > 0,
+                }
+            })
+            .filter(row => row.hasRecords || !row.isDefault)
     }, [configs, records, documents, units])
 
     const ViewButtonCellRenderer = useMemo(() => {
@@ -129,7 +133,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
                     targetRange={targetRange}
                     onClick={() => {
                         if (cellProps.data?.id) {
-                            handleViewRecords(cellProps.data.id)
+                            handleViewRecords(cellProps.data.id, 'chart')
                         }
                     }}
                 />
@@ -202,7 +206,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
         {
             colId: 'delete',
             headerName: '',
-            minWidth: 80,
+            minWidth: 90,
             flex: 0.4,
             suppressHeaderMenuButton: true,
             sortable: false,
@@ -236,7 +240,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
         <div className={`bg-white p-6 rounded-lg shadow-sm flex flex-col ${className ?? ''}`}>
             <div className='mb-4'>
                 <div className='flex justify-between items-center mb-2'>
-                    <h3 className='text-lg font-medium'>Biomarkers ({configs.length})</h3>
+                    <h3 className='text-lg font-medium'>Biomarkers ({rowData.length})</h3>
                     <AddNewButton onClick={() => { void handleAddNew() }}/>
                 </div>
                 <p className='text-sm text-gray-600'>Manage biomarker configurations and view statistics</p>

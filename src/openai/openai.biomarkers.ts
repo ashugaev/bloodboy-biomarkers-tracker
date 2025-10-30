@@ -116,6 +116,7 @@ Examples of unit vs ucumCode:
 - INR 1.08 (dimensionless) → unit: null, ucumCode: null
 
 General Rules:
+- Clean the extracted text from obviously incorrect and unnecessary symbols (e.g., garbage characters, formatting artifacts, stray symbols)
 - Extract all numeric biomarker values
 - Include the unit of measurement for each biomarker
 - Include reference ranges when available

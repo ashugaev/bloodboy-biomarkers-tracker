@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { Tooltip } from 'antd'
 import { Link } from 'react-router-dom'
 
+import { GitHubStarsButton } from '@/components/GitHubStarsButton'
 import { HomePageProps } from './HomePage.types'
 
 export const HomePage = (props: HomePageProps) => {
@@ -78,7 +79,7 @@ export const HomePage = (props: HomePageProps) => {
 
                     <div className='flex items-center gap-1 md:order-4 md:ms-4'>
                         {/* Desktop button */}
-                        <Link to='/data' className='hidden md:w-full md:inline-flex whitespace-nowrap py-2 px-3 justify-center items-center gap-x-2 text-sm font-medium rounded-full border border-transparent bg-indigo-600 text-white hover:bg-indigo-700 hover:text-white focus:outline-none focus:bg-indigo-700'>
+                        <Link to='/data' className='hidden md:w-full md:inline-flex whitespace-nowrap py-2 px-3 justify-center items-center gap-x-2 text-sm font-medium rounded-full border border-transparent bg-indigo-600 text-white hover:bg-indigo-700 hover:text-white focus:outline-none focus:bg-indigo-700 transition-all hover:scale-105 active:scale-95'>
                             Get Started
                         </Link>
 
@@ -87,7 +88,7 @@ export const HomePage = (props: HomePageProps) => {
                             <button
                                 type='button'
                                 onClick={() => { setIsMenuOpen(!isMenuOpen) }}
-                                className='flex justify-center items-center size-9 border rounded-full border-gray-200 text-gray-500 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-colors'
+                                className='flex justify-center items-center size-9 border rounded-full border-gray-200 text-gray-500 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-all hover:scale-105 active:scale-95'
                                 aria-label='Toggle navigation'
                             >
                                 {!isMenuOpen ? (
@@ -180,18 +181,17 @@ export const HomePage = (props: HomePageProps) => {
 
                         <div className='mt-4 flex justify-center gap-4 sm:mt-6'>
                             <Link
-                                className='inline-block rounded border border-indigo-600 bg-indigo-600 py-3 px-4 font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 hover:text-white'
+                                className='inline-block rounded border border-indigo-600 bg-indigo-600 py-3 px-4 font-medium text-white shadow-sm transition-all hover:bg-indigo-700 hover:text-white hover:scale-105 active:scale-95'
                                 to='/data'
                             >
                                 Get Started
                             </Link>
 
-                            <button
-                                className='inline-block rounded border border-gray-200 py-3 px-4 font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 hover:text-gray-900'
-                                onClick={() => { scrollToSection('features') }}
-                            >
-                                Learn More
-                            </button>
+                            <GitHubStarsButton
+                                username='ashugaev'
+                                repo='bloodboy-biomarkers-tracker'
+                                formatted
+                            />
                         </div>
                     </div>
                 </div>
@@ -359,7 +359,7 @@ export const HomePage = (props: HomePageProps) => {
                                         />
                                     </div>
                                     <div>
-                                        <h4 className='font-bold'>Rajan Joharson</h4>
+                                        <h4 className='font-bold'>Rajan Joshi</h4>
                                         <span className='text-xs text-gray-600'>5 days ago</span>
                                     </div>
                                 </div>
@@ -463,9 +463,21 @@ export const HomePage = (props: HomePageProps) => {
                                 </li>
                             </ul>
 
-                            <Link to='/data' className='mt-3 inline-block rounded border border-indigo-600 bg-indigo-600 py-3 px-4 font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 hover:text-white'>
+                            <Link to='/data' className='mt-3 inline-block rounded border border-indigo-600 bg-indigo-600 py-3 px-4 font-medium text-white shadow-sm transition-all hover:bg-indigo-700 hover:text-white hover:scale-105 active:scale-95'>
                                 Get Started
                             </Link>
+                            <p className='mt-4 text-xs text-gray-500'>
+                                Enjoying the free app?{' '}
+                                <a
+                                    className='inline-flex items-center gap-1 underline hover:text-gray-700 focus:outline-none transition-colors'
+                                    href='https://github.com/ashugaev/bloodboy-biomarkers-tracker'
+                                    target='_blank'
+                                    rel='noopener noreferrer'
+                                >
+                                    Leave a star <span>⭐</span>
+                                </a>
+                                {' '}on GitHub
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -600,23 +612,19 @@ export const HomePage = (props: HomePageProps) => {
                             </p>
                         </div>
 
-                        <ul className='flex flex-wrap items-center'>
-                            <li className='inline-block relative pe-4 text-xs last:pe-0 last-of-type:before:hidden before:absolute before:top-1/2 before:end-1.5 before:-translate-y-1/2 before:size-[3px] before:rounded-full before:bg-gray-400'>
-                                <a className='text-xs text-gray-500 underline hover:text-gray-800 hover:decoration-2 focus:outline-none focus:decoration-2' href='#'>
-                                    Privacy
-                                </a>
-                            </li>
-                            <li className='inline-block relative pe-4 text-xs last:pe-0 last-of-type:before:hidden before:absolute before:top-1/2 before:end-1.5 before:-translate-y-1/2 before:size-[3px] before:rounded-full before:bg-gray-400'>
-                                <a className='text-xs text-gray-500 underline hover:text-gray-800 hover:decoration-2 focus:outline-none focus:decoration-2' href='#'>
-                                    Terms
-                                </a>
-                            </li>
-                            <li className='inline-block pe-4 text-xs'>
-                                <a className='text-xs text-gray-500 underline hover:text-gray-800 hover:decoration-2 focus:outline-none focus:decoration-2' href='https://github.com' target='_blank' rel='noopener noreferrer'>
-                                    Github
-                                </a>
-                            </li>
-                        </ul>
+                        <div className='flex items-center gap-2'>
+                            <a 
+                                href='https://github.com/ashugaev/bloodboy-biomarkers-tracker' 
+                                target='_blank' 
+                                rel='noopener noreferrer'
+                                className='text-xs text-gray-600 hover:text-gray-900 transition-colors inline-flex items-center gap-1'
+                            >
+                                <svg role='img' viewBox='0 0 24 24' fill='currentColor' className='w-3.5 h-3.5'>
+                                    <path d='M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12' />
+                                </svg>
+                                <span>Star on GitHub</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </footer>

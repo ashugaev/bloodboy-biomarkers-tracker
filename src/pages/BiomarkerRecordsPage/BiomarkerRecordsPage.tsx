@@ -2,12 +2,13 @@ import { useState } from 'react'
 
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { Button, Segmented } from 'antd'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { BiomarkerChart } from '@/components/BiomarkerChart'
 import { BiomarkerRecordsTable } from '@/components/BiomarkerRecordsTable'
 import { Header } from '@/components/Header'
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
+import { ViewMode } from '@/types/viewMode.types'
 
 import { BiomarkerRecordsPageProps } from './BiomarkerRecordsPage.types'
 
@@ -15,8 +16,11 @@ export const BiomarkerRecordsPage = (props: BiomarkerRecordsPageProps) => {
     const { className } = props
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
+    const location = useLocation()
     const { data: configs } = useBiomarkerConfigs({ filter: (c) => c.approved })
-    const [viewMode, setViewMode] = useState<'table' | 'chart'>('table')
+    const [viewMode, setViewMode] = useState<ViewMode>(
+        (location.state as { viewMode?: ViewMode })?.viewMode ?? 'table'
+    )
 
     const biomarker = configs.find(c => c.id === id)
 
@@ -64,7 +68,7 @@ export const BiomarkerRecordsPage = (props: BiomarkerRecordsPageProps) => {
                                 },
                             ]}
                             value={viewMode}
-                            onChange={(value) => { setViewMode(value as 'table' | 'chart') }}
+                            onChange={(value) => { setViewMode(value as ViewMode) }}
                         />
                     </div>
 

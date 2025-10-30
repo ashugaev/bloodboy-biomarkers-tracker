@@ -149,7 +149,7 @@ export const createDeleteColumn = <T extends { id: string }>(
 ): ColDef<T> => ({
     colId: 'delete',
     headerName: '',
-    minWidth: 80,
+    minWidth: 90,
     flex: 0.4,
     suppressHeaderMenuButton: true,
     suppressMenu: true,

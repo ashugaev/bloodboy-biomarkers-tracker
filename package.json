@@ -41,6 +41,7 @@
     "classnames": "2.5.1",
     "dayjs": "1.11.18",
     "dexie": "4.2.1",
+    "dexie-export-import": "4.1.4",
     "dexie-react-hooks": "4.2.0",
     "openai": "6.5.0",
     "pdf-parse": "2.4.3",

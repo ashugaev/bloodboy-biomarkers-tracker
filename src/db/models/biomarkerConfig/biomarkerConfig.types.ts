@@ -10,4 +10,5 @@ export interface BiomarkerConfig extends BaseEntity {
     ucumCode?: string
     approved: boolean
     order?: number
+    isDefault?: boolean
 }

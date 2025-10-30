@@ -10,6 +10,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Fasting blood glucose',
         order: 0,
+        isDefault: true,
     },
     {
         name: 'Hemoglobin',
@@ -20,6 +21,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Oxygen-carrying protein in red blood cells',
         order: 1,
+        isDefault: true,
     },
     {
         name: 'Total Cholesterol',
@@ -27,6 +29,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         normalRange: { max: 200 },
         description: 'Total blood cholesterol',
         order: 2,
+        isDefault: true,
     },
     {
         name: 'HDL Cholesterol',
@@ -34,6 +37,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         normalRange: { min: 40 },
         description: 'High-density lipoprotein (good cholesterol)',
         order: 3,
+        isDefault: true,
     },
     {
         name: 'LDL Cholesterol',
@@ -41,6 +45,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         normalRange: { max: 100 },
         description: 'Low-density lipoprotein (bad cholesterol)',
         order: 4,
+        isDefault: true,
     },
     {
         name: 'Triglycerides',
@@ -48,6 +53,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         normalRange: { max: 150 },
         description: 'Type of fat in blood',
         order: 5,
+        isDefault: true,
     },
     {
         name: 'TSH',
@@ -58,6 +64,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Thyroid Stimulating Hormone',
         order: 6,
+        isDefault: true,
     },
     {
         name: 'ALT',
@@ -68,6 +75,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Alanine Aminotransferase (liver enzyme)',
         order: 7,
+        isDefault: true,
     },
     {
         name: 'AST',
@@ -78,6 +86,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Aspartate Aminotransferase (liver enzyme)',
         order: 8,
+        isDefault: true,
     },
     {
         name: 'Creatinine',
@@ -88,6 +97,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Kidney function marker',
         order: 9,
+        isDefault: true,
     },
     {
         name: 'White Blood Cells',
@@ -98,6 +108,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Immune system cells',
         order: 10,
+        isDefault: true,
     },
     {
         name: 'Red Blood Cells',
@@ -108,6 +119,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Oxygen-carrying blood cells',
         order: 11,
+        isDefault: true,
     },
     {
         name: 'Platelets',
@@ -118,6 +130,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Blood clotting cells',
         order: 12,
+        isDefault: true,
     },
     {
         name: 'Hematocrit',
@@ -128,6 +141,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Percentage of red blood cells in blood',
         order: 13,
+        isDefault: true,
     },
     {
         name: 'MCV',
@@ -138,6 +152,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Mean Corpuscular Volume',
         order: 14,
+        isDefault: true,
     },
     {
         name: 'MCH',
@@ -148,6 +163,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Mean Corpuscular Hemoglobin',
         order: 15,
+        isDefault: true,
     },
     {
         name: 'MCHC',
@@ -158,6 +174,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Mean Corpuscular Hemoglobin Concentration',
         order: 16,
+        isDefault: true,
     },
     {
         name: 'RDW',
@@ -168,6 +185,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Red Cell Distribution Width',
         order: 17,
+        isDefault: true,
     },
     {
         name: 'Vitamin D',
@@ -178,6 +196,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: '25-hydroxyvitamin D',
         order: 18,
+        isDefault: true,
     },
     {
         name: 'Vitamin B12',
@@ -188,6 +207,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Cobalamin',
         order: 19,
+        isDefault: true,
     },
     {
         name: 'Iron',
@@ -198,6 +218,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Serum iron',
         order: 20,
+        isDefault: true,
     },
     {
         name: 'Ferritin',
@@ -208,6 +229,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Iron storage protein',
         order: 21,
+        isDefault: true,
     },
     {
         name: 'Folate',
@@ -218,6 +240,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Vitamin B9',
         order: 22,
+        isDefault: true,
     },
     {
         name: 'Urea',
@@ -228,6 +251,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Blood urea nitrogen (BUN)',
         order: 23,
+        isDefault: true,
     },
     {
         name: 'Uric Acid',
@@ -238,6 +262,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Purine metabolism marker',
         order: 24,
+        isDefault: true,
     },
     {
         name: 'Total Protein',
@@ -248,6 +273,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Total serum protein',
         order: 25,
+        isDefault: true,
     },
     {
         name: 'Albumin',
@@ -258,6 +284,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Major blood protein',
         order: 26,
+        isDefault: true,
     },
     {
         name: 'Bilirubin',
@@ -265,6 +292,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         normalRange: { max: 1.2 },
         description: 'Total bilirubin',
         order: 27,
+        isDefault: true,
     },
     {
         name: 'Alkaline Phosphatase',
@@ -275,6 +303,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'ALP (liver/bone enzyme)',
         order: 28,
+        isDefault: true,
     },
     {
         name: 'GGT',
@@ -285,6 +314,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Gamma-Glutamyl Transferase',
         order: 29,
+        isDefault: true,
     },
     {
         name: 'HbA1c',
@@ -292,6 +322,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         normalRange: { max: 5.7 },
         description: 'Glycated hemoglobin (diabetes marker)',
         order: 30,
+        isDefault: true,
     },
     {
         name: 'Sodium',
@@ -302,6 +333,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Blood sodium',
         order: 31,
+        isDefault: true,
     },
     {
         name: 'Potassium',
@@ -312,6 +344,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Blood potassium',
         order: 32,
+        isDefault: true,
     },
     {
         name: 'Chloride',
@@ -322,6 +355,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Blood chloride',
         order: 33,
+        isDefault: true,
     },
     {
         name: 'Calcium',
@@ -332,6 +366,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Blood calcium',
         order: 34,
+        isDefault: true,
     },
     {
         name: 'Magnesium',
@@ -342,6 +377,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Blood magnesium',
         order: 35,
+        isDefault: true,
     },
     {
         name: 'Phosphorus',
@@ -352,6 +388,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         },
         description: 'Blood phosphorus',
         order: 36,
+        isDefault: true,
     },
     {
         name: 'CRP',
@@ -359,6 +396,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         normalRange: { max: 3.0 },
         description: 'C-Reactive Protein (inflammation marker)',
         order: 37,
+        isDefault: true,
     },
     {
         name: 'ESR',
@@ -366,6 +404,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         normalRange: { max: 20 },
         description: 'Erythrocyte Sedimentation Rate',
         order: 38,
+        isDefault: true,
     },
     {
         name: 'PSA',
@@ -373,5 +412,6 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         normalRange: { max: 4.0 },
         description: 'Prostate-Specific Antigen',
         order: 39,
+        isDefault: true,
     },
 ]

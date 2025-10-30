@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 
 import { ExportButton } from '@/components/ExportButton'
 import { ImportButton } from '@/components/ImportButton'
+import { ResetDbButton } from '@/components/ResetDbButton'
 
 import { HeaderProps } from './Header.types'
 
@@ -19,6 +20,7 @@ export const Header = (props: HeaderProps) => {
                     <div className='flex gap-2'>
                         <ImportButton/>
                         <ExportButton/>
+                        <ResetDbButton/>
                     </div>
                 </div>
             </div>
