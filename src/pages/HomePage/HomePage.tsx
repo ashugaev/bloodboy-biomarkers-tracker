@@ -4,6 +4,7 @@ import { Tooltip } from 'antd'
 import { Link } from 'react-router-dom'
 
 import { GitHubStarsButton } from '@/components/GitHubStarsButton'
+import { getPublicPath } from '@/utils'
 
 import { HomePageProps } from './HomePage.types'
 
@@ -73,7 +74,7 @@ export const HomePage = (props: HomePageProps) => {
                 <nav className='mt-4 relative max-w-2xl w-full bg-white border border-gray-200 rounded-[24px] mx-2 flex flex-wrap md:flex-nowrap items-center justify-between p-1 ps-4 md:py-0 sm:mx-auto'>
                     <div className='flex items-center'>
                         <Link className='flex items-center gap-2 rounded-md focus:outline-none focus:opacity-80' to='/' aria-label='Bloodboy'>
-                            <img src='/favicon.svg' alt='Bloodboy' className='w-4 h-4'/>
+                            <img src={getPublicPath('favicon.svg')} alt='Bloodboy' className='w-4 h-4'/>
                             <span className='text-xl font-semibold text-gray-800'>Bloodboy</span>
                         </Link>
                     </div>
