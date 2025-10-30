@@ -15,7 +15,7 @@ export const GitHubStarsButton = (props: GitHubStarsButtonProps) => {
     useEffect(() => {
         fetch(`https://api.github.com/repos/${username}/${repo}`)
             .then((response) => response.json())
-            .then((data) => {
+            .then((data: { stargazers_count?: number }) => {
                 if (data && typeof data.stargazers_count === 'number') {
                     setStars(data.stargazers_count)
                 }
