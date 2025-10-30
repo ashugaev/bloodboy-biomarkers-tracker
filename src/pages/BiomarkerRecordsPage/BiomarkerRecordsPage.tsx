@@ -19,7 +19,7 @@ export const BiomarkerRecordsPage = (props: BiomarkerRecordsPageProps) => {
     const location = useLocation()
     const { data: configs } = useBiomarkerConfigs({ filter: (c) => c.approved })
     const [viewMode, setViewMode] = useState<ViewMode>(
-        (location.state as { viewMode?: ViewMode })?.viewMode ?? 'table'
+        (location.state as { viewMode?: ViewMode })?.viewMode ?? 'table',
     )
 
     const biomarker = configs.find(c => c.id === id)

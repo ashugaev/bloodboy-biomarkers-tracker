@@ -6,4 +6,3 @@ export interface GitHubStarsButtonProps extends Omit<HTMLProps<HTMLAnchorElement
     formatted?: boolean
     className?: string
 }
-

@@ -14,4 +14,3 @@ export const formatStarsNumber = (num: number, formatted: boolean): string => {
     }
     return `${Math.floor(n)}${units[unitIndex - 1] ?? ''}`
 }
-

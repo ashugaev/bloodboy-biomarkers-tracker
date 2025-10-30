@@ -1,6 +1,7 @@
+import { useState } from 'react'
+
 import { DeleteOutlined } from '@ant-design/icons'
 import { Button, Modal } from 'antd'
-import { useState } from 'react'
 
 import { COLORS, DB_NAME } from '@/constants'
 
@@ -14,18 +15,18 @@ export const ResetDbButton = (props: ResetDbButtonProps) => {
     const handleReset = () => {
         setIsResetting(true)
         const deleteRequest = indexedDB.deleteDatabase(DB_NAME)
-        
+
         deleteRequest.onsuccess = () => {
             localStorage.clear()
             sessionStorage.clear()
             window.location.reload()
         }
-        
+
         deleteRequest.onerror = (error) => {
             console.error('Failed to reset database:', error)
             setIsResetting(false)
         }
-        
+
         deleteRequest.onblocked = () => {
             console.warn('Database deletion blocked. Closing connections...')
             window.location.reload()
@@ -36,7 +37,7 @@ export const ResetDbButton = (props: ResetDbButtonProps) => {
         <>
             <Button
                 icon={<DeleteOutlined/>}
-                onClick={() => setIsModalVisible(true)}
+                onClick={() => { setIsModalVisible(true) }}
                 danger
                 className={className}
             >
@@ -46,7 +47,7 @@ export const ResetDbButton = (props: ResetDbButtonProps) => {
                 title='Clear All Data'
                 open={isModalVisible}
                 onOk={handleReset}
-                onCancel={() => setIsModalVisible(false)}
+                onCancel={() => { setIsModalVisible(false) }}
                 okText='Yes, Delete Everything'
                 cancelText='Cancel'
                 okButtonProps={{
@@ -59,7 +60,13 @@ export const ResetDbButton = (props: ResetDbButtonProps) => {
             >
                 <p>Are you sure you want to delete all your data?</p>
                 <p>This will permanently remove:</p>
-                <ul style={{ marginLeft: '20px', marginTop: '8px', marginBottom: '12px' }}>
+                <ul
+                    style={{
+                        marginLeft: '20px',
+                        marginTop: '8px',
+                        marginBottom: '12px',
+                    }}
+                >
                     <li>🩸 All biomarker records</li>
                     <li>📄 All uploaded documents</li>
                     <li>⚙️ All custom configurations</li>
@@ -68,4 +75,3 @@ export const ResetDbButton = (props: ResetDbButtonProps) => {
         </>
     )
 }
-

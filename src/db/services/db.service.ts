@@ -1,12 +1,12 @@
 import { Dexie, EntityTable } from 'dexie'
 
+import { DB_NAME } from '@/constants'
 import { AppSettings } from '@/db/models/appSettings'
 import { BiomarkerConfig } from '@/db/models/biomarkerConfig'
 import { BiomarkerRecord } from '@/db/models/biomarkerRecord'
 import { UploadedDocument } from '@/db/models/document'
 import { Unit } from '@/db/models/unit'
 import { User } from '@/db/models/user'
-import { DB_NAME } from '@/constants'
 
 let currentUserId: string | null = null
 
