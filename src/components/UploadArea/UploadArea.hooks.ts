@@ -42,6 +42,7 @@ export const usePdfExtraction = ({ extractBiomarkers, onPageProgress, onTotalPag
                             console.error('Validator errors stringify failed', stringifyError)
                         }
 
+                        debugger
                         console.error('JSON Validation failed:', errorsInfo)
 
                         followUpMessage.push(`JSON Validation failed: ${errorsInfo}`)
