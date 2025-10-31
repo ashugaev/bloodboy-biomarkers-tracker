@@ -42,7 +42,7 @@ export const ResetDbButton = (props: ResetDbButtonProps) => {
                 danger
                 className={className}
             >
-                Clear All Data
+                Clear DB
             </Button>
             <Modal
                 title='Clear All Data'

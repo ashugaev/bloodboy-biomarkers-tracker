@@ -1,4 +1,4 @@
-import { DownloadOutlined } from '@ant-design/icons'
+import { UploadOutlined } from '@ant-design/icons'
 import { Button } from 'antd'
 
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
@@ -30,12 +30,12 @@ export const ExportButton = (props: ExportButtonProps) => {
 
     return (
         <Button
-            icon={<DownloadOutlined/>}
+            icon={<UploadOutlined/>}
             onClick={handleExport}
             className={className}
             size='small'
         >
-            Export
+            Export DB
         </Button>
     )
 }

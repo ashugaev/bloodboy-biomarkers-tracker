@@ -13,7 +13,7 @@ export const ContentArea = (props: ContentAreaProps) => {
     if (currentDocument?.fileData) {
         return (
             <div className={`overflow-hidden ${className ?? ''}`}>
-                <div className='bg-white rounded shadow-sm border border-gray-100 h-full'>
+                <div className='bg-white rounded border border-gray-100 h-full'>
                     <PdfViewer
                         fileData={currentDocument.fileData}
                         fileName={currentDocument.originalName}

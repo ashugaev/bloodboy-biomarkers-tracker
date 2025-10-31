@@ -124,7 +124,7 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
     }, [])
 
     return (
-        <div className={`bg-white p-6 rounded shadow-sm border border-gray-100 flex flex-col ${className ?? ''}`}>
+        <div className={`bg-white p-6 rounded border border-gray-100 flex flex-col ${className ?? ''}`}>
             <div className='mb-4 flex gap-6'>
                 {normalRange && (normalRange.min !== undefined || normalRange.max !== undefined) && (
                     <div className='flex items-center gap-2'>

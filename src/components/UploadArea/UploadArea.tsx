@@ -5,6 +5,7 @@ import { RcFile } from 'antd/es/upload/interface'
 import { UploadRequestOption } from 'rc-upload/lib/interface'
 import { v4 as uuidv4 } from 'uuid'
 
+import { ExtractionErrorModal } from '@/components/ExtractionErrorModal'
 import { UploadDropZone } from '@/components/UploadDropZone'
 import { UploadStatus, UploadStage } from '@/components/UploadStatus'
 import { createBiomarkerConfigs, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
@@ -36,6 +37,12 @@ export const UploadArea = () => {
     const uploadQueueRef = useRef<UploadRequestOption[]>([])
     const isProcessingRef = useRef(false)
     const [queueTrigger, setQueueTrigger] = useState(0)
+    const [showErrorModal, setShowErrorModal] = useState(false)
+    const [failedPageIndices, setFailedPageIndices] = useState<number[]>([])
+    const [retrying, setRetrying] = useState(false)
+    const currentFileRef = useRef<RcFile | null>(null)
+    const currentArrayBufferRef = useRef<ArrayBuffer | null>(null)
+    const savedPageResultsRef = useRef<Map<number, ExtractionResult | null>>(new Map())
 
     const { extractFromPdf } = usePdfExtraction({
         extractBiomarkers,
@@ -102,14 +109,31 @@ export const UploadArea = () => {
         }
 
         void processQueue()
-    }, [queueTrigger, hasApiKey, documents, configs, records])
+    }, [queueTrigger, hasApiKey, documents, configs, records, extractFromPdf])
 
-    const performExtraction = async (file: RcFile, arrayBuffer: ArrayBuffer) => {
+    const performExtraction = async (file: RcFile, arrayBuffer: ArrayBuffer, retryFailedPages?: number[], model?: string) => {
         setUploadStage(UploadStage.EXTRACTING)
 
-        const result = await extractFromPdf(arrayBuffer)
+        const extractionResult = await extractFromPdf(
+            arrayBuffer,
+            retryFailedPages,
+            model,
+            retryFailedPages ? savedPageResultsRef.current : undefined,
+        )
 
-        if (result.biomarkers.length === 0) {
+        if (extractionResult.failedPageIndices.length > 0) {
+            setFailedPageIndices(extractionResult.failedPageIndices)
+            setShowErrorModal(true)
+            currentFileRef.current = file
+            currentArrayBufferRef.current = arrayBuffer
+            savedPageResultsRef.current = extractionResult.pageResults
+            setUploadStage(null)
+            setCurrentPage(0)
+            setTotalPages(0)
+            return
+        }
+
+        if (extractionResult.result.biomarkers.length === 0) {
             void message.error('No biomarkers found in the document')
             setUploadStage(null)
             setCurrentPage(0)
@@ -117,11 +141,31 @@ export const UploadArea = () => {
             return
         }
 
-        await saveToDatabase(file, result)
+        await saveToDatabase(file, extractionResult.result)
 
         setUploadStage(null)
         setCurrentPage(0)
         setTotalPages(0)
+        savedPageResultsRef.current = new Map()
+    }
+
+    const handleRetry = async () => {
+        if (!currentFileRef.current || !currentArrayBufferRef.current) return
+
+        setRetrying(true)
+        setShowErrorModal(false)
+
+        await performExtraction(currentFileRef.current, currentArrayBufferRef.current, failedPageIndices)
+
+        setRetrying(false)
+    }
+
+    const handleCancelRetry = () => {
+        setShowErrorModal(false)
+        currentFileRef.current = null
+        currentArrayBufferRef.current = null
+        savedPageResultsRef.current = new Map()
+        setFailedPageIndices([])
     }
 
     const saveToDatabase = async (
@@ -291,10 +335,19 @@ export const UploadArea = () => {
     if (isDisabled) return null
 
     return (
-        <UploadDropZone
-            customRequest={handleUpload}
-            button
-            disabled={isDisabled}
-        />
+        <>
+            <UploadDropZone
+                customRequest={handleUpload}
+                button
+                disabled={isDisabled}
+            />
+            <ExtractionErrorModal
+                open={showErrorModal}
+                failedPages={failedPageIndices}
+                onRetry={() => { void handleRetry() }}
+                onCancel={handleCancelRetry}
+                retrying={retrying}
+            />
+        </>
     )
 }

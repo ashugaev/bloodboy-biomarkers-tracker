@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 
-import { UploadOutlined } from '@ant-design/icons'
+import { DownloadOutlined } from '@ant-design/icons'
 import { Button } from 'antd'
 
 import { importData } from '@/utils/importData'
@@ -36,11 +36,11 @@ export const ImportButton = (props: ImportButtonProps) => {
             />
             <Button
                 size='small'
-                icon={<UploadOutlined/>}
+                icon={<DownloadOutlined/>}
                 onClick={handleClick}
                 className={className}
             >
-                Import
+                Import DB
             </Button>
         </>
     )

@@ -26,24 +26,59 @@ export interface ExtractionResult {
     labName?: string
 }
 
-export const extractedBiomarkerSchema = z.object({
-    name: z.string().min(1),
-    originalName: z.string().min(1),
-    value: z.number(),
-    unit: z.string().min(1),
-    ucumCode: z.string().optional(),
-    referenceRange: z.object({
-        min: z.number().optional(),
-        max: z.number().optional(),
-    }).partial().optional(),
-    order: z.number(),
+const referenceRangeSchema = z.object({
+    min: z.number({
+        required_error: 'referenceRange.min is required',
+        invalid_type_error: 'referenceRange.min must be a number',
+    }).nullable().optional(),
+    max: z.number({
+        required_error: 'referenceRange.max is required',
+        invalid_type_error: 'referenceRange.max must be a number',
+    }).nullable().optional(),
 })
 
+export const extractedBiomarkerSchema = z.object({
+    name: z.string({
+        required_error: 'name is required',
+        invalid_type_error: 'name must be a string',
+    }).min(1, 'name cannot be empty'),
+    originalName: z.string({
+        required_error: 'originalName is required',
+        invalid_type_error: 'originalName must be a string',
+    }).min(1, 'originalName cannot be empty'),
+    value: z.number({
+        required_error: 'value is required',
+        invalid_type_error: 'value must be a number',
+    }),
+    unit: z.union([
+        z.string().min(1, 'unit cannot be empty'),
+        z.null(),
+    ], {
+        required_error: 'unit is required',
+        invalid_type_error: 'unit must be a string or null',
+    }),
+    ucumCode: z.string({
+        invalid_type_error: 'ucumCode must be a string',
+    }).nullable().optional(),
+    referenceRange: referenceRangeSchema.nullable().optional(),
+    order: z.number({
+        required_error: 'order is required',
+        invalid_type_error: 'order must be a number',
+    }),
+}).strict({ message: 'Unknown field detected' })
+
 export const extractionResultSchema = z.object({
-    biomarkers: z.array(extractedBiomarkerSchema),
-    testDate: z.string().date().optional(),
-    labName: z.string().optional(),
-})
+    biomarkers: z.array(extractedBiomarkerSchema, {
+        required_error: 'biomarkers is required',
+        invalid_type_error: 'biomarkers must be an array',
+    }).min(1, 'biomarkers array cannot be empty'),
+    testDate: z.string({
+        invalid_type_error: 'testDate must be a string',
+    }).date('testDate must be a valid date in YYYY-MM-DD format').optional(),
+    labName: z.string({
+        invalid_type_error: 'labName must be a string',
+    }).optional(),
+}).strict({ message: 'Unknown field detected' })
 
 const buildExtractionPrompt = (existingBiomarkers: Array<{
     name: string
@@ -138,7 +173,7 @@ export const useExtractBiomarkers = () => {
     const { client, hasApiKey, loading } = useOpenAI()
     const { data: configs } = useBiomarkerConfigs()
 
-    const extractBiomarkers = useCallback(async (imageBase64: string, followUpMessage?: string): Promise<ExtractionResult | null> => {
+    const extractBiomarkers = useCallback(async (imageBase64: string, followUpMessage?: string, model?: string): Promise<ExtractionResult | null> => {
         if (!client) return null
 
         const existingBiomarkers = configs.map(c => ({
@@ -185,7 +220,7 @@ export const useExtractBiomarkers = () => {
         console.log('AI Messages:', messages)
 
         const completion = await client.chat.completions.create({
-            model: 'gpt-5-mini',
+            model: model ?? 'gpt-5-mini',
             messages: messages as never,
             reasoning_effort: 'low',
             temperature: 1,

@@ -167,7 +167,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
     }
 
     return (
-        <div className={`bg-white p-4 rounded shadow-sm border border-gray-100 flex flex-col ${className ?? ''}`}>
+        <div className={`bg-white p-4 rounded border border-gray-100 flex flex-col ${className ?? ''}`}>
             <div className='mb-4'>
                 <div className='flex justify-between items-center mb-2'>
                     <h3 className='text-lg font-medium'>Verify New Measurments ({biomarkers.length})</h3>

@@ -34,7 +34,7 @@ export const ApiKeyInput = (props: ApiKeyInputProps) => {
     }
 
     return (
-        <div className={`bg-white p-6 rounded shadow-sm border border-gray-100 ${className ?? ''}`}>
+        <div className={`bg-white p-6 rounded border border-gray-100 ${className ?? ''}`}>
             <h3 className='text-lg font-medium mb-2'>OpenAI API Key Required</h3>
             <p className='text-sm text-gray-600 mb-2'>
                 Stored locally in your browser

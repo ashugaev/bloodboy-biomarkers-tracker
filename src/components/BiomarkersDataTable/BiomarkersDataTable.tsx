@@ -238,7 +238,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
     }, [])
 
     return (
-        <div className={`bg-white p-6 rounded shadow-sm border border-gray-100 flex flex-col ${className ?? ''}`}>
+        <div className={`bg-white p-6 rounded border border-gray-100 flex flex-col ${className ?? ''}`}>
             <div className='mb-4'>
                 <div className='flex justify-between items-center mb-2'>
                     <h3 className='text-lg font-medium'>Biomarkers ({rowData.length})</h3>

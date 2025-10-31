@@ -75,7 +75,7 @@ export const UploadStatus = (props: UploadStatusProps) => {
     ].filter(Boolean).join(', ')
 
     return (
-        <div className={`bg-white p-6 rounded shadow-sm border border-gray-100 ${className ?? ''}`}>
+        <div className={`bg-white p-6 rounded border border-gray-100 ${className ?? ''}`}>
             <div className='flex items-center gap-3 mb-4'>
                 <Spin/>
                 <span className='text-base font-medium'>{currentMessage}</span>
