@@ -14,10 +14,11 @@ export interface ExtractedBiomarker {
     name?: string
     originalName?: string
     value?: number
-    unit?: string
-    ucumCode?: string
+    unit?: string | null
+    ucumCode?: string | null
     referenceRange?: Partial<Range>
     order?: number
+    page?: number | null
 }
 
 export interface ExtractionResult {
@@ -28,57 +29,53 @@ export interface ExtractionResult {
 
 const referenceRangeSchema = z.object({
     min: z.number({
-        required_error: 'referenceRange.min is required',
-        invalid_type_error: 'referenceRange.min must be a number',
+        message: 'referenceRange.min must be a number',
     }).nullable().optional(),
     max: z.number({
-        required_error: 'referenceRange.max is required',
-        invalid_type_error: 'referenceRange.max must be a number',
+        message: 'referenceRange.max must be a number',
     }).nullable().optional(),
-})
+}).transform((val) => ({
+    min: val.min ?? undefined,
+    max: val.max ?? undefined,
+}))
 
 export const extractedBiomarkerSchema = z.object({
     name: z.string({
-        required_error: 'name is required',
-        invalid_type_error: 'name must be a string',
+        message: 'name must be a string',
     }).min(1, 'name cannot be empty'),
     originalName: z.string({
-        required_error: 'originalName is required',
-        invalid_type_error: 'originalName must be a string',
+        message: 'originalName must be a string',
     }).min(1, 'originalName cannot be empty'),
     value: z.number({
-        required_error: 'value is required',
-        invalid_type_error: 'value must be a number',
+        message: 'value must be a number',
     }),
     unit: z.union([
         z.string().min(1, 'unit cannot be empty'),
         z.null(),
     ], {
-        required_error: 'unit is required',
-        invalid_type_error: 'unit must be a string or null',
+        message: 'unit must be a string or null',
     }),
     ucumCode: z.string({
-        invalid_type_error: 'ucumCode must be a string',
+        message: 'ucumCode must be a string',
     }).nullable().optional(),
-    referenceRange: referenceRangeSchema.nullable().optional(),
+    referenceRange: referenceRangeSchema.optional(),
     order: z.number({
-        required_error: 'order is required',
-        invalid_type_error: 'order must be a number',
+        message: 'order must be a number',
     }),
-}).strict({ message: 'Unknown field detected' })
+    page: z.number({
+        message: 'page must be a number',
+    }).nullable().optional(),
+}).strict()
 
 export const extractionResultSchema = z.object({
-    biomarkers: z.array(extractedBiomarkerSchema, {
-        required_error: 'biomarkers is required',
-        invalid_type_error: 'biomarkers must be an array',
-    }).min(1, 'biomarkers array cannot be empty'),
+    biomarkers: z.array(extractedBiomarkerSchema).min(1, 'biomarkers array cannot be empty'),
     testDate: z.string({
-        invalid_type_error: 'testDate must be a string',
+        message: 'testDate must be a string',
     }).date('testDate must be a valid date in YYYY-MM-DD format').optional(),
     labName: z.string({
-        invalid_type_error: 'labName must be a string',
+        message: 'labName must be a string',
     }).optional(),
-}).strict({ message: 'Unknown field detected' })
+}).strict()
 
 const buildExtractionPrompt = (existingBiomarkers: Array<{
     name: string
@@ -161,13 +158,6 @@ General Rules:
 - Use null instead of empty strings for unit, ucumCode, or referenceRange values when not available
 - If a value is not numeric or not available, skip that biomarker
 - Return only valid JSON, no additional text
-
-Duplicate Prevention Rules (CRITICAL):
-- NEVER include duplicate entries for the same biomarker
-- Each biomarker should appear ONLY ONCE in the results
-- If a biomarker has multiple values in different units, choose ONE:
-  * Prefer the unit that matches existing biomarkers from the system (if provided above)
-  * If no match, use the most common/standard unit for that biomarker type`
 
 export const useExtractBiomarkers = () => {
     const { client, hasApiKey, loading } = useOpenAI()

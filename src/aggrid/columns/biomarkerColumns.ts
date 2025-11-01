@@ -22,7 +22,7 @@ export const createNameColumn = <T extends BiomarkerWithRanges>(): ColDef<T> => 
     cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.name),
 })
 
-export const createOriginalNameColumn = <T extends { originalName?: string }>(): ColDef<T> => ({
+export const createOriginalNameColumn = <T extends { originalName?: string | null }>(): ColDef<T> => ({
     field: 'originalName' as never,
     headerName: 'Original Name',
     flex: 0.8,

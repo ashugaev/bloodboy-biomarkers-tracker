@@ -1,7 +1,7 @@
 import { ExtractionResults } from '@/components/ExtractionResults'
 import { useCancelUnapproved } from '@/db/hooks/useCancelUnapproved'
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
-import { bulkUpdateBiomarkerRecords, createBiomarkerRecords } from '@/db/models/biomarkerRecord'
+import { bulkUpdateBiomarkerRecords, comparePageAndOrder, createBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { ExtractedBiomarker } from '@/openai/openai.biomarkers'
 
 import { BiomarkerRecordsConfirmationProps } from './BiomarkerRecordsConfirmation.types'
@@ -45,8 +45,9 @@ export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmation
             ucumCode: record.ucumCode,
             referenceRange: config?.normalRange,
             order: record.order,
+            page: record.page,
         }
-    }).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    }).sort(comparePageAndOrder)
 
     return (
         <ExtractionResults

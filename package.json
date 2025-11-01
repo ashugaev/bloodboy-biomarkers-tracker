@@ -40,7 +40,8 @@
     "recharts": "3.3.0",
     "uuid": "13.0.0",
     "xlsx": "0.18.5",
-    "zod": "4.1.12"
+    "zod": "4.1.12",
+    "zod-error": "2.0.0"
   },
   "devDependencies": {
     "@sentry/vite-plugin": "4.4.0",

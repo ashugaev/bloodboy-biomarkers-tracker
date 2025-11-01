@@ -133,7 +133,7 @@ export const UploadArea = () => {
             return
         }
 
-        if (extractionResult.result.biomarkers.length === 0) {
+        if (!extractionResult.result.biomarkers || extractionResult.result.biomarkers.length === 0) {
             void message.error('No biomarkers found in the document')
             setUploadStage(null)
             setCurrentPage(0)
@@ -178,7 +178,7 @@ export const UploadArea = () => {
         const fileData = await file.arrayBuffer()
         const testDate = extractionResult.testDate ? new Date(extractionResult.testDate) : undefined
 
-        const { biomarkers } = extractionResult
+        const { biomarkers = [] } = extractionResult
 
         const uniqueExtractedUcumCodes = new Set(
             biomarkers.map(b => b.ucumCode).filter((code): code is string => !!code),
@@ -215,14 +215,14 @@ export const UploadArea = () => {
                     id: configId,
                     userId,
                     name: biomarkerName,
-                    originalName: biomarker?.originalName,
+                    originalName: biomarker?.originalName ?? undefined,
                     ucumCode: biomarkerUcumCode,
                     normalRange: biomarker?.referenceRange ? {
-                        min: biomarker.referenceRange.min,
-                        max: biomarker.referenceRange.max,
+                        min: biomarker.referenceRange.min ?? undefined,
+                        max: biomarker.referenceRange.max ?? undefined,
                     } : undefined,
                     approved: false,
-                    order: biomarker?.order,
+                    order: biomarker?.order ?? undefined,
                     createdAt: now,
                     updatedAt: now,
                 }
@@ -240,12 +240,13 @@ export const UploadArea = () => {
                     userId,
                     biomarkerId,
                     documentId,
-                    value: biomarker.value,
+                    value: biomarker.value ?? undefined,
                     ucumCode: biomarker.ucumCode ?? '',
-                    originalName: biomarker.originalName,
+                    originalName: biomarker.originalName ?? undefined,
                     approved: false,
                     latest: true,
-                    order: biomarker.order,
+                    order: biomarker.order ?? undefined,
+                    page: biomarker.page ?? undefined,
                     createdAt: now,
                     updatedAt: now,
                 }
@@ -283,6 +284,7 @@ export const UploadArea = () => {
 
         if (isDuplicate) {
             void message.warning(`File "${file.name}" was already uploaded before`)
+            return
         }
 
         await addDocument({
@@ -296,7 +298,7 @@ export const UploadArea = () => {
             fileSize: file.size,
             mimeType: file.type,
             fileData,
-            lab: extractionResult.labName,
+            lab: extractionResult.labName ?? undefined,
             testDate,
             notes: '',
             createdAt: now,

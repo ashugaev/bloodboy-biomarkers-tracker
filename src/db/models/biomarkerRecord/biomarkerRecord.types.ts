@@ -11,4 +11,5 @@ export interface BiomarkerRecord extends BaseEntity {
     approved: boolean
     latest: boolean
     order?: number
+    page?: number
 }

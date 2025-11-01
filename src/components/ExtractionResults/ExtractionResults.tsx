@@ -41,6 +41,13 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
 
     const columnDefs = useMemo<Array<ColDef<ExtractedBiomarker>>>(() => [
         {
+            field: 'page',
+            headerName: 'Page',
+            flex: 0.5,
+            minWidth: 100,
+            editable: false,
+        },
+        {
             field: 'name',
             headerName: 'Biomarker',
             flex: 1.5,

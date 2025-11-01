@@ -13,4 +13,5 @@ export const biomarkerRecordSchema = baseEntitySchema.extend({
     approved: z.boolean(),
     latest: z.boolean(),
     order: z.number().optional(),
+    page: z.number().optional(),
 })
