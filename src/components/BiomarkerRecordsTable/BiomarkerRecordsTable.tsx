@@ -5,7 +5,7 @@ import { AgGridReact } from '@ag-grid-community/react'
 import { DeleteOutlined } from '@ant-design/icons'
 import { Button } from 'antd'
 
-import { createPageColumn, createUnitColumn, createValueColumn } from '@/aggrid/columns/biomarkerColumns'
+import { createUnitColumn, createValueColumn } from '@/aggrid/columns/biomarkerColumns'
 import { dateComparator } from '@/aggrid/comparators/dateComprator'
 import { COLORS } from '@/constants/colors'
 import { deleteBiomarkerRecord, updateBiomarkerRecord, useBiomarkerRecords } from '@/db/models/biomarkerRecord'

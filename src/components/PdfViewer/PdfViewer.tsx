@@ -87,7 +87,7 @@ export const PdfViewer = (props: PdfViewerProps) => {
                                         renderAnnotationLayer={false}
                                     />
                                     {index < numPages - 1 && (
-                                        <div className='h-1 w-full bg-gray-100'></div>
+                                        <div className='h-1 w-full bg-gray-100'/>
                                     )}
                                 </div>
                             ))}
