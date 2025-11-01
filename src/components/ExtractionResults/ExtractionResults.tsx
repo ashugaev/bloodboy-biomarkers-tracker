@@ -5,7 +5,7 @@ import { AgGridReact } from '@ag-grid-community/react'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, message } from 'antd'
 
-import { createOriginalNameColumn } from '@/aggrid/columns/biomarkerColumns'
+import { createOriginalNameColumn, createPageColumn, createValueColumn } from '@/aggrid/columns/biomarkerColumns'
 import { ValidationWarning } from '@/components/ValidationWarning'
 import { BiomarkerRecord, deleteBiomarkerRecord, modifyBiomarkerRecord } from '@/db/models/biomarkerRecord'
 import { useUnits } from '@/db/models/unit'
@@ -26,7 +26,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
     }, [])
 
     const hasInvalidBiomarkers = useMemo(() => {
-        return rowData.some(b => !b.name || b.value === undefined)
+        return rowData.some(b => !b.name || (b.value === undefined && !b.textValue))
     }, [rowData])
 
     const biomarkerOptions = useMemo(() => {
@@ -40,13 +40,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
     }, [configs, units])
 
     const columnDefs = useMemo<Array<ColDef<ExtractedBiomarker>>>(() => [
-        {
-            field: 'page',
-            headerName: 'Page',
-            flex: 0.5,
-            minWidth: 100,
-            editable: false,
-        },
+        createPageColumn<ExtractedBiomarker>(),
         {
             field: 'name',
             headerName: 'Biomarker',
@@ -73,6 +67,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
                         if (config) {
                             params.data.biomarkerId = config.id
                             params.data.name = config.name
+                            params.data.ucumCode = config.ucumCode ?? null
                             return true
                         }
                     }
@@ -82,23 +77,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
             cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.name),
         },
         createOriginalNameColumn<ExtractedBiomarker>(),
-        {
-            field: 'value',
-            headerName: 'Value',
-            flex: 1,
-            editable: true,
-            valueSetter: (params) => {
-                if (params.data) {
-                    const numValue = Number(params.newValue)
-                    if (!isNaN(numValue)) {
-                        params.data.value = numValue
-                        return true
-                    }
-                }
-                return false
-            },
-            cellStyle: (params) => getInvalidCellStyle(params, (data) => data?.value === undefined),
-        },
+        createValueColumn<ExtractedBiomarker>(units),
         {
             colId: 'delete',
             headerName: '',
@@ -119,7 +98,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
                 )
             },
         },
-    ], [handleDelete, biomarkerOptions, configs])
+    ], [handleDelete, biomarkerOptions, configs, units])
 
     const onCellValueChanged = useCallback((event: CellValueChangedEvent<ExtractedBiomarker>) => {
         const data = event.data
@@ -146,12 +125,15 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
                 }
             }
         } else if (field === 'value') {
-            const numValue = Number(newValue)
-            if (!isNaN(numValue)) {
-                void modifyBiomarkerRecord(data.id, (record: BiomarkerRecord) => {
-                    record.value = numValue
-                })
-            }
+            void modifyBiomarkerRecord(data.id, (record: BiomarkerRecord) => {
+                if (data.textValue !== undefined) {
+                    record.textValue = data.textValue
+                    record.value = undefined
+                } else if (data.value !== undefined) {
+                    record.value = data.value
+                    record.textValue = undefined
+                }
+            })
         } else if (field && newValue !== undefined) {
             void modifyBiomarkerRecord(data.id, (record) => {
                 (record as unknown as Record<string, unknown>)[field] = newValue

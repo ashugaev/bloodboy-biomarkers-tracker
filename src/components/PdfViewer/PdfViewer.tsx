@@ -75,18 +75,21 @@ export const PdfViewer = (props: PdfViewerProps) => {
                             loading={<div className='text-gray-500'>Loading PDF...</div>}
                             error={<div className='text-red-500'>Failed to load PDF</div>}
                             onLoadSuccess={(pdf) => { setNumPages(pdf.numPages) }}
-                            className='inline-block'
+                            className='flex flex-col gap-4'
                         >
                             {Array.from(new Array(numPages), (_, index) => (
-                                <Page
-                                    key={`page_${index + 1}`}
-                                    pageNumber={index + 1}
-                                    width={containerWidth || undefined}
-                                    scale={scale}
-                                    className='mb-4'
-                                    renderTextLayer={false}
-                                    renderAnnotationLayer={false}
-                                />
+                                <div key={`page_${index + 1}`} className='flex flex-col gap-4'>
+                                    <Page
+                                        pageNumber={index + 1}
+                                        width={containerWidth || undefined}
+                                        scale={scale}
+                                        renderTextLayer={false}
+                                        renderAnnotationLayer={false}
+                                    />
+                                    {index < numPages - 1 && (
+                                        <div className='h-1 w-full bg-gray-100'></div>
+                                    )}
+                                </div>
                             ))}
                         </Document>
                     </div>

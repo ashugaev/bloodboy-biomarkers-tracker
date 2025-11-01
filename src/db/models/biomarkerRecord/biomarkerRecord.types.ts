@@ -4,6 +4,7 @@ export interface BiomarkerRecord extends BaseEntity {
     biomarkerId: string
     documentId?: string
     value?: number
+    textValue?: string
     ucumCode: string
     originalName?: string
     notes?: string

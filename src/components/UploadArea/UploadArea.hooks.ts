@@ -46,6 +46,12 @@ export const usePdfExtraction = ({ extractBiomarkers, onPageProgress, onTotalPag
                 if (extractionResult) {
                     try {
                         parsedExtractionResult = extractionResultSchema.parse(extractionResult)
+                        if (parsedExtractionResult?.biomarkers) {
+                            parsedExtractionResult.biomarkers = parsedExtractionResult.biomarkers.map(biomarker => ({
+                                ...biomarker,
+                                page: pageIndex + 1,
+                            }))
+                        }
                     } catch (error) {
                         let errorsInfo = ''
                         try {
@@ -149,6 +155,7 @@ export const usePdfExtraction = ({ extractBiomarkers, onPageProgress, onTotalPag
             pagesToExtract.map(({ page, index }) => extractPage(page, index, completedPagesRef, model)),
         )
 
+        const attemptedPageIndices = new Set(pagesToExtract.map(({ index }) => index))
         const failedIndices: number[] = []
 
         for (const pageResult of pagesExtractionResults) {
@@ -167,7 +174,7 @@ export const usePdfExtraction = ({ extractBiomarkers, onPageProgress, onTotalPag
         for (let i = 0; i < numPages; i++) {
             const pageResult = pageResults.get(i)
             if (!pageResult) {
-                if (!failedIndices.includes(i)) {
+                if (attemptedPageIndices.has(i) && !failedIndices.includes(i)) {
                     failedIndices.push(i)
                 }
                 continue

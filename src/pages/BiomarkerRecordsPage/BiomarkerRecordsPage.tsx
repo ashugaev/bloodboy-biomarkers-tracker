@@ -21,17 +21,18 @@ export const BiomarkerRecordsPage = (props: BiomarkerRecordsPageProps) => {
     const location = useLocation()
     const { data: configs } = useBiomarkerConfigs({ filter: (c) => c.approved })
     const { data: records } = useBiomarkerRecords({
-        filter: (item) => item.biomarkerId === id && item.approved && item.value !== undefined,
+        filter: (item) => item.biomarkerId === id && item.approved && (item.value !== undefined || item.textValue !== undefined),
     })
     const [viewMode, setViewMode] = useState<ViewMode>(
         (location.state as { viewMode?: ViewMode })?.viewMode ?? 'table',
     )
 
-    const biomarker = configs.find(c => c.id === id)
+    const biomarkerConfig = configs.find(c => c.id === id)
 
     const handleAddNew = useCallback(async () => {
         if (!id) return
-        const defaultUcumCode = records.find(r => r.ucumCode)?.ucumCode
+        const defaultUcumCode = biomarkerConfig?.ucumCode
+
         await createBiomarkerRecords([{
             biomarkerId: id,
             ucumCode: defaultUcumCode ?? '',
@@ -39,9 +40,9 @@ export const BiomarkerRecordsPage = (props: BiomarkerRecordsPageProps) => {
             latest: true,
         }])
         setViewMode('table')
-    }, [id, records])
+    }, [id, biomarkerConfig?.ucumCode])
 
-    if (!biomarker) {
+    if (!biomarkerConfig) {
         return (
             <div className={className}>
                 <Header/>
@@ -70,7 +71,7 @@ export const BiomarkerRecordsPage = (props: BiomarkerRecordsPageProps) => {
                             >
                                 Back
                             </Button>
-                            <h1 className='text-2xl font-bold'>{biomarker.name} ({records.length})</h1>
+                            <h1 className='text-2xl font-bold'>{biomarkerConfig.name} ({records.length})</h1>
                         </div>
 
                         <Segmented
@@ -92,20 +93,20 @@ export const BiomarkerRecordsPage = (props: BiomarkerRecordsPageProps) => {
                     </div>
                     {viewMode === 'table' && (
                         <BiomarkerRecordsTable
-                            biomarkerId={biomarker.id}
-                            biomarkerName={biomarker.name}
-                            normalRange={biomarker.normalRange}
-                            targetRange={biomarker.targetRange}
+                            biomarkerId={biomarkerConfig.id}
+                            biomarkerName={biomarkerConfig.name}
+                            normalRange={biomarkerConfig.normalRange}
+                            targetRange={biomarkerConfig.targetRange}
                             className='flex-1 overflow-auto'
                         />
                     )}
 
                     {viewMode === 'chart' && (
                         <BiomarkerChart
-                            biomarkerId={biomarker.id}
-                            biomarkerName={biomarker.name}
-                            normalRange={biomarker.normalRange}
-                            targetRange={biomarker.targetRange}
+                            biomarkerId={biomarkerConfig.id}
+                            biomarkerName={biomarkerConfig.name}
+                            normalRange={biomarkerConfig.normalRange}
+                            targetRange={biomarkerConfig.targetRange}
                             className='flex-1 overflow-auto'
                         />
                     )}

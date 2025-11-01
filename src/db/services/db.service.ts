@@ -24,7 +24,7 @@ class BloodTestDatabase extends Dexie {
     uploadedFiles!: EntityTable<UploadedDocument, 'id'>
     appSettings!: EntityTable<AppSettings, 'id'>
     users!: EntityTable<User, 'id'>
-    units!: EntityTable<Unit, 'ucumCode'>
+    units!: EntityTable<Unit, 'id'>
 
     constructor () {
         super(DB_NAME)
@@ -44,6 +44,24 @@ class BloodTestDatabase extends Dexie {
             appSettings: 'id, createdAt, updatedAt',
             users: 'id, createdAt, updatedAt',
             units: 'ucumCode, approved, createdAt, updatedAt',
+        })
+
+        this.version(3).stores({
+            biomarkerConfigs: 'id, userId, approved, createdAt, updatedAt',
+            biomarkerRecords: 'id, userId, biomarkerId, documentId, approved, latest, createdAt, updatedAt',
+            uploadedFiles: 'id, userId, type, approved, uploadDate, createdAt, updatedAt',
+            appSettings: 'id, createdAt, updatedAt',
+            users: 'id, createdAt, updatedAt',
+            units: null,
+        })
+
+        this.version(4).stores({
+            biomarkerConfigs: 'id, userId, approved, createdAt, updatedAt',
+            biomarkerRecords: 'id, userId, biomarkerId, documentId, approved, latest, createdAt, updatedAt',
+            uploadedFiles: 'id, userId, type, approved, uploadDate, createdAt, updatedAt',
+            appSettings: 'id, createdAt, updatedAt',
+            users: 'id, createdAt, updatedAt',
+            units: 'id, ucumCode, approved, createdAt, updatedAt',
         })
 
         const tablesWithUserId = [

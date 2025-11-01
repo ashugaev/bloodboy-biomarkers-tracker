@@ -51,8 +51,10 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
     const { data: documents } = useDocuments()
 
     const chartData = useMemo(() => {
-        const approvedRecords = records.filter((r): r is typeof r & { value: number } => r.approved && r.value !== undefined)
-        const data: ChartDataPoint[] = approvedRecords.map(record => {
+        const approvedRecords = records.filter(r => r.approved)
+        const numericRecords = approvedRecords.filter((r): r is typeof r & { value: number } => r.value !== undefined)
+
+        const data: ChartDataPoint[] = numericRecords.map(record => {
             const document = documents.find(d => d.id === record.documentId)
             const date = document?.testDate
             return {
@@ -90,6 +92,17 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
             Math.ceil(rangeMax + padding),
         ]
     }, [chartData, normalRange, targetRange])
+
+    if (chartData.length === 0) {
+        return (
+            <div className={cn('bg-white p-6 rounded border border-gray-100 flex flex-col items-center justify-center min-h-[400px]', className)}>
+                <div className='text-center text-gray-400'>
+                    <div className='text-lg mb-2'>No numeric data available</div>
+                    <div className='text-sm'>This biomarker contains only text-based values</div>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className={cn('bg-white p-6 rounded border border-gray-100 flex flex-col', className)}>

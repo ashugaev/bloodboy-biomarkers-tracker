@@ -2,6 +2,7 @@ import { BiomarkerConfig } from '@/db/models/biomarkerConfig'
 
 export interface BiomarkerStats {
     lastMeasurement?: number
+    lastValue?: number | string
     maxResult?: number
     minResult?: number
 }

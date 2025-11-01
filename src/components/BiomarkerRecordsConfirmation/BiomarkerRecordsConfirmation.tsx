@@ -42,6 +42,7 @@ export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmation
             name: config?.name,
             originalName: record.originalName,
             value: record.value,
+            textValue: record.textValue,
             ucumCode: record.ucumCode,
             referenceRange: config?.normalRange,
             order: record.order,

@@ -64,7 +64,7 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
 
     const isValid = useMemo(() => {
         return rowData.every(row => {
-            if (!row.name || !row.ucumCode) return false
+            if (!row.name) return false
             const validation = validateRanges(row.normalRange, row.targetRange)
             return validation.isValid
         })

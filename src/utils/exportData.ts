@@ -35,7 +35,7 @@ const exportToCSV = (data: ExportDataParams) => {
     ]
 
     records
-        .filter(r => r.approved && r.value !== undefined)
+        .filter(r => r.approved && (r.value !== undefined || r.textValue !== undefined))
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         .forEach(record => {
             const config = configsMap.get(record.biomarkerId)
@@ -43,7 +43,7 @@ const exportToCSV = (data: ExportDataParams) => {
 
             const testDate = doc?.testDate ? doc.testDate.toLocaleDateString() : record.createdAt.toLocaleDateString()
             const name = config?.name ?? record.originalName ?? 'Unknown'
-            const value = record.value?.toString() ?? ''
+            const value = record.textValue ?? record.value?.toString() ?? ''
             const unit = record.ucumCode ?? ''
             const normalRangeMin = config?.normalRange?.min?.toString() ?? ''
             const normalRangeMax = config?.normalRange?.max?.toString() ?? ''

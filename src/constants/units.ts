@@ -1,6 +1,8 @@
 export interface UnitConfig {
     title: string
     ucum: string
+    valueType?: 'number' | 'select' | 'text'
+    options?: string[]
 }
 
 export const UNIT_CONFIGS: UnitConfig[] = [
@@ -135,6 +137,33 @@ export const UNIT_CONFIGS: UnitConfig[] = [
     {
         title: 'copies/mL',
         ucum: '{copies}/mL',
+    },
+    {
+        title: 'Reactive / Nonreactive',
+        ucum: '{reactive}',
+        valueType: 'select',
+        options: ['Reactive', 'Nonreactive'],
+    },
+    {
+        title: 'Positive / Negative',
+        ucum: '{positive}',
+        valueType: 'select',
+        options: ['Positive', 'Negative'],
+    },
+    {
+        title: 'Detected / Not Detected',
+        ucum: '{detected}',
+        valueType: 'select',
+        options: ['Detected', 'Not Detected'],
+    },
+    {
+        title: 'Note',
+        ucum: '{note}',
+        valueType: 'text',
+    },
+    {
+        title: 'No Unit',
+        ucum: '{no_unit}',
     },
 ]
 

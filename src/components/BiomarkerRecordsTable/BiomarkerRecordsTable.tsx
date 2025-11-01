@@ -5,7 +5,7 @@ import { AgGridReact } from '@ag-grid-community/react'
 import { DeleteOutlined } from '@ant-design/icons'
 import { Button } from 'antd'
 
-import { createUnitColumn } from '@/aggrid/columns/biomarkerColumns'
+import { createPageColumn, createUnitColumn, createValueColumn } from '@/aggrid/columns/biomarkerColumns'
 import { dateComparator } from '@/aggrid/comparators/dateComprator'
 import { COLORS } from '@/constants/colors'
 import { deleteBiomarkerRecord, updateBiomarkerRecord, useBiomarkerRecords } from '@/db/models/biomarkerRecord'
@@ -78,18 +78,10 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
             minWidth: 160,
             editable: true,
         },
-        {
-            field: 'value',
-            headerName: 'Value',
-            flex: 0.8,
-            minWidth: 100,
-            editable: true,
-            cellStyle: (params) => getRangeCellStyle(
-                params.data?.value,
-                normalRange,
-                targetRange,
-            ),
-        },
+        createValueColumn<BiomarkerRecordRowData>(
+            units,
+            (value) => getRangeCellStyle(value, normalRange, targetRange),
+        ),
         createUnitColumn<BiomarkerRecordRowData>(units),
         {
             colId: 'delete',
@@ -118,6 +110,7 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
         if (row.id && (colId === 'value' || colId === 'unitTitle')) {
             await updateBiomarkerRecord(row.id, {
                 value: row.value,
+                textValue: row.textValue,
                 ucumCode: row.ucumCode,
             })
         }

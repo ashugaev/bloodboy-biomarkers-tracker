@@ -4,6 +4,7 @@ import { ChatCompletion } from 'openai/resources'
 import { z } from 'zod'
 
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
+import { useUnits } from '@/db/models/unit'
 import { Range } from '@/db/types'
 
 import { useOpenAI } from './openai.client'
@@ -14,6 +15,7 @@ export interface ExtractedBiomarker {
     name?: string
     originalName?: string
     value?: number
+    textValue?: string
     unit?: string | null
     ucumCode?: string | null
     referenceRange?: Partial<Range>
@@ -48,7 +50,10 @@ export const extractedBiomarkerSchema = z.object({
     }).min(1, 'originalName cannot be empty'),
     value: z.number({
         message: 'value must be a number',
-    }),
+    }).optional(),
+    textValue: z.string({
+        message: 'textValue must be a string',
+    }).optional(),
     unit: z.union([
         z.string().min(1, 'unit cannot be empty'),
         z.null(),
@@ -65,7 +70,9 @@ export const extractedBiomarkerSchema = z.object({
     page: z.number({
         message: 'page must be a number',
     }).nullable().optional(),
-}).strict()
+}).strict().refine((data) => data.value !== undefined || data.textValue !== undefined, {
+    message: 'Either value or textValue must be provided',
+})
 
 export const extractionResultSchema = z.object({
     biomarkers: z.array(extractedBiomarkerSchema).min(1, 'biomarkers array cannot be empty'),
@@ -80,20 +87,23 @@ export const extractionResultSchema = z.object({
 const buildExtractionPrompt = (existingBiomarkers: Array<{
     name: string
     ucumCode?: string
+    valueType?: string
+    options?: string[]
 }>) => `You are a medical data extraction assistant. Extract all biomarker/blood test results from the provided text.
 
 Return a JSON object with the following structure:
 {
   "biomarkers": [
     {
-      "name": "normalized biomarker name (use rules bellow)",
+      "name": "normalized biomarker name (use rules below)",
       "originalName": "exact biomarker name as it appears in the document",
-      "value": numeric value,
-      "unit": "short unit label (e.g., 'mg/dL', 'μIU/mL', 'K/μL', 'cells/μL'). Set null of not available.",
-      "ucumCode": "UCUM csCode string (e.g., mg/dL, mmol/L, [iU]/L, ug/mL). Set null of not available.",
+      "value": numeric value (ONLY for numeric results, omit if result is text-based),
+      "textValue": "text value for qualitative results (ONLY for text-based results - can be predefined values like 'Positive', 'Negative', 'Reactive', 'Detected', or any free-form text description, omit if result is numeric)",
+      "unit": "unit label - for numeric: 'mg/dL', 'μIU/mL', etc. For text-based: descriptive title like 'Positive / Negative', 'Blood Type', or general description. Set null if not available.",
+      "ucumCode": "UCUM code - for numeric: 'mg/dL', 'mmol/L', '[iU]/L', etc. For text-based: '{reactive}', '{positive}', '{detected}', or '{note}'. Set null if not available.",
       "referenceRange": {
-        "min": minimum reference value or null if not available,
-        "max": maximum reference value or null if not available
+        "min": minimum reference value or null (ONLY for numeric results),
+        "max": maximum reference value or null (ONLY for numeric results)
       },
       "order": order number starting from 0
     }
@@ -102,9 +112,16 @@ Return a JSON object with the following structure:
   "labName": "laboratory name (omit if not found)"
 }
 
+CRITICAL: Never include both "value" and "textValue" in the same biomarker - use ONLY one based on result type!
+
 IMPORTANT: Preserve the order of biomarkers as they appear in the document. Assign sequential order numbers starting from 0.
 
-${existingBiomarkers.length > 0 ? `\nExisting biomarkers in the system:\n${existingBiomarkers.map(b => `- ${b.name} | UCUM: ${b.ucumCode ?? 'N/A'}`).join('\n')}\n` : ''}
+${existingBiomarkers.length > 0 ? `\nExisting biomarkers in the system (match these exactly, including ucumCode and valueType):\n${existingBiomarkers.map(b => {
+        const ucum = b.ucumCode ?? 'N/A'
+        const type = b.valueType ? ` | Type: ${b.valueType}` : ''
+        const opts = b.options ? ` | Options: ${b.options.join(', ')}` : ''
+        return `- ${b.name} | UCUM: ${ucum}${type}${opts}`
+    }).join('\n')}\n` : ''}
 Biomarker Naming Rules (STRICT):
 - originalName: extract EXACTLY as it appears in the document (preserve original language, case, spacing)
   * If biomarker name appears in multiple languages, prioritize: English > Russian > other languages
@@ -137,39 +154,65 @@ Examples of correct naming:
 - "Vit D" → originalName: "Vit D", name: "Vitamin D"
 
 Unit and UCUM Rules (STRICT):
-- unit: provide a short label that approximates how the unit appears in the document, but normalized to English and consistent casing/font (e.g., "mg/dL", "μIU/mL", "K/μL", "cells/μL"). Use null if not available or for dimensionless values.
-- ucumCode: provide the UCUM csCode string (case-sensitive), e.g., mg/dL, mmol/L, [iU]/L, ug/mL. Use null if unsure or not available.
-- Do not invent units. If unsure about ucumCode, set null.
-Examples of unit vs ucumCode:
-- Glucose 5.2 mmol/L → unit: "mmol/L", ucumCode: "mmol/L"
-- TSH 2.1 μIU/mL → unit: "μIU/mL", ucumCode: "u[iU]/mL"
-- WBC 6.0 K/μL → unit: "K/μL", ucumCode: "10*3/uL"
-- WBC 6.0 cells/μL → unit: "cells/μL", ucumCode: "{cells}/uL"
-- INR 1.08 (dimensionless) → unit: null, ucumCode: null
+- unit: provide a short label that approximates how the unit appears in the document, but normalized to English and consistent casing/font (e.g., "mg/dL", "μIU/mL", "K/μL", "cells/μL"). Use "No Unit" for dimensionless numeric values. Use null if not available.
+- ucumCode: provide the UCUM csCode string (case-sensitive), e.g., mg/dL, mmol/L, [iU]/L, ug/mL. If there is a unit but no specific UCUM code exists, use the format {anyName} (e.g., {appearance}, {blood_type}). For dimensionless numeric values, use "{no_unit}". Use null only if unit is also null.
+- Do not invent units. If there is a unit, there must be a corresponding ucumCode (either standard UCUM or {anyName} format).
+
+Examples of numeric values with unit vs ucumCode:
+- Glucose 5.2 mmol/L → value: 5.2, unit: "mmol/L", ucumCode: "mmol/L"
+- TSH 2.1 μIU/mL → value: 2.1, unit: "μIU/mL", ucumCode: "u[iU]/mL"
+- WBC 6.0 K/μL → value: 6.0, unit: "K/μL", ucumCode: "10*3/uL"
+- WBC 6.0 cells/μL → value: 6.0, unit: "cells/μL", ucumCode: "{cells}/uL"
+- INR 1.08 (dimensionless) → value: 1.08, unit: "No Unit", ucumCode: "{no_unit}"
+
+Examples of text-based values with unit vs ucumCode:
+- HIV Antibody: Negative → textValue: "Negative", unit: "Positive / Negative", ucumCode: "{positive}"
+- Blood Type: AB+ → textValue: "AB+", unit: "Blood Type", ucumCode: "{blood_type}"
+- Hepatitis B Surface Antigen: Reactive → textValue: "Reactive", unit: "Reactive / Non-Reactive", ucumCode: "{reactive}"
+- Urine Appearance: Clear yellow → textValue: "Clear yellow", unit: "Appearance", ucumCode: "{appearance}"
+- Comment: Sample hemolyzed → textValue: "Sample hemolyzed", unit: "Note", ucumCode: "{note}"
+
+Text-Based Values Rules (CRITICAL):
+For qualitative (non-numeric) results, use "textValue" field with appropriate ucumCode:
+
+**Key Rules:**
+- unit describes the analysis TYPE, not the value itself
+- Never mix numeric values with text-based ucumCodes
+- Match existing biomarker ucumCode when available
+- Try to use specific descriptive ucumCodes that match the analysis type (e.g., {blood_type}, {appearance}, {color})
+- Use unit: "Note" with ucumCode: "{note}" for TEXT-BASED results ONLY as a fallback when no appropriate specific ucumCode can be determined
+- ALWAYS normalize textValue to English (e.g., "Отрицательный" → "Negative", "Положительный" → "Positive", "Обнаружено" → "Detected")
 
 General Rules:
 - Clean the extracted text from obviously incorrect and unnecessary symbols (e.g., garbage characters, formatting artifacts, stray symbols)
-- Extract all numeric biomarker values
-- Include the unit of measurement for each biomarker
-- Include reference ranges when available
+- For numeric biomarker values: use "value" field (number type)
+- For qualitative/text-based results: use "textValue" field (string type) and appropriate ucumCode (see Text-Based Values Rules above)
+- Either "value" or "textValue" must be provided, but NEVER both
+- Include the unit of measurement for each biomarker (for text-based results, unit describes the analysis type)
+- Include reference ranges ONLY for numeric values (omit for text-based results)
 - Parse dates in ISO format (YYYY-MM-DD)
 - Extract laboratory name if mentioned
 - If testDate or labName are not found, omit them from the response
 - Use null instead of empty strings for unit, ucumCode, or referenceRange values when not available
-- If a value is not numeric or not available, skip that biomarker
-- Return only valid JSON, no additional text
+- Return only valid JSON, no additional text`
 
 export const useExtractBiomarkers = () => {
     const { client, hasApiKey, loading } = useOpenAI()
     const { data: configs } = useBiomarkerConfigs()
+    const { data: units } = useUnits()
 
     const extractBiomarkers = useCallback(async (imageBase64: string, followUpMessage?: string, model?: string): Promise<ExtractionResult | null> => {
         if (!client) return null
 
-        const existingBiomarkers = configs.map(c => ({
-            name: c.name,
-            ucumCode: c.ucumCode,
-        }))
+        const existingBiomarkers = configs.map(c => {
+            const unit = units.find(u => u.ucumCode === c.ucumCode)
+            return {
+                name: c.name,
+                ucumCode: c.ucumCode,
+                valueType: unit?.valueType,
+                options: unit?.options,
+            }
+        })
         const prompt = buildExtractionPrompt(existingBiomarkers)
 
         const messages = [
@@ -225,7 +268,7 @@ export const useExtractBiomarkers = () => {
         // eslint-disable-next-line no-console
         console.log('AI Result:', result)
         return result
-    }, [client, configs])
+    }, [client, configs, units])
 
     return {
         extractBiomarkers,

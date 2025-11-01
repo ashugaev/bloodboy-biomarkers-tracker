@@ -241,6 +241,7 @@ export const UploadArea = () => {
                     biomarkerId,
                     documentId,
                     value: biomarker.value ?? undefined,
+                    textValue: biomarker.textValue ?? undefined,
                     ucumCode: biomarker.ucumCode ?? '',
                     originalName: biomarker.originalName ?? undefined,
                     approved: false,
@@ -333,8 +334,6 @@ export const UploadArea = () => {
             />
         )
     }
-
-    if (isDisabled) return null
 
     return (
         <>

@@ -73,12 +73,16 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
                         date: item.date ? item.date.toLocaleDateString() : '',
                     }))
 
+                const lastRecord = sortedData.length > 0 ? sortedData[sortedData.length - 1].record : undefined
+                const lastValue = lastRecord?.textValue ?? (lastRecord?.value != null ? lastRecord.value : undefined)
+
                 return {
                     ...config,
                     unitTitle: unit?.title,
                     history: lastFiveData,
                     stats: {
                         lastMeasurement: values.length > 0 ? values[values.length - 1] : undefined,
+                        lastValue,
                         maxResult: values.length > 0 ? Math.max(...values) : undefined,
                         minResult: values.length > 0 ? Math.min(...values) : undefined,
                     },
@@ -167,17 +171,28 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
         createTargetRangeMinColumn<BiomarkerRowData>(),
         createTargetRangeMaxColumn<BiomarkerRowData>(),
         {
-            field: 'stats.lastMeasurement',
+            field: 'stats.lastValue',
             headerName: 'Last',
             flex: 0.6,
             minWidth: 90,
             editable: false,
-            valueGetter: (params) => params.data?.stats.lastMeasurement ?? '',
-            cellStyle: (params) => getRangeCellStyle(
-                params.data?.stats.lastMeasurement,
-                params.data?.normalRange,
-                params.data?.targetRange,
-            ),
+            valueGetter: (params) => {
+                const val = params.data?.stats.lastValue
+                if (typeof val === 'string') return val
+                if (typeof val === 'number') return val
+                return ''
+            },
+            cellStyle: (params) => {
+                const val = params.data?.stats.lastValue
+                if (typeof val === 'number') {
+                    return getRangeCellStyle(
+                        val,
+                        params.data?.normalRange,
+                        params.data?.targetRange,
+                    )
+                }
+                return {}
+            },
         },
         {
             field: 'stats.maxResult',
