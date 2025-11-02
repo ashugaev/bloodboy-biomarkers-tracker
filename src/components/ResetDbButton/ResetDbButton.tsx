@@ -2,17 +2,21 @@ import { useState } from 'react'
 
 import { DeleteOutlined } from '@ant-design/icons'
 import { Button, Modal } from 'antd'
+import { usePostHog } from 'posthog-js/react'
 
 import { COLORS, DB_NAME } from '@/constants'
+import { captureEvent } from '@/utils'
 
 import { ResetDbButtonProps } from './ResetDbButton.types'
 
 export const ResetDbButton = (props: ResetDbButtonProps) => {
     const { className } = props
+    const posthog = usePostHog()
     const [isModalVisible, setIsModalVisible] = useState(false)
     const [isResetting, setIsResetting] = useState(false)
 
     const handleReset = () => {
+        captureEvent(posthog, 'database_reset')
         setIsResetting(true)
         const deleteRequest = indexedDB.deleteDatabase(DB_NAME)
 
@@ -38,7 +42,10 @@ export const ResetDbButton = (props: ResetDbButtonProps) => {
             <Button
                 size='small'
                 icon={<DeleteOutlined/>}
-                onClick={() => { setIsModalVisible(true) }}
+                onClick={() => {
+                    captureEvent(posthog, 'database_reset_modal_opened')
+                    setIsModalVisible(true)
+                }}
                 danger
                 className={className}
             >

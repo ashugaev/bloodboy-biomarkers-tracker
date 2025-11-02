@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react'
 
 import { Tooltip } from 'antd'
+import { usePostHog } from 'posthog-js/react'
 import { Link } from 'react-router-dom'
 
 import { GitHubStarsButton } from '@/components/GitHubStarsButton'
-import { getPublicPath } from '@/utils'
+import { getPublicPath, captureEvent } from '@/utils'
 
+import { HomePageProps } from './HomePage.types'
 import user1Img from './img/user-1.png'
 import user2Img from './img/user-2.png'
 import user3Img from './img/user-3.png'
 
-import { HomePageProps } from './HomePage.types'
-
 export const HomePage = (props: HomePageProps) => {
     const { className } = props
+    const posthog = usePostHog()
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [openFaq, setOpenFaq] = useState<string | null>('1')
     const [activeSection, setActiveSection] = useState('home')
@@ -58,6 +59,9 @@ export const HomePage = (props: HomePageProps) => {
     }, [])
 
     const scrollToSection = (sectionId: string) => {
+        captureEvent(posthog, 'homepage_navigation_clicked', {
+            section: sectionId,
+        })
         if (sectionId === 'home') {
             window.scrollTo({
                 top: 0,
@@ -77,7 +81,14 @@ export const HomePage = (props: HomePageProps) => {
             <header className='sticky top-0 inset-x-0 flex flex-wrap md:justify-start md:flex-nowrap z-50 w-full text-sm'>
                 <nav className='mt-4 relative max-w-2xl w-full bg-white border border-gray-200 rounded-[24px] mx-2 flex flex-wrap md:flex-nowrap items-center justify-between p-1 ps-4 md:py-0 sm:mx-auto'>
                     <div className='flex items-center'>
-                        <Link className='flex items-center gap-2 rounded-md focus:outline-none focus:opacity-80' to='/' aria-label='Bloodboy'>
+                        <Link
+                            className='flex items-center gap-2 rounded-md focus:outline-none focus:opacity-80'
+                            to='/'
+                            aria-label='Bloodboy'
+                            onClick={() => {
+                                captureEvent(posthog, 'homepage_logo_clicked')
+                            }}
+                        >
                             <img src={getPublicPath('favicon.svg')} alt='Bloodboy' className='w-4 h-4'/>
                             <span className='text-xl font-semibold text-gray-800'>Bloodboy</span>
                         </Link>
@@ -85,7 +96,15 @@ export const HomePage = (props: HomePageProps) => {
 
                     <div className='flex items-center gap-1 md:order-4 md:ms-4'>
                         {/* Desktop button */}
-                        <Link to='/data' className='hidden md:w-full md:inline-flex whitespace-nowrap py-2 px-3 justify-center items-center gap-x-2 text-sm font-medium rounded-full border border-transparent bg-indigo-600 text-white hover:bg-indigo-700 hover:text-white focus:outline-none focus:bg-indigo-700 transition-all hover:scale-105 active:scale-95'>
+                        <Link
+                            to='/data'
+                            className='hidden md:w-full md:inline-flex whitespace-nowrap py-2 px-3 justify-center items-center gap-x-2 text-sm font-medium rounded-full border border-transparent bg-indigo-600 text-white hover:bg-indigo-700 hover:text-white focus:outline-none focus:bg-indigo-700 transition-all hover:scale-105 active:scale-95'
+                            onClick={() => {
+                                captureEvent(posthog, 'homepage_get_started_clicked', {
+                                    location: 'header_desktop',
+                                })
+                            }}
+                        >
                             Get Started
                         </Link>
 
@@ -93,7 +112,12 @@ export const HomePage = (props: HomePageProps) => {
                         <div className='md:hidden'>
                             <button
                                 type='button'
-                                onClick={() => { setIsMenuOpen(!isMenuOpen) }}
+                                onClick={() => {
+                                    captureEvent(posthog, 'homepage_mobile_menu_toggled', {
+                                        isOpen: !isMenuOpen,
+                                    })
+                                    setIsMenuOpen(!isMenuOpen)
+                                }}
                                 className='flex justify-center items-center size-9 border rounded-full border-gray-200 text-gray-500 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-all hover:scale-105 active:scale-95'
                                 aria-label='Toggle navigation'
                             >
@@ -164,7 +188,12 @@ export const HomePage = (props: HomePageProps) => {
                             <Link
                                 to='/data'
                                 className='md:hidden w-full mt-3 inline-flex justify-center items-center gap-x-2 py-3 px-4 text-sm font-medium rounded-full border border-transparent bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:bg-indigo-700 transition-colors'
-                                onClick={() => { setIsMenuOpen(false) }}
+                                onClick={() => {
+                                    captureEvent(posthog, 'homepage_get_started_clicked', {
+                                        location: 'header_mobile',
+                                    })
+                                    setIsMenuOpen(false)
+                                }}
                             >
                                 Get Started
                             </Link>
@@ -189,6 +218,11 @@ export const HomePage = (props: HomePageProps) => {
                             <Link
                                 className='inline-block rounded border border-indigo-600 bg-indigo-600 py-3 px-4 font-medium text-white shadow-sm transition-all hover:bg-indigo-700 hover:text-white hover:scale-105 active:scale-95'
                                 to='/data'
+                                onClick={() => {
+                                    captureEvent(posthog, 'homepage_get_started_clicked', {
+                                        location: 'hero',
+                                    })
+                                }}
                             >
                                 Get Started
                             </Link>
@@ -469,7 +503,15 @@ export const HomePage = (props: HomePageProps) => {
                                 </li>
                             </ul>
 
-                            <Link to='/data' className='mt-3 inline-block rounded border border-indigo-600 bg-indigo-600 py-3 px-4 font-medium text-white shadow-sm transition-all hover:bg-indigo-700 hover:text-white hover:scale-105 active:scale-95'>
+                            <Link
+                                to='/data'
+                                className='mt-3 inline-block rounded border border-indigo-600 bg-indigo-600 py-3 px-4 font-medium text-white shadow-sm transition-all hover:bg-indigo-700 hover:text-white hover:scale-105 active:scale-95'
+                                onClick={() => {
+                                    captureEvent(posthog, 'homepage_get_started_clicked', {
+                                        location: 'pricing',
+                                    })
+                                }}
+                            >
                                 Get Started
                             </Link>
                             <p className='mt-4 text-xs text-gray-500'>
@@ -479,6 +521,11 @@ export const HomePage = (props: HomePageProps) => {
                                     href='https://github.com/ashugaev/bloodboy-biomarkers-tracker'
                                     target='_blank'
                                     rel='noopener noreferrer'
+                                    onClick={() => {
+                                        captureEvent(posthog, 'homepage_github_star_link_clicked', {
+                                            location: 'pricing',
+                                        })
+                                    }}
                                 >
                                     Leave a star <span>⭐</span>
                                 </a>
@@ -508,7 +555,13 @@ export const HomePage = (props: HomePageProps) => {
                                 <div className='pb-3'>
                                     <button
                                         className='group pb-3 inline-flex items-center justify-between gap-x-3 w-full md:text-lg font-semibold text-start text-gray-800 rounded-lg transition hover:text-gray-500 focus:outline-none focus:text-gray-500'
-                                        onClick={() => { setOpenFaq(openFaq === '1' ? null : '1') }}
+                                        onClick={() => {
+                                            captureEvent(posthog, 'homepage_faq_toggled', {
+                                                faqId: '1',
+                                                isOpen: openFaq !== '1',
+                                            })
+                                            setOpenFaq(openFaq === '1' ? null : '1')
+                                        }}
                                     >
                                         Is my health data secure?
                                         <svg className={`shrink-0 size-5 text-gray-600 ${openFaq === '1' ? 'rotate-180' : ''} transition-transform`} xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
@@ -527,7 +580,13 @@ export const HomePage = (props: HomePageProps) => {
                                 <div className='pt-6 pb-3'>
                                     <button
                                         className='group pb-3 inline-flex items-center justify-between gap-x-3 w-full md:text-lg font-semibold text-start text-gray-800 rounded-lg transition hover:text-gray-500 focus:outline-none focus:text-gray-500'
-                                        onClick={() => { setOpenFaq(openFaq === '2' ? null : '2') }}
+                                        onClick={() => {
+                                            captureEvent(posthog, 'homepage_faq_toggled', {
+                                                faqId: '2',
+                                                isOpen: openFaq !== '2',
+                                            })
+                                            setOpenFaq(openFaq === '2' ? null : '2')
+                                        }}
                                     >
                                         What file formats are supported?
                                         <svg className={`shrink-0 size-5 text-gray-600 ${openFaq === '2' ? 'rotate-180' : ''} transition-transform`} xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
@@ -546,7 +605,13 @@ export const HomePage = (props: HomePageProps) => {
                                 <div className='pt-6 pb-3'>
                                     <button
                                         className='group pb-3 inline-flex items-center justify-between gap-x-3 w-full md:text-lg font-semibold text-start text-gray-800 rounded-lg transition hover:text-gray-500 focus:outline-none focus:text-gray-500'
-                                        onClick={() => { setOpenFaq(openFaq === '3' ? null : '3') }}
+                                        onClick={() => {
+                                            captureEvent(posthog, 'homepage_faq_toggled', {
+                                                faqId: '3',
+                                                isOpen: openFaq !== '3',
+                                            })
+                                            setOpenFaq(openFaq === '3' ? null : '3')
+                                        }}
                                     >
                                         Is this service free?
                                         <svg className={`shrink-0 size-5 text-gray-600 ${openFaq === '3' ? 'rotate-180' : ''} transition-transform`} xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
@@ -569,7 +634,13 @@ export const HomePage = (props: HomePageProps) => {
                                 <div className='pt-6 pb-3'>
                                     <button
                                         className='group pb-3 inline-flex items-center justify-between gap-x-3 w-full md:text-lg font-semibold text-start text-gray-800 rounded-lg transition hover:text-gray-500 focus:outline-none focus:text-gray-500'
-                                        onClick={() => { setOpenFaq(openFaq === '4' ? null : '4') }}
+                                        onClick={() => {
+                                            captureEvent(posthog, 'homepage_faq_toggled', {
+                                                faqId: '4',
+                                                isOpen: openFaq !== '4',
+                                            })
+                                            setOpenFaq(openFaq === '4' ? null : '4')
+                                        }}
                                     >
                                         Can I export my data?
                                         <svg className={`shrink-0 size-5 text-gray-600 ${openFaq === '4' ? 'rotate-180' : ''} transition-transform`} xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
@@ -588,7 +659,13 @@ export const HomePage = (props: HomePageProps) => {
                                 <div className='pt-6 pb-3'>
                                     <button
                                         className='group pb-3 inline-flex items-center justify-between gap-x-3 w-full md:text-lg font-semibold text-start text-gray-800 rounded-lg transition hover:text-gray-500 focus:outline-none focus:text-gray-500'
-                                        onClick={() => { setOpenFaq(openFaq === '5' ? null : '5') }}
+                                        onClick={() => {
+                                            captureEvent(posthog, 'homepage_faq_toggled', {
+                                                faqId: '5',
+                                                isOpen: openFaq !== '5',
+                                            })
+                                            setOpenFaq(openFaq === '5' ? null : '5')
+                                        }}
                                     >
                                         How far back can I track my results?
                                         <svg className={`shrink-0 size-5 text-gray-600 ${openFaq === '5' ? 'rotate-180' : ''} transition-transform`} xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
@@ -624,6 +701,11 @@ export const HomePage = (props: HomePageProps) => {
                                 target='_blank'
                                 rel='noopener noreferrer'
                                 className='text-xs text-gray-600 hover:text-gray-900 transition-colors inline-flex items-center gap-1'
+                                onClick={() => {
+                                    captureEvent(posthog, 'homepage_github_star_link_clicked', {
+                                        location: 'footer',
+                                    })
+                                }}
                             >
                                 <svg role='img' viewBox='0 0 24 24' fill='currentColor' className='w-3.5 h-3.5'>
                                     <path d='M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12'/>

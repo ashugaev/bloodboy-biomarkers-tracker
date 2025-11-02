@@ -2,11 +2,13 @@ import { useRef, useState } from 'react'
 
 import { DeleteOutlined, DownloadOutlined, MenuOutlined, UploadOutlined } from '@ant-design/icons'
 import { Button, Dropdown, Modal, MenuProps } from 'antd'
+import { usePostHog } from 'posthog-js/react'
 
 import { COLORS, DB_NAME } from '@/constants'
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments } from '@/db/models/document'
+import { captureEvent } from '@/utils'
 import { exportData } from '@/utils/exportData'
 import { importData } from '@/utils/importData'
 
@@ -14,6 +16,7 @@ import { ImportButtonProps } from './ImportButton.types'
 
 export const ImportButton = (props: ImportButtonProps) => {
     const { className, onlyApproved = true } = props
+    const posthog = usePostHog()
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [isModalVisible, setIsModalVisible] = useState(false)
     const [isResetting, setIsResetting] = useState(false)
@@ -35,7 +38,21 @@ export const ImportButton = (props: ImportButtonProps) => {
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
         if (file) {
-            await importData(file)
+            captureEvent(posthog, 'data_import_started', {
+                fileSize: file.size,
+            })
+            try {
+                await importData(file)
+                captureEvent(posthog, 'data_imported', {
+                    configsCount: configs.length,
+                    recordsCount: records.length,
+                    documentsCount: documents.length,
+                })
+            } catch (error) {
+                captureEvent(posthog, 'data_import_failed', {
+                    error: error instanceof Error ? error.constructor.name : 'UnknownError',
+                })
+            }
             if (fileInputRef.current) {
                 fileInputRef.current.value = ''
             }
@@ -43,6 +60,12 @@ export const ImportButton = (props: ImportButtonProps) => {
     }
 
     const handleExport = () => {
+        captureEvent(posthog, 'data_exported', {
+            configsCount: configs.length,
+            recordsCount: records.length,
+            documentsCount: documents.length,
+            onlyApproved,
+        })
         void exportData({
             configs,
             records,
@@ -51,6 +74,11 @@ export const ImportButton = (props: ImportButtonProps) => {
     }
 
     const handleReset = () => {
+        captureEvent(posthog, 'database_reset', {
+            configsCount: configs.length,
+            recordsCount: records.length,
+            documentsCount: documents.length,
+        })
         setIsResetting(true)
         const deleteRequest = indexedDB.deleteDatabase(DB_NAME)
 

@@ -1,13 +1,17 @@
+import { usePostHog } from 'posthog-js/react'
+
 import { ExtractionResults } from '@/components/ExtractionResults'
 import { useCancelUnapproved } from '@/db/hooks/useCancelUnapproved'
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { bulkUpdateBiomarkerRecords, comparePageAndOrder, createBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { ExtractedBiomarker } from '@/openai/openai.biomarkers'
+import { captureEvent } from '@/utils'
 
 import { BiomarkerRecordsConfirmationProps } from './BiomarkerRecordsConfirmation.types'
 
 export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmationProps) => {
     const { records, className } = props
+    const posthog = usePostHog()
     const { data: configs } = useBiomarkerConfigs()
     const { cancelAll } = useCancelUnapproved()
 
@@ -20,6 +24,9 @@ export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmation
             }))
 
         await bulkUpdateBiomarkerRecords(updatedRecords)
+        captureEvent(posthog, 'biomarker_records_confirmed', {
+            recordsCount: updatedRecords.length,
+        })
     }
 
     const handleAddNew = async () => {

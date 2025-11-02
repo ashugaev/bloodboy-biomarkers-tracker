@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
 
 import cn from 'classnames'
+import { usePostHog } from 'posthog-js/react'
+
+import { captureEvent } from '@/utils'
 
 import { GitHubStarsButtonProps } from './GitHubStarsButton.types'
 import { formatStarsNumber } from './GitHubStarsButton.utils'
 
 export const GitHubStarsButton = (props: GitHubStarsButtonProps) => {
     const { username, repo, formatted = false, className, onClick, ...restProps } = props
+    const posthog = usePostHog()
     const [stars, setStars] = useState<number>(0)
     const [isLoading, setIsLoading] = useState(true)
 
@@ -25,6 +29,11 @@ export const GitHubStarsButton = (props: GitHubStarsButtonProps) => {
     }, [username, repo])
 
     const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+        captureEvent(posthog, 'github_stars_button_clicked', {
+            username,
+            repo,
+            stars,
+        })
         if (onClick) {
             onClick(e)
         }

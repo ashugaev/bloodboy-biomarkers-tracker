@@ -2,14 +2,23 @@ import { useState } from 'react'
 
 import { Button, DatePicker, Input } from 'antd'
 import dayjs from 'dayjs'
+import { usePostHog } from 'posthog-js/react'
+
+import { captureEvent } from '@/utils'
 
 import { DocumentMetadataFormProps } from './DocumentMetadataForm.types'
 
 export const DocumentMetadataForm = (props: DocumentMetadataFormProps) => {
     const { initialData, onSave, onCancel, className } = props
+    const posthog = usePostHog()
     const [formData, setFormData] = useState(initialData)
 
     const handleSave = () => {
+        captureEvent(posthog, 'document_metadata_form_saved', {
+            hasLab: !!formData.lab,
+            hasTestDate: !!formData.testDate,
+            hasNotes: !!formData.notes,
+        })
         onSave(formData)
     }
 
@@ -84,7 +93,12 @@ export const DocumentMetadataForm = (props: DocumentMetadataFormProps) => {
             </div>
 
             <div className='flex gap-2 justify-end'>
-                <Button onClick={onCancel}>
+                <Button
+                    onClick={() => {
+                        captureEvent(posthog, 'document_metadata_form_cancelled')
+                        onCancel()
+                    }}
+                >
                     Cancel
                 </Button>
                 <Button type='primary' onClick={handleSave}>

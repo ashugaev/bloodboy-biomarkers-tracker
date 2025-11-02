@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 
 import { message } from 'antd'
 import { RcFile } from 'antd/es/upload/interface'
+import { usePostHog } from 'posthog-js/react'
 import { UploadRequestOption } from 'rc-upload/lib/interface'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -15,11 +16,13 @@ import { createUnits, useUnits } from '@/db/models/unit'
 import { getCurrentUserId } from '@/db/models/user'
 import { useExtractBiomarkers } from '@/openai'
 import { ExtractionResult } from '@/openai/openai.biomarkers'
+import { captureEvent } from '@/utils'
 
 import { usePdfExtraction } from './UploadArea.hooks'
 import { createRecordKey, createDocumentKey } from './UploadArea.utils'
 
 export const UploadArea = () => {
+    const posthog = usePostHog()
     const { extractBiomarkers, hasApiKey } = useExtractBiomarkers()
     const { data: configs } = useBiomarkerConfigs()
     const { data: records } = useBiomarkerRecords()
@@ -61,6 +64,9 @@ export const UploadArea = () => {
         uploadQueueRef.current.push(data)
         setTotalFiles(uploadQueueRef.current.length)
         setQueueTrigger(prev => prev + 1)
+        captureEvent(posthog, 'document_upload_started', {
+            fileSize: (data.file as RcFile)?.size,
+        })
         return Promise.resolve()
     }
 
@@ -127,6 +133,10 @@ export const UploadArea = () => {
             currentFileRef.current = file
             currentArrayBufferRef.current = arrayBuffer
             savedPageResultsRef.current = extractionResult.pageResults
+            captureEvent(posthog, 'biomarker_extraction_failed', {
+                failedPages: extractionResult.failedPageIndices.length,
+                totalPages: extractionResult.pageResults.size,
+            })
             setUploadStage(null)
             setCurrentPage(0)
             setTotalPages(0)
@@ -135,6 +145,8 @@ export const UploadArea = () => {
 
         if (!extractionResult.result.biomarkers || extractionResult.result.biomarkers.length === 0) {
             void message.error('No biomarkers found in the document')
+            captureEvent(posthog, 'biomarker_extraction_empty', {
+            })
             setUploadStage(null)
             setCurrentPage(0)
             setTotalPages(0)
@@ -154,6 +166,10 @@ export const UploadArea = () => {
 
         setRetrying(true)
         setShowErrorModal(false)
+        captureEvent(posthog, 'biomarker_extraction_retry', {
+
+            failedPagesCount: failedPageIndices.length,
+        })
 
         await performExtraction(currentFileRef.current, currentArrayBufferRef.current, failedPageIndices)
 
@@ -285,6 +301,9 @@ export const UploadArea = () => {
 
         if (isDuplicate) {
             void message.warning(`File "${file.name}" was already uploaded before`)
+            captureEvent(posthog, 'document_upload_duplicate', {
+
+            })
             return
         }
 
@@ -321,6 +340,17 @@ export const UploadArea = () => {
         }
 
         await Promise.all(bulkOperations)
+
+        captureEvent(posthog, 'document_uploaded', {
+            fileSize: file.size,
+            biomarkersCount: biomarkers.length,
+            newRecordsCount: newRecords.length,
+            newConfigsCount: newConfigs.length,
+            newUnitsCount: newUnits.length,
+            duplicatesCount,
+            hasLab: !!extractionResult.labName,
+            hasTestDate: !!testDate,
+        })
     }
 
     if (uploadStage) {

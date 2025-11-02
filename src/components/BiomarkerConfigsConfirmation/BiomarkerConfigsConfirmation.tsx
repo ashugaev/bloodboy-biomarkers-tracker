@@ -1,11 +1,15 @@
+import { usePostHog } from 'posthog-js/react'
+
 import { NewBiomarkersTable, NewBiomarkerRow } from '@/components/NewBiomarkersTable'
 import { useCancelUnapproved } from '@/db/hooks/useCancelUnapproved'
 import { bulkUpdateBiomarkerConfigs } from '@/db/models/biomarkerConfig'
+import { captureEvent } from '@/utils'
 
 import { BiomarkerConfigsConfirmationProps } from './BiomarkerConfigsConfirmation.types'
 
 export const BiomarkerConfigsConfirmation = (props: BiomarkerConfigsConfirmationProps) => {
     const { configs, className } = props
+    const posthog = usePostHog()
     const { cancelAll } = useCancelUnapproved()
 
     const handleSave = async (biomarkers: NewBiomarkerRow[]) => {
@@ -24,6 +28,9 @@ export const BiomarkerConfigsConfirmation = (props: BiomarkerConfigsConfirmation
             .filter((config): config is NonNullable<typeof config> => config !== null)
 
         await bulkUpdateBiomarkerConfigs(updatedConfigs)
+        captureEvent(posthog, 'biomarker_configs_confirmed', {
+            configsCount: updatedConfigs.length,
+        })
     }
 
     const biomarkerRows: NewBiomarkerRow[] = configs.map(config => ({

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { App } from 'antd'
 import OpenAI from 'openai'
+import posthog from 'posthog-js'
 
 import { deleteAppSettings, useAppSettings } from '@/db/models/appSettings'
 
@@ -41,6 +42,14 @@ export const useOpenAI = () => {
                             return await openaiClient.chat.completions.create(...args)
                         } catch (error: unknown) {
                             const err = error as { status?: number, message?: string }
+                            try {
+                                posthog.capture('openai_api_error', {
+                                    status: err.status,
+                                    errorType: err.status === 401 ? 'invalid_api_key' : 'api_error',
+                                })
+                            } catch {
+                                // PostHog not initialized yet
+                            }
                             if (err.status === 401) {
                                 void message.error('Invalid API key')
                                 void resetApiKey()

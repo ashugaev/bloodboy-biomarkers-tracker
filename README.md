@@ -77,10 +77,6 @@ Copy `.env.example` to `.env` and configure:
 VITE_APP_TITLE=Bloodboy
 VITE_API_URL=http://localhost:3000/api
 VITE_ENVIRONMENT=development
-
-SENTRY_AUTH_TOKEN=
-SENTRY_ORG=
-SENTRY_PROJECT=
 ```
 
 ## License

@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import { Tabs } from 'antd'
 import cn from 'classnames'
+import { usePostHog } from 'posthog-js/react'
 
 import { AddNewButton } from '@/components/AddNewButton'
 import { BiomarkersDataTable } from '@/components/BiomarkersDataTable'
@@ -10,11 +11,13 @@ import { PdfViewer } from '@/components/PdfViewer'
 import { createBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments } from '@/db/models/document'
+import { captureEvent } from '@/utils'
 
 import { ContentAreaProps } from './ContentArea.types'
 
 export const ContentArea = (props: ContentAreaProps) => {
     const { className } = props
+    const posthog = usePostHog()
     const [activeTab, setActiveTab] = useState<'biomarkers' | 'files'>('biomarkers')
     const { data: unconfirmedDocuments } = useDocuments({ filter: (item) => !item.approved })
     const { data: records } = useBiomarkerRecords({ filter: (r) => r.approved })
@@ -58,7 +61,12 @@ export const ContentArea = (props: ContentAreaProps) => {
             <div className='bg-white px-6 pb-6 rounded border border-gray-100 flex flex-col flex-1 min-h-0'>
                 <Tabs
                     activeKey={activeTab}
-                    onChange={(key) => { setActiveTab(key as 'biomarkers' | 'files') }}
+                    onChange={(key) => {
+                        captureEvent(posthog, 'content_area_tab_changed', {
+                            tab: key,
+                        })
+                        setActiveTab(key as 'biomarkers' | 'files')
+                    }}
                     centered
                     items={[
                         {

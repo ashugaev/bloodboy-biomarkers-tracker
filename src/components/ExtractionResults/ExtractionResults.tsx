@@ -4,18 +4,21 @@ import { CellValueChangedEvent, ColDef } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, message } from 'antd'
+import { usePostHog } from 'posthog-js/react'
 
 import { createOriginalNameColumn, createPageColumn, createValueColumn } from '@/aggrid/columns/biomarkerColumns'
 import { ValidationWarning } from '@/components/ValidationWarning'
 import { BiomarkerRecord, deleteBiomarkerRecord, modifyBiomarkerRecord } from '@/db/models/biomarkerRecord'
 import { useUnits } from '@/db/models/unit'
 import { ExtractedBiomarker } from '@/openai/openai.biomarkers'
+import { captureEvent } from '@/utils'
 import { getInvalidCellStyle } from '@/utils/cellStyle'
 
 import { ExtractionResultsProps } from './ExtractionResults.types'
 
 export const ExtractionResults = (props: ExtractionResultsProps) => {
     const { biomarkers, configs, onSave, onCancel, onAddNew, className } = props
+    const posthog = usePostHog()
     const [rowData, setRowData] = useState<ExtractedBiomarker[]>(biomarkers)
     const { data: units } = useUnits()
 
@@ -146,10 +149,14 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
     }, [biomarkers])
 
     const handleSave = () => {
+        captureEvent(posthog, 'extraction_results_saved', {
+            biomarkersCount: rowData.length,
+        })
         onSave(rowData)
     }
 
     const handleAddNewClick = () => {
+        captureEvent(posthog, 'extraction_results_add_new_clicked')
         if (onAddNew) {
             onAddNew()
         }
@@ -183,7 +190,12 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
             </div>
 
             <div className='flex gap-2 justify-end'>
-                <Button onClick={onCancel}>
+                <Button
+                    onClick={() => {
+                        captureEvent(posthog, 'extraction_results_cancelled')
+                        onCancel()
+                    }}
+                >
                     Cancel
                 </Button>
                 <Button type='primary' onClick={handleSave} disabled={hasInvalidBiomarkers}>

@@ -1,14 +1,17 @@
 import { useState } from 'react'
 
 import { Button, Input } from 'antd'
+import { usePostHog } from 'posthog-js/react'
 
 import { MAIN_SETTINGS_ID } from '@/constants'
 import { addAppSettings, updateAppSettings, useAppSettings } from '@/db/models/appSettings'
+import { captureEvent } from '@/utils'
 
 import { ApiKeyInputProps } from './ApiKeyInput.types'
 
 export const ApiKeyInput = (props: ApiKeyInputProps) => {
     const { className } = props
+    const posthog = usePostHog()
     const [apiKeyInput, setApiKeyInput] = useState('')
     const { data: settings } = useAppSettings()
 
@@ -26,8 +29,10 @@ export const ApiKeyInput = (props: ApiKeyInputProps) => {
 
         if (currentSettings) {
             await updateAppSettings(MAIN_SETTINGS_ID, newSettings)
+            captureEvent(posthog, 'api_key_updated')
         } else {
             await addAppSettings(newSettings)
+            captureEvent(posthog, 'api_key_saved')
         }
 
         setApiKeyInput('')
@@ -46,6 +51,9 @@ export const ApiKeyInput = (props: ApiKeyInputProps) => {
                     target='_blank'
                     rel='noopener noreferrer'
                     className='text-blue-600 hover:text-blue-800 underline'
+                    onClick={() => {
+                        captureEvent(posthog, 'openai_api_keys_link_clicked')
+                    }}
                 >
                     platform.openai.com/api-keys
                 </a>

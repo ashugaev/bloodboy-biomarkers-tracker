@@ -1,11 +1,15 @@
+import { usePostHog } from 'posthog-js/react'
+
 import { DocumentMetadataForm, DocumentMetadataFormData } from '@/components/DocumentMetadataForm'
 import { useCancelUnapproved } from '@/db/hooks/useCancelUnapproved'
 import { updateDocument } from '@/db/models/document'
+import { captureEvent } from '@/utils'
 
 import { DocumentConfirmationProps } from './DocumentConfirmation.types'
 
 export const DocumentConfirmation = (props: DocumentConfirmationProps) => {
     const { document, className } = props
+    const posthog = usePostHog()
     const { cancelAll } = useCancelUnapproved()
 
     const handleSave = async (data: DocumentMetadataFormData) => {
@@ -14,6 +18,11 @@ export const DocumentConfirmation = (props: DocumentConfirmationProps) => {
             lab: data.lab,
             testDate: data.testDate ? new Date(data.testDate) : undefined,
             notes: data.notes,
+        })
+        captureEvent(posthog, 'document_confirmed', {
+            hasLab: !!data.lab,
+            hasTestDate: !!data.testDate,
+            hasNotes: !!data.notes,
         })
     }
 

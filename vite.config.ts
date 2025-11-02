@@ -1,4 +1,3 @@
-import { sentryVitePlugin } from '@sentry/vite-plugin'
 import react from '@vitejs/plugin-react'
 import dotenv from 'dotenv'
 import {
@@ -21,16 +20,6 @@ export default defineConfig(({ mode }) => {
         plugins: [
             react(),
             tsconfigPaths(),
-            sentryVitePlugin({
-                authToken: process.env.SENTRY_AUTH_TOKEN,
-                org: process.env.SENTRY_ORG,
-                project: process.env.SENTRY_PROJECT,
-                telemetry: false,
-                sourcemaps: {
-                    assets: './dist/**',
-                    filesToDeleteAfterUpload: ['./dist/**/*.map'],
-                },
-            }),
             svgr({
                 svgrOptions: {
                     plugins: ['@svgr/plugin-svgo', '@svgr/plugin-jsx'],
