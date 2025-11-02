@@ -12,7 +12,7 @@ dotenv.config()
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '')
     const isProd = env.VITE_ENVIRONMENT === 'production'
-    const base = process.env.BASE_PATH || '/'
+    const base = process.env.BASE_URL || '/'
 
     return {
         define: { 'process.env': process.env },

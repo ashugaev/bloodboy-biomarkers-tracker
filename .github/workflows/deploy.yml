@@ -33,22 +33,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Get repository name and set base path
-        id: repo
-        run: |
-          REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
-          OWNER="${{ github.repository_owner }}"
-          if [ "$REPO_NAME" = "${OWNER}.github.io" ]; then
-            BASE_PATH="/"
-          else
-            BASE_PATH="/${REPO_NAME}/"
-          fi
-          echo "name=$REPO_NAME" >> $GITHUB_OUTPUT
-          echo "base_path=$BASE_PATH" >> $GITHUB_OUTPUT
-
       - name: Build project
         env:
-          BASE_PATH: ${{ steps.repo.outputs.base_path }}
+          BASE_URL: ${{ env.BASE_URL }}
           VITE_PUBLIC_POSTHOG_KEY: ${{ env.VITE_PUBLIC_POSTHOG_KEY }}
           VITE_PUBLIC_POSTHOG_HOST: ${{ env.VITE_PUBLIC_POSTHOG_HOST }}
         run: npm run build

@@ -1,4 +1,4 @@
-# 🩸👦 Bloodboy
+# 🩸👦🏼 Bloodboy
 
 Track and visualize your blood test results over time with AI-powered data extraction
 
