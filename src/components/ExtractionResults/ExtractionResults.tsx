@@ -43,7 +43,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
         createPageColumn<ExtractedBiomarker>(),
         {
             field: 'name',
-            headerName: 'Biomarker',
+            headerName: 'Name',
             flex: 1.5,
             minWidth: 250,
             editable: true,
@@ -159,7 +159,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
         <div className={`bg-white p-4 rounded border border-gray-100 flex flex-col ${className ?? ''}`}>
             <div className='mb-4'>
                 <div className='flex justify-between items-center mb-2'>
-                    <h3 className='text-lg font-medium'>Verify New Measurments ({biomarkers.length})</h3>
+                    <h3 className='text-lg font-medium'>Verify New Records ({biomarkers.length})</h3>
                     {onAddNew && (
                         <Button size='small' icon={<PlusOutlined/>} onClick={handleAddNewClick}>
                             Add New

@@ -6,6 +6,7 @@ import { DeleteOutlined, DownloadOutlined } from '@ant-design/icons'
 import { Button } from 'antd'
 import cn from 'classnames'
 
+import { dateComparator } from '@/aggrid/comparators/dateComprator'
 import { deleteDocument, useDocuments } from '@/db/models/document'
 import { formatFileSize } from '@/db/models/document/document.utils'
 
@@ -77,14 +78,19 @@ export const FilesTable = (props: FilesTableProps) => {
             headerName: 'Test Date',
             flex: 0.6,
             minWidth: 120,
-            valueGetter: (params) => params.data?.testDate ? params.data.testDate.toLocaleDateString() : '',
+            sort: 'asc',
+            comparator: dateComparator,
+            valueFormatter: (params) => {
+                if (!params.value) return ''
+                const date = new Date(params.value as string | number | Date)
+                return date.toLocaleDateString()
+            },
         },
         {
             field: 'originalName',
             headerName: 'File Name',
             flex: 1,
             minWidth: 200,
-            sort: 'asc',
         },
         {
             field: 'lab',
@@ -101,6 +107,12 @@ export const FilesTable = (props: FilesTableProps) => {
             valueGetter: (params) => params.data?.fileSize ? formatFileSize(params.data.fileSize) : '',
         },
 
+        {
+            field: 'notes',
+            headerName: 'Notes',
+            flex: 0.5,
+            minWidth: 150,
+        },
         {
             colId: 'download',
             headerName: '',

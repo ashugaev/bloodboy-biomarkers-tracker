@@ -31,7 +31,7 @@ const exportToCSV = (data: ExportDataParams) => {
     const documentsMap = new Map(documents.map(d => [d.id, d]))
 
     const csvRows = [
-        ['Test Date', 'Biomarker', 'Value', 'Unit', 'Normal Range Min', 'Normal Range Max', 'Target Range Min', 'Target Range Max'].join(','),
+        ['Test Date', 'Name', 'Value', 'Unit', 'Normal Range Min', 'Normal Range Max', 'Target Range Min', 'Target Range Max'].join(','),
     ]
 
     records

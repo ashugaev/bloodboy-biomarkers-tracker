@@ -49,7 +49,7 @@ export const ContentArea = (props: ContentAreaProps) => {
         <div className={cn('flex flex-col h-full min-h-0', className)}>
             <div className='flex justify-between items-center mb-4 flex-shrink-0' style={{ minHeight: 40 }}>
                 <h3 className='text-lg font-medium'>
-                    {activeTab === 'biomarkers' ? `Biomarkers (${biomarkersCount})` : `Files (${filesCount})`}
+                    {activeTab === 'biomarkers' ? `Test Records (${biomarkersCount})` : `Files (${filesCount})`}
                 </h3>
                 {activeTab === 'biomarkers' && (
                     <AddNewButton onClick={() => { void handleAddNew() }}/>
@@ -63,7 +63,7 @@ export const ContentArea = (props: ContentAreaProps) => {
                     items={[
                         {
                             key: 'biomarkers',
-                            label: 'Biomarkers',
+                            label: 'Test Records',
                         },
                         {
                             key: 'files',

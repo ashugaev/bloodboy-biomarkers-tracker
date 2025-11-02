@@ -44,7 +44,7 @@ export const createNormalRangeMinColumn = <T extends BiomarkerWithRanges>(): Col
     field: 'normalRange' as never,
     headerName: 'Normal Min',
     flex: 0.7,
-    minWidth: 100,
+    minWidth: 150,
     editable: true,
     valueGetter: (params) => params.data?.normalRange?.min,
     valueSetter: (params) => {
@@ -66,7 +66,7 @@ export const createNormalRangeMaxColumn = <T extends BiomarkerWithRanges>(): Col
     field: 'normalRange' as never,
     headerName: 'Normal Max',
     flex: 0.7,
-    minWidth: 100,
+    minWidth: 150,
     editable: true,
     valueGetter: (params) => params.data?.normalRange?.max,
     valueSetter: (params) => {
@@ -88,7 +88,7 @@ export const createTargetRangeMinColumn = <T extends BiomarkerWithRanges>(): Col
     field: 'targetRange' as never,
     headerName: 'Target Min',
     flex: 0.7,
-    minWidth: 100,
+    minWidth: 150,
     editable: true,
     valueGetter: (params) => params.data?.targetRange?.min ?? '',
     valueSetter: (params) => {
@@ -110,7 +110,7 @@ export const createTargetRangeMaxColumn = <T extends BiomarkerWithRanges>(): Col
     field: 'targetRange' as never,
     headerName: 'Target Max',
     flex: 0.7,
-    minWidth: 100,
+    minWidth: 150,
     editable: true,
     valueGetter: (params) => params.data?.targetRange?.max ?? '',
     valueSetter: (params) => {
