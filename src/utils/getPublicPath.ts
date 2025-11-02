@@ -1,4 +1,6 @@
+import { config } from '@/config'
+
 export const getPublicPath = (path: string): string => {
-    const base = import.meta.env.BASE_URL
+    const base = config.baseUrl
     return `${base}${path}`.replace(/\/+/g, '/')
 }

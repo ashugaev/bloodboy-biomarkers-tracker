@@ -6,6 +6,7 @@ import { App as AntApp, ConfigProvider } from 'antd'
 import { usePostHog } from 'posthog-js/react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 
+import { config } from '@/config'
 import { themeConfig } from '@/constants'
 import { useCurrentUser } from '@/db'
 import { HomePage, DataPage, BiomarkerRecordsPage } from '@/pages'
@@ -35,7 +36,7 @@ export const App = () => {
     return (
         <ConfigProvider theme={themeConfig}>
             <AntApp>
-                <BrowserRouter basename={import.meta.env.BASE_URL}>
+                <BrowserRouter basename={config.baseUrl}>
                     <PageViewTracker/>
                     <Routes>
                         <Route path='/' element={<HomePage/>}/>

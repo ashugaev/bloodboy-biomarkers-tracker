@@ -6,6 +6,7 @@ import { PostHogProvider, PostHogErrorBoundary } from 'posthog-js/react'
 import { createRoot } from 'react-dom/client'
 
 import { App } from './App'
+import { config } from './config'
 import { preloadBiomarkerConfigs } from './db/models/biomarkerConfig'
 import { preloadUnits } from './db/models/unit'
 import { getCurrentUserId } from './db/models/user'
@@ -13,7 +14,7 @@ import { getCurrentUserId } from './db/models/user'
 import './index.css'
 
 const posthogOptions = {
-    api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+    api_host: config.posthogHost,
     defaults: '2025-05-24' as const,
     capture_pageview: false,
     capture_pageleave: true,
@@ -61,7 +62,7 @@ if (rootElement) {
         .then(() => preloadUnits())
         .then(() => preloadBiomarkerConfigs())
         .then(() => {
-            const posthogKey = import.meta.env.VITE_PUBLIC_POSTHOG_KEY
+            const posthogKey = config.posthogKey
             if (!posthogKey) {
                 console.warn('PostHog API key is not set')
             }
