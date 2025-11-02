@@ -1,8 +1,6 @@
 import { Link } from 'react-router-dom'
 
-import { ExportButton } from '@/components/ExportButton'
 import { ImportButton } from '@/components/ImportButton'
-import { ResetDbButton } from '@/components/ResetDbButton'
 import { getPublicPath } from '@/utils'
 
 import { HeaderProps } from './Header.types'
@@ -18,11 +16,7 @@ export const Header = (props: HeaderProps) => {
                         <img src={getPublicPath('favicon.svg')} alt='Bloodboy' className='w-5 h-5'/>
                         <span className='text-lg font-semibold text-gray-800'>Bloodboy</span>
                     </Link>
-                    <div className='flex gap-2'>
-                        <ImportButton/>
-                        <ExportButton/>
-                        <ResetDbButton/>
-                    </div>
+                    <ImportButton/>
                 </div>
             </div>
         </header>

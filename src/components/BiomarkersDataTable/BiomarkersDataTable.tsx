@@ -8,9 +8,8 @@ import { useNavigate } from 'react-router-dom'
 
 import { createNameColumn, createNormalRangeMaxColumn, createNormalRangeMinColumn, createTargetRangeMaxColumn, createTargetRangeMinColumn, createUnitColumn } from '@/aggrid/columns/biomarkerColumns'
 import { validateRanges } from '@/aggrid/validators/rangeValidators'
-import { AddNewButton } from '@/components/AddNewButton'
 import { MiniBarChart } from '@/components/MiniBarChart'
-import { createBiomarkerConfigs, deleteBiomarkerConfig, updateBiomarkerConfig, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
+import { deleteBiomarkerConfig, updateBiomarkerConfig, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments } from '@/db/models/document'
 import { useUnits } from '@/db/models/unit'
@@ -34,13 +33,6 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
     const handleViewRecords = useCallback((id: string, mode: ViewMode = 'table') => {
         void navigate(`/biomarker/${id}`, { state: { viewMode: mode } })
     }, [navigate])
-
-    const handleAddNew = useCallback(async () => {
-        await createBiomarkerConfigs([{
-            name: '',
-            approved: true,
-        }])
-    }, [])
 
     const rowData = useMemo(() => {
         return configs
@@ -253,15 +245,8 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
     }, [])
 
     return (
-        <div className={`bg-white p-6 rounded border border-gray-100 flex flex-col ${className ?? ''}`}>
-            <div className='mb-4'>
-                <div className='flex justify-between items-center mb-2'>
-                    <h3 className='text-lg font-medium'>Biomarkers ({rowData.length})</h3>
-                    <AddNewButton onClick={() => { void handleAddNew() }}/>
-                </div>
-            </div>
-
-            <div className='ag-theme-material flex-1'>
+        <div className={`flex flex-col h-full min-h-0 ${className ?? ''}`}>
+            <div className='ag-theme-material flex-1 min-h-0'>
                 <AgGridReact
                     rowData={rowData}
                     columnDefs={columnDefs}

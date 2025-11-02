@@ -95,7 +95,7 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
 
     if (chartData.length === 0) {
         return (
-            <div className={cn('bg-white p-6 rounded border border-gray-100 flex flex-col items-center justify-center min-h-[400px]', className)}>
+            <div className={cn('flex flex-col items-center justify-center min-h-[400px]', className)}>
                 <div className='text-center text-gray-400'>
                     <div className='text-lg mb-2'>No numeric data available</div>
                     <div className='text-sm'>This biomarker contains only text-based values</div>
@@ -105,7 +105,7 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
     }
 
     return (
-        <div className={cn('bg-white p-6 rounded border border-gray-100 flex flex-col', className)}>
+        <div className={cn('flex flex-col', className)}>
             <div className='mb-4 flex gap-6'>
                 {normalRange && (normalRange.min !== undefined || normalRange.max !== undefined) && (
                     <div className='flex items-center gap-2'>

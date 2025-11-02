@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 
 import { ArrowLeftOutlined } from '@ant-design/icons'
-import { Button, Segmented } from 'antd'
+import { Button, Tabs } from 'antd'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { AddNewButton } from '@/components/AddNewButton'
@@ -63,53 +63,59 @@ export const BiomarkerRecordsPage = (props: BiomarkerRecordsPageProps) => {
             <Header/>
             <div className='h-screen bg-gray-50 pt-16 flex flex-col overflow-hidden'>
                 <div className='flex flex-col flex-1 p-4 gap-4 overflow-hidden'>
-                    <div className='flex items-center justify-between '>
+                    <div className='flex items-center justify-between'>
                         <div className='flex items-center gap-4'>
                             <Button
+                                size='small'
                                 icon={<ArrowLeftOutlined/>}
                                 onClick={() => { void navigate('/data') }}
                             >
                                 Back
                             </Button>
-                            <h1 className='text-2xl font-bold'>{biomarkerConfig.name} ({records.length})</h1>
+                            <h1 className='text-lg font-medium'>{biomarkerConfig.name} ({records.length})</h1>
                         </div>
-
-                        <Segmented
-                            size='large'
-                            options={[
-                                {
-                                    label: 'Table',
-                                    value: 'table',
-                                },
-                                {
-                                    label: 'Chart',
-                                    value: 'chart',
-                                },
-                            ]}
-                            value={viewMode}
-                            onChange={(value) => { setViewMode(value as ViewMode) }}
-                        />
                         <AddNewButton onClick={() => { void handleAddNew() }} label='Add Record'/>
                     </div>
-                    {viewMode === 'table' && (
-                        <BiomarkerRecordsTable
-                            biomarkerId={biomarkerConfig.id}
-                            biomarkerName={biomarkerConfig.name}
-                            normalRange={biomarkerConfig.normalRange}
-                            targetRange={biomarkerConfig.targetRange}
-                            className='flex-1 overflow-auto'
-                        />
-                    )}
 
-                    {viewMode === 'chart' && (
-                        <BiomarkerChart
-                            biomarkerId={biomarkerConfig.id}
-                            biomarkerName={biomarkerConfig.name}
-                            normalRange={biomarkerConfig.normalRange}
-                            targetRange={biomarkerConfig.targetRange}
-                            className='flex-1 overflow-auto'
+                    <div className='bg-white px-6 pb-6 rounded border border-gray-100 flex flex-col flex-1 min-h-0'>
+                        <Tabs
+                            activeKey={viewMode}
+                            onChange={(key) => { setViewMode(key as ViewMode) }}
+                            centered
+                            items={[
+                                {
+                                    key: 'table',
+                                    label: 'Table',
+                                },
+                                {
+                                    key: 'chart',
+                                    label: 'Chart',
+                                },
+                            ]}
+                            className='flex-shrink-0'
                         />
-                    )}
+                        <div className='flex-1 min-h-0 mt-4'>
+                            {viewMode === 'table' && (
+                                <BiomarkerRecordsTable
+                                    biomarkerId={biomarkerConfig.id}
+                                    biomarkerName={biomarkerConfig.name}
+                                    normalRange={biomarkerConfig.normalRange}
+                                    targetRange={biomarkerConfig.targetRange}
+                                    className='h-full'
+                                />
+                            )}
+
+                            {viewMode === 'chart' && (
+                                <BiomarkerChart
+                                    biomarkerId={biomarkerConfig.id}
+                                    biomarkerName={biomarkerConfig.name}
+                                    normalRange={biomarkerConfig.normalRange}
+                                    targetRange={biomarkerConfig.targetRange}
+                                    className='h-full'
+                                />
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
