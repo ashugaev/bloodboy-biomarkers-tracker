@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 
 import { Tabs } from 'antd'
 import cn from 'classnames'
@@ -7,7 +7,7 @@ import { AddNewButton } from '@/components/AddNewButton'
 import { BiomarkersDataTable } from '@/components/BiomarkersDataTable'
 import { FilesTable } from '@/components/FilesTable'
 import { PdfViewer } from '@/components/PdfViewer'
-import { createBiomarkerConfigs, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
+import { createBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments } from '@/db/models/document'
 
@@ -17,7 +17,6 @@ export const ContentArea = (props: ContentAreaProps) => {
     const { className } = props
     const [activeTab, setActiveTab] = useState<'biomarkers' | 'files'>('biomarkers')
     const { data: unconfirmedDocuments } = useDocuments({ filter: (item) => !item.approved })
-    const { data: configs } = useBiomarkerConfigs({ filter: (c) => c.approved })
     const { data: records } = useBiomarkerRecords({ filter: (r) => r.approved })
     const { data: documents } = useDocuments()
 
@@ -47,7 +46,7 @@ export const ContentArea = (props: ContentAreaProps) => {
     }
 
     return (
-        <div className={cn('flex flex-col h-full min-h-0', className)} >
+        <div className={cn('flex flex-col h-full min-h-0', className)}>
             <div className='flex justify-between items-center mb-4 flex-shrink-0' style={{ minHeight: 40 }}>
                 <h3 className='text-lg font-medium'>
                     {activeTab === 'biomarkers' ? `Biomarkers (${biomarkersCount})` : `Files (${filesCount})`}

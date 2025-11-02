@@ -52,8 +52,7 @@ export const FilesTable = (props: FilesTableProps) => {
                     }
                 }}
                 disabled={!cellProps.data?.fileData}
-            >
-            </Button>
+            />
         ))
     }, [handleDownload])
 
@@ -139,4 +138,3 @@ export const FilesTable = (props: FilesTableProps) => {
         </div>
     )
 }
-

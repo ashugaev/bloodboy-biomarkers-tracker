@@ -1,8 +1,7 @@
 import { useRef, useState } from 'react'
 
 import { DeleteOutlined, DownloadOutlined, MenuOutlined, UploadOutlined } from '@ant-design/icons'
-import { Button, Dropdown, Modal } from 'antd'
-import type { MenuProps } from 'antd'
+import { Button, Dropdown, Modal, MenuProps } from 'antd'
 
 import { COLORS, DB_NAME } from '@/constants'
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
@@ -76,13 +75,13 @@ export const ImportButton = (props: ImportButtonProps) => {
         {
             key: 'import',
             label: 'Import DB',
-            icon: <DownloadOutlined />,
+            icon: <DownloadOutlined/>,
             onClick: handleImportClick,
         },
         {
             key: 'export',
             label: 'Export DB',
-            icon: <UploadOutlined />,
+            icon: <UploadOutlined/>,
             onClick: handleExport,
         },
         {
@@ -91,7 +90,7 @@ export const ImportButton = (props: ImportButtonProps) => {
         {
             key: 'reset',
             label: 'Clear DB',
-            icon: <DeleteOutlined />,
+            icon: <DeleteOutlined/>,
             danger: true,
             onClick: () => { setIsModalVisible(true) },
         },
@@ -109,7 +108,7 @@ export const ImportButton = (props: ImportButtonProps) => {
             <Dropdown menu={{ items }} trigger={['click']}>
                 <Button
                     size='small'
-                    icon={<MenuOutlined />}
+                    icon={<MenuOutlined/>}
                     className={className}
                 />
             </Dropdown>
