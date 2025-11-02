@@ -34,7 +34,7 @@ export const DocumentMetadataForm = (props: DocumentMetadataFormProps) => {
 
                 <div>
                     <label className='block text-sm font-medium text-gray-700 mb-1'>
-                        Laboratory
+                        Lab
                     </label>
                     <Input
                         value={formData.lab}

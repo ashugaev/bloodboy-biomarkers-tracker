@@ -75,7 +75,7 @@ export const FilesTable = (props: FilesTableProps) => {
     const columnDefs = useMemo<Array<ColDef<FileRowData>>>(() => [
         {
             field: 'testDate',
-            headerName: 'Test Date',
+            headerName: 'Date',
             flex: 0.6,
             minWidth: 120,
             sort: 'asc',
@@ -88,7 +88,7 @@ export const FilesTable = (props: FilesTableProps) => {
         },
         {
             field: 'originalName',
-            headerName: 'File Name',
+            headerName: 'Original Name',
             flex: 1,
             minWidth: 200,
         },
