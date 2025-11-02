@@ -18,6 +18,8 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -47,8 +49,8 @@ jobs:
       - name: Build project
         env:
           BASE_PATH: ${{ steps.repo.outputs.base_path }}
-          VITE_PUBLIC_POSTHOG_KEY: ${{ vars.VITE_PUBLIC_POSTHOG_KEY }}
-          VITE_PUBLIC_POSTHOG_HOST: ${{ vars.VITE_PUBLIC_POSTHOG_HOST }}
+          VITE_PUBLIC_POSTHOG_KEY: ${{ env.VITE_PUBLIC_POSTHOG_KEY }}
+          VITE_PUBLIC_POSTHOG_HOST: ${{ env.VITE_PUBLIC_POSTHOG_HOST }}
         run: npm run build
 
       - name: Setup Pages
