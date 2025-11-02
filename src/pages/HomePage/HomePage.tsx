@@ -6,6 +6,10 @@ import { Link } from 'react-router-dom'
 import { GitHubStarsButton } from '@/components/GitHubStarsButton'
 import { getPublicPath } from '@/utils'
 
+import user1Img from './img/user-1.png'
+import user2Img from './img/user-2.png'
+import user3Img from './img/user-3.png'
+
 import { HomePageProps } from './HomePage.types'
 
 export const HomePage = (props: HomePageProps) => {
@@ -325,12 +329,12 @@ export const HomePage = (props: HomePageProps) => {
                     <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-[85rem] mx-auto'>
                         <div className='flex flex-col w-full p-6 divide-y rounded-md bg-white border border-gray-200'>
                             <div className='flex justify-between p-4'>
-                                <div className='flex space-x-4'>
+                                <div className='flex items-center space-x-4'>
                                     <div>
                                         <img
-                                            src='https://source.unsplash.com/100x100/?portrait,1'
-                                            alt=''
-                                            className='object-cover w-12 h-12 rounded-full bg-gray-500'
+                                            src={user1Img}
+                                            alt='Count V. Drake'
+                                            className='object-cover w-14 h-14 rounded-full bg-gray-500'
                                         />
                                     </div>
                                     <div>
@@ -352,12 +356,12 @@ export const HomePage = (props: HomePageProps) => {
 
                         <div className='flex flex-col w-full p-6 divide-y rounded-md bg-white border border-gray-200'>
                             <div className='flex justify-between p-4'>
-                                <div className='flex space-x-4'>
+                                <div className='flex items-center space-x-4'>
                                     <div>
                                         <img
-                                            src='https://source.unsplash.com/100x100/?portrait,2'
-                                            alt=''
-                                            className='object-cover w-12 h-12 rounded-full bg-gray-500'
+                                            src={user2Img}
+                                            alt='Rajan Joshi'
+                                            className='object-cover w-14 h-14 rounded-full bg-gray-500'
                                         />
                                     </div>
                                     <div>
@@ -379,12 +383,12 @@ export const HomePage = (props: HomePageProps) => {
 
                         <div className='flex flex-col w-full p-6 divide-y rounded-md bg-white border border-gray-200'>
                             <div className='flex justify-between p-4'>
-                                <div className='flex space-x-4'>
+                                <div className='flex items-center space-x-4'>
                                     <div>
                                         <img
-                                            src='https://source.unsplash.com/100x100/?portrait,3'
-                                            alt=''
-                                            className='object-cover w-12 h-12 rounded-full bg-gray-500'
+                                            src={user3Img}
+                                            alt='Dr. Elizabeth'
+                                            className='object-cover w-14 h-14 rounded-full bg-gray-500'
                                         />
                                     </div>
                                     <div>
