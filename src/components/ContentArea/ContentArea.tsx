@@ -8,7 +8,7 @@ import { AddNewButton } from '@/components/AddNewButton'
 import { BiomarkersDataTable } from '@/components/BiomarkersDataTable'
 import { FilesTable } from '@/components/FilesTable'
 import { PdfViewer } from '@/components/PdfViewer'
-import { createBiomarkerConfigs } from '@/db/models/biomarkerConfig'
+import { createBiomarkerConfigs, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments } from '@/db/models/document'
 import { captureEvent } from '@/utils'
@@ -22,6 +22,7 @@ export const ContentArea = (props: ContentAreaProps) => {
     const { data: unconfirmedDocuments } = useDocuments({ filter: (item) => !item.approved })
     const { data: records } = useBiomarkerRecords({ filter: (r) => r.approved })
     const { data: documents } = useDocuments()
+    const { data: configs } = useBiomarkerConfigs({ filter: (c) => c.approved })
 
     const currentDocument = unconfirmedDocuments[0]
 
@@ -32,7 +33,9 @@ export const ContentArea = (props: ContentAreaProps) => {
         }])
     }
 
-    const biomarkersCount = records.length
+    const configsWithRecordsCount = configs.filter(config =>
+        records.some(record => record.biomarkerId === config.id),
+    ).length
     const filesCount = documents.length
 
     if (currentDocument?.fileData) {
@@ -52,7 +55,7 @@ export const ContentArea = (props: ContentAreaProps) => {
         <div className={cn('flex flex-col h-full min-h-0', className)}>
             <div className='flex justify-between items-center mb-4 flex-shrink-0' style={{ minHeight: 40 }}>
                 <h3 className='text-lg font-medium'>
-                    {activeTab === 'biomarkers' ? `Biomarkers (${biomarkersCount})` : `Files (${filesCount})`}
+                    {activeTab === 'biomarkers' ? `Biomarkers (${configsWithRecordsCount})` : `Files (${filesCount})`}
                 </h3>
                 {activeTab === 'biomarkers' && (
                     <AddNewButton onClick={() => { void handleAddNew() }}/>
