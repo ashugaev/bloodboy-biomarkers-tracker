@@ -48,7 +48,7 @@ export const BiomarkerRecordsPage = (props: BiomarkerRecordsPageProps) => {
                 <Header/>
                 <div className='h-screen bg-gray-50 pt-16 flex items-center justify-center'>
                     <div className='text-center'>
-                        <h2 className='text-2xl font-bold mb-4'>Test Records not found</h2>
+                        <h2 className='text-2xl font-bold mb-4'>Biomarkers not found</h2>
                         <Button onClick={() => { void navigate('/data') }}>
                             Back to Data
                         </Button>

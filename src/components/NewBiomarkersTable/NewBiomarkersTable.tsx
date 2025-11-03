@@ -135,13 +135,13 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
             <div className={`bg-white p-6 rounded border border-gray-100 flex flex-col ${className ?? ''}`}>
                 <div className='mb-4'>
                     <div className='flex justify-between items-center mb-2'>
-                        <h3 className='text-lg font-medium'>Verify New Test Record Configs ({biomarkers.length})</h3>
+                        <h3 className='text-lg font-medium'>Verify New Biomarker Configs ({biomarkers.length})</h3>
                         <div className='flex gap-2'>
                             <Button size='small' icon={<PlusOutlined/>} onClick={() => { setIsModalOpen(true) }}>
                                 Add Unit
                             </Button>
                             <Button size='small' icon={<PlusOutlined/>} onClick={() => { void handleAddNew() }}>
-                                Add Test Record
+                                Add Biomarker
                             </Button>
                         </div>
                     </div>
