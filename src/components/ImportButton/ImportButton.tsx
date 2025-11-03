@@ -11,6 +11,7 @@ import { useDocuments } from '@/db/models/document'
 import { captureEvent } from '@/utils'
 import { exportData } from '@/utils/exportData'
 import { importData } from '@/utils/importData'
+import { reloadApp } from '@/utils/reloadApp'
 
 import { ImportButtonProps } from './ImportButton.types'
 
@@ -85,7 +86,7 @@ export const ImportButton = (props: ImportButtonProps) => {
         deleteRequest.onsuccess = () => {
             localStorage.clear()
             sessionStorage.clear()
-            window.location.reload()
+            reloadApp()
         }
 
         deleteRequest.onerror = (error) => {
@@ -95,7 +96,7 @@ export const ImportButton = (props: ImportButtonProps) => {
 
         deleteRequest.onblocked = () => {
             console.warn('Database deletion blocked. Closing connections...')
-            window.location.reload()
+            reloadApp()
         }
     }
 

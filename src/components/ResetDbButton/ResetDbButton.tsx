@@ -6,6 +6,7 @@ import { usePostHog } from 'posthog-js/react'
 
 import { COLORS, DB_NAME } from '@/constants'
 import { captureEvent } from '@/utils'
+import { reloadApp } from '@/utils/reloadApp'
 
 import { ResetDbButtonProps } from './ResetDbButton.types'
 
@@ -23,7 +24,7 @@ export const ResetDbButton = (props: ResetDbButtonProps) => {
         deleteRequest.onsuccess = () => {
             localStorage.clear()
             sessionStorage.clear()
-            window.location.reload()
+            reloadApp()
         }
 
         deleteRequest.onerror = (error) => {
@@ -33,7 +34,7 @@ export const ResetDbButton = (props: ResetDbButtonProps) => {
 
         deleteRequest.onblocked = () => {
             console.warn('Database deletion blocked. Closing connections...')
-            window.location.reload()
+            reloadApp()
         }
     }
 

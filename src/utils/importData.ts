@@ -3,6 +3,7 @@ import { importDB } from 'dexie-export-import'
 
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/db/services/db.service'
+import { reloadApp } from '@/utils/reloadApp'
 
 export const importData = async (file: File) => {
     try {
@@ -13,7 +14,7 @@ export const importData = async (file: File) => {
         await importDB(file)
         void message.success('Data imported successfully. Refreshing...')
         setTimeout(() => {
-            window.location.reload()
+            reloadApp()
         }, 1000)
     } catch (error) {
         console.error('Import error:', error)
