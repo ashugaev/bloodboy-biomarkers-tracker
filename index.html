@@ -9,10 +9,25 @@
       // Restore path from query string (handled by 404.html)
       // e.g., /?/data -> /data for React Router
       (function(l) {
+        // Clean up if path already contains ?/ segments (prevent loops)
+        if (l.pathname.indexOf('/?/') !== -1) {
+          var basePath = l.pathname.split('/').slice(0, 2).join('/') || '/';
+          window.location.replace(l.origin + basePath);
+          return;
+        }
+        
         if (l.search[1] === '/' ) {
           var decoded = l.search.slice(1);
           var newPath = l.pathname.slice(0, -1) + decoded + l.hash;
-          window.history.replaceState(null, null, newPath);
+          
+          // Prevent multiple ?/ segments in decoded path
+          if (newPath.indexOf('/?/') === -1 && newPath.indexOf('?/') === -1) {
+            window.history.replaceState(null, null, newPath);
+          } else {
+            // If decoded path contains ?/, redirect to root
+            var basePath = l.pathname.split('/').slice(0, 2).join('/') || '/';
+            window.location.replace(l.origin + basePath);
+          }
         }
       }(window.location))
     </script>

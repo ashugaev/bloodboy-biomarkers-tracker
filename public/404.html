@@ -6,14 +6,26 @@
     <script>
       // GitHub Pages SPA routing: convert path to query string
       // e.g., /data -> /?/data so index.html can handle it
-      var pathSegmentsToKeep = 1;
-
       var l = window.location;
+      
+      // Clean up if URL already contains ?/ segments (prevent loops)
+      if (l.pathname.indexOf('/?/') !== -1 || (l.search && l.search.indexOf('/?/') !== -1)) {
+        var basePath = l.pathname.split('/').slice(0, 2).join('/') || '/';
+        l.replace(l.origin + basePath);
+        return;
+      }
+      
+      // Skip if already processed (has ?/ at start of query)
+      if (l.search[1] === '/') {
+        return;
+      }
+      
+      var pathSegmentsToKeep = 1;
       var basePath = l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/');
       var remainingPath = l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/');
       l.replace(
         l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        basePath + '/?/' + remainingPath + (l.search || '') + l.hash
+        basePath + '/?/' + remainingPath + l.hash
       );
     </script>
   </head>
