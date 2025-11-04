@@ -65,13 +65,13 @@ export const UploadStatus = (props: UploadStatusProps) => {
         return () => { clearInterval(interval) }
     }, [])
 
-    const showProgress = stage === UploadStage.EXTRACTING && totalPages && currentPage !== undefined
-    const progressPercent = showProgress && currentPage !== undefined ? Math.round(((currentPage - 1) / totalPages) * 100) : 0
+    const showProgress = stage === UploadStage.EXTRACTING && !!totalPages
+    const progressPercent = showProgress ? Math.round(((currentPage ?? 1 - 1) / totalPages) * 100) : 0
     const showFileProgress = totalFiles && totalFiles > 1
 
     const progressText = [
-        showFileProgress && `Files ${currentFile}/${totalFiles}`,
-        showProgress && currentPage !== undefined && `Pages ${currentPage}/${totalPages}`,
+        showFileProgress && `Files ${currentFile ?? 1}/${totalFiles}`,
+        showProgress && `Pages ${currentPage ?? 1}/${totalPages}`,
     ].filter(Boolean).join(', ')
 
     return (
