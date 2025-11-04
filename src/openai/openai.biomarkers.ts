@@ -160,6 +160,14 @@ Unit and UCUM Rules (STRICT):
 - ucumCode: provide the UCUM csCode string (case-sensitive), e.g., mg/dL, mmol/L, [iU]/L, ug/mL. If there is a unit but no specific UCUM code exists, use the format {anyName} (e.g., {appearance}, {blood_type}). For dimensionless numeric values, use "{no_unit}". Use null only if unit is also null.
 - Do not invent units. If there is a unit, there must be a corresponding ucumCode (either standard UCUM or {anyName} format).
 
+Multiple Units for the Same Biomarker (IMPORTANT):
+- If the same biomarker appears in complementary units in the same document (e.g., percentage and absolute count in a complete blood count), output SEPARATE entries for each unit. Use the same normalized biomarker name for all such entries, each with its own value, unit, ucumCode and referenceRange. Preserve the original order; do not merge or convert between units.
+- If a biomarker exists in the provided existing list but that specific ucumCode is not listed for it, still output the result using the SAME biomarker name with the new ucumCode. This creates a new biomarker + unit (ucum) pair; never drop such results.
+Example:
+- "Neutrophils 29.7 %" and "Neutrophils 0.55 x10^9/L" → two entries:
+  1) name: "Neutrophils", value: 29.7, unit: "%", ucumCode: "%"
+  2) name: "Neutrophils", value: 0.55, unit: "x10^9/L", ucumCode: "10*9/L"
+
 Examples of numeric values with unit vs ucumCode:
 - Glucose 5.2 mmol/L → value: 5.2, unit: "mmol/L", ucumCode: "mmol/L"
 - TSH 2.1 μIU/mL → value: 2.1, unit: "μIU/mL", ucumCode: "u[iU]/mL"
