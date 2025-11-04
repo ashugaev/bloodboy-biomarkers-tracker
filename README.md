@@ -2,15 +2,15 @@
 
 Track and visualize your blood test results over time with AI-powered data extraction
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT + CC](https://img.shields.io/badge/License-MIT%20%2B%20CC-yellow.svg)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://reactjs.org/)
 
 ## 💎 Core Values
 
-- **Privacy First** - All processing happens locally in your browser
-- **No Subscriptions** - Free and open source forever
-- **You Own Your Data** - Full control with import/export capabilities
+- **Privacy First** - Everything stays on your device
+- **No Subscriptions** - Free for personal use, forever
+- **You Own Your Data**  - Export and backup anytime
 
 ## ✨ Features
 
@@ -95,21 +95,19 @@ src/
 
 ## 🔧 Configuration
 
-Optional environment variables:
-
-```env
-VITE_APP_TITLE=Bloodboy
-VITE_API_URL=http://localhost:3000/api
-VITE_ENVIRONMENT=development
-```
+See `.env.example` for optional environment variables. The app works fully offline without any configuration.
 
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+## 📧 Contact
+
+For questions or feedback, reach out at [yashugaev@gmail.com](mailto:yashugaev@gmail.com)
+
 ## 📄 License
 
-MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License with Commons Clause - see the [LICENSE](LICENSE) file for details.
 
 ---
 

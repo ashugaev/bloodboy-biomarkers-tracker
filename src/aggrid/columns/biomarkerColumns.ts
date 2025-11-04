@@ -7,7 +7,7 @@ import { getInvalidCellStyle } from '@/utils/cellStyle'
 interface BiomarkerWithRanges {
     id?: string
     name?: string
-    ucumCode?: string
+    ucumCode?: string | null
     normalRange?: { min?: number, max?: number }
     targetRange?: { min?: number, max?: number }
 }

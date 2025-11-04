@@ -1,9 +1,45 @@
 {
-  "name": "blood-test-tracker",
+  "name": "Bloodboy",
   "private": true,
   "version": "0.1.0",
-  "license": "MIT",
+  "description": "Privacy-first medical records tracking application for managing and visualizing blood test results and lab data",
+  "license": "SEE LICENSE IN LICENSE",
   "type": "module",
+  "author": "Aleksei Shugaev <yashugaev@gmail.com>",
+  "homepage": "https://github.com/alek/blood_test_tracker#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alek/blood_test_tracker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alek/blood_test_tracker/issues"
+  },
+  "keywords": [
+    "blood-test",
+    "blood-work",
+    "blood-work-tracking",
+    "csv-export",
+    "health-data-analysis",
+    "health-data-csv-export",
+    "health-data-tracker",
+    "health-data-visualization",
+    "health-monitoring",
+    "health-monitoring-application",
+    "health-report",
+    "health-tracking",
+    "lab-results",
+    "medical-records",
+    "medical-records-management",
+    "medical-records-parsing",
+    "personal-health",
+    "privacy-first",
+    "self-quantified",
+    "visualization"
+  ],
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "scripts": {
     "preinstall": "npx only-allow npm",
     "dev": "vite",

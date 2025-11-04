@@ -41,13 +41,10 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
 
     const handleCreateUnit = useCallback(async (values: NewUnitFormData) => {
         try {
-            const now = new Date()
             await addUnit({
                 ucumCode: values.ucumCode,
                 title: values.title,
                 approved: true,
-                createdAt: now,
-                updatedAt: now,
             })
             void message.success('Unit created successfully')
             setIsModalOpen(false)

@@ -6,9 +6,13 @@ import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, message } from 'antd'
 import { usePostHog } from 'posthog-js/react'
 
-import { createOriginalNameColumn, createPageColumn, createValueColumn } from '@/aggrid/columns/biomarkerColumns'
+import { createNormalRangeMaxColumn, createNormalRangeMinColumn, createOriginalNameColumn, createPageColumn, createValueColumn } from '@/aggrid/columns/biomarkerColumns'
+import { validateRanges } from '@/aggrid/validators/rangeValidators'
+import { CreateBiomarkerModal } from '@/components/CreateBiomarkerModal'
+import { CreateUnitModal } from '@/components/CreateUnitModal'
 import { ValidationWarning } from '@/components/ValidationWarning'
-import { BiomarkerRecord, deleteBiomarkerRecord, modifyBiomarkerRecord } from '@/db/models/biomarkerRecord'
+import { updateBiomarkerConfig, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
+import { deleteBiomarkerRecord, updateBiomarkerRecord } from '@/db/models/biomarkerRecord'
 import { useUnits } from '@/db/models/unit'
 import { ExtractedBiomarker } from '@/openai/openai.biomarkers'
 import { captureEvent } from '@/utils'
@@ -17,10 +21,13 @@ import { getInvalidCellStyle } from '@/utils/cellStyle'
 import { ExtractionResultsProps } from './ExtractionResults.types'
 
 export const ExtractionResults = (props: ExtractionResultsProps) => {
-    const { biomarkers, configs, onSave, onCancel, onAddNew, className } = props
+    const { biomarkers, onSave, onCancel, onAddNew, className } = props
     const posthog = usePostHog()
     const [rowData, setRowData] = useState<ExtractedBiomarker[]>(biomarkers)
+    const [isBiomarkerModalOpen, setIsBiomarkerModalOpen] = useState(false)
+    const [isUnitModalOpen, setIsUnitModalOpen] = useState(false)
     const { data: units } = useUnits()
+    const { data: configs } = useBiomarkerConfigs()
 
     const handleDelete = useCallback(async (id?: string) => {
         if (id) {
@@ -70,7 +77,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
                         if (config) {
                             params.data.biomarkerId = config.id
                             params.data.name = config.name
-                            params.data.ucumCode = config.ucumCode ?? null
+                            params.data.ucumCode = config.ucumCode ?? undefined
                             return true
                         }
                     }
@@ -81,6 +88,8 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
         },
         createOriginalNameColumn<ExtractedBiomarker>(),
         createValueColumn<ExtractedBiomarker>(units),
+        createNormalRangeMinColumn<ExtractedBiomarker>(),
+        createNormalRangeMaxColumn<ExtractedBiomarker>(),
         {
             colId: 'delete',
             headerName: '',
@@ -103,46 +112,35 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
         },
     ], [handleDelete, biomarkerOptions, configs, units])
 
-    const onCellValueChanged = useCallback((event: CellValueChangedEvent<ExtractedBiomarker>) => {
-        const data = event.data
-        const colDef = event.colDef
-        const newValue = event.newValue as number | string | undefined
-        const field = colDef.field as string
+    const onCellValueChanged = useCallback(async (event: CellValueChangedEvent<ExtractedBiomarker>) => {
+        const row = event.data
+
+        if (row) {
+            const validation = validateRanges(row.normalRange, row.targetRange)
+
+            if (!validation.isValid) {
+                void message.error(validation.errors.join('. '))
+            }
+        }
 
         setRowData(prev => [...prev])
 
-        if (!data?.id) {
-            void message.error('Failed to update biomarker record')
-            return
-        }
+        if (row?.id) {
+            await updateBiomarkerRecord(row.id, {
+                biomarkerId: row.biomarkerId,
+                value: row.value,
+                textValue: row.textValue,
+                ucumCode: row.ucumCode ?? undefined,
+            })
 
-        if (field === 'name') {
-            const selectedOption = biomarkerOptions.find(opt => opt.label === newValue)
-            if (selectedOption) {
-                const config = configs.find(c => c.id === selectedOption.value)
-                if (config?.ucumCode) {
-                    void modifyBiomarkerRecord(data.id, (record) => {
-                        (record as unknown as Record<string, unknown>).biomarkerId = config.id;
-                        (record as unknown as Record<string, unknown>).ucumCode = config.ucumCode ?? ''
-                    })
-                }
+            if (row.biomarkerId) {
+                await updateBiomarkerConfig(row.biomarkerId, {
+                    normalRange: row.normalRange,
+                    targetRange: row.targetRange,
+                })
             }
-        } else if (field === 'value') {
-            void modifyBiomarkerRecord(data.id, (record: BiomarkerRecord) => {
-                if (data.textValue !== undefined) {
-                    record.textValue = data.textValue
-                    record.value = undefined
-                } else if (data.value !== undefined) {
-                    record.value = data.value
-                    record.textValue = undefined
-                }
-            })
-        } else if (field && newValue !== undefined) {
-            void modifyBiomarkerRecord(data.id, (record) => {
-                (record as unknown as Record<string, unknown>)[field] = newValue
-            })
         }
-    }, [biomarkerOptions, configs])
+    }, [])
 
     useEffect(() => {
         setRowData(biomarkers)
@@ -167,11 +165,19 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
             <div className='mb-4'>
                 <div className='flex justify-between items-center mb-2'>
                     <h3 className='text-lg font-medium'>Verify New Records ({biomarkers.length})</h3>
-                    {onAddNew && (
-                        <Button size='small' icon={<PlusOutlined/>} onClick={handleAddNewClick}>
-                            Add New
+                    <div className='flex gap-2'>
+                        <Button size='small' icon={<PlusOutlined/>} onClick={() => { setIsUnitModalOpen(true) }}>
+                            Add Unit
                         </Button>
-                    )}
+                        <Button size='small' icon={<PlusOutlined/>} onClick={() => { setIsBiomarkerModalOpen(true) }}>
+                            Add Biomarker
+                        </Button>
+                        {onAddNew && (
+                            <Button size='small' icon={<PlusOutlined/>} onClick={handleAddNewClick}>
+                                Add Record
+                            </Button>
+                        )}
+                    </div>
                 </div>
                 <p className='text-sm text-gray-600'>Click on any cell to edit values and correct results</p>
             </div>
@@ -185,7 +191,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
                     rowData={rowData}
                     columnDefs={columnDefs}
                     domLayout='normal'
-                    onCellValueChanged={onCellValueChanged}
+                    onCellValueChanged={(event) => { void onCellValueChanged(event) }}
                 />
             </div>
 
@@ -202,6 +208,16 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
                     Save Results
                 </Button>
             </div>
+
+            <CreateBiomarkerModal
+                open={isBiomarkerModalOpen}
+                onCancel={() => { setIsBiomarkerModalOpen(false) }}
+            />
+
+            <CreateUnitModal
+                open={isUnitModalOpen}
+                onCancel={() => { setIsUnitModalOpen(false) }}
+            />
         </div>
     )
 }

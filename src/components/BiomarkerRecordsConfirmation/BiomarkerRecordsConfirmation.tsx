@@ -52,6 +52,8 @@ export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmation
             textValue: record.textValue,
             ucumCode: record.ucumCode,
             referenceRange: config?.normalRange,
+            normalRange: config?.normalRange,
+            targetRange: config?.targetRange,
             order: record.order,
             page: record.page,
         }
@@ -60,7 +62,6 @@ export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmation
     return (
         <ExtractionResults
             biomarkers={extractedBiomarkers}
-            configs={configs}
             onSave={(biomarkers) => { void handleSave(biomarkers) }}
             onCancel={() => { void cancelAll() }}
             onAddNew={() => { void handleAddNew() }}

@@ -19,6 +19,8 @@ export interface ExtractedBiomarker {
     unit?: string | null
     ucumCode?: string | null
     referenceRange?: Partial<Range>
+    normalRange?: Range
+    targetRange?: Range
     order?: number
     page?: number | null
 }

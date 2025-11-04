@@ -63,8 +63,12 @@ export function createModelHooks<T extends object, K extends keyof T & string> (
             return items
         },
 
-        addItem: async (item: InsertType<T, K>): Promise<IDParam<T, K>> => {
-            return await table.add(item)
+        addItem: async (item: Partial<T>): Promise<IDParam<T, K>> => {
+            const itemWithBase = {
+                ...await createBaseEntity(),
+                ...item,
+            } as InsertType<T, K>
+            return await table.add(itemWithBase)
         },
 
         updateItem: async (id: IDParam<T, K>, updates: UpdateSpec<InsertType<T, K>>): Promise<void> => {
