@@ -4,29 +4,17 @@
     <meta charset="utf-8">
     <title>Bloodboy</title>
     <script>
-      // GitHub Pages SPA routing: convert path to query string
-      // e.g., /data -> /?/data so index.html can handle it
+      // SPA routing for GitHub Pages: redirect to index.html with path as query
+      // /data -> /?/data
       var l = window.location;
       
-      // Clean up if URL already contains ?/ segments (prevent loops)
-      if (l.pathname.indexOf('/?/') !== -1 || (l.search && l.search.indexOf('/?/') !== -1)) {
-        var basePath = l.pathname.split('/').slice(0, 2).join('/') || '/';
-        l.replace(l.origin + basePath);
-        return;
+      // if processed already, go to root
+      if(l.search.indexOf('?/') === 0) {
+        l.replace(l.origin + '/'); 
+      } else {
+        var path = l.pathname
+        l.replace(l.origin + '/?' + path);
       }
-      
-      // Skip if already processed (has ?/ at start of query)
-      if (l.search[1] === '/') {
-        return;
-      }
-      
-      var pathSegmentsToKeep = 1;
-      var basePath = l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/');
-      var remainingPath = l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/');
-      l.replace(
-        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        basePath + '/?/' + remainingPath + l.hash
-      );
     </script>
   </head>
   <body>

@@ -5,3 +5,4 @@ export const reloadApp = () => {
     const rootUrl = `${window.location.origin}${baseUrl}`
     window.location.replace(rootUrl)
 }
+
