@@ -10,6 +10,7 @@ export const {
     updateItem: updateBiomarkerConfig,
     removeItem: deleteBiomarkerConfig,
     bulkUpdate: bulkUpdateBiomarkerConfigs,
+    bulkDelete: bulkDeleteBiomarkerConfigs,
 } = createModelHooks(db.biomarkerConfigs, {
     defaultSort: (a, b) => (a.order ?? Infinity) - (b.order ?? Infinity),
 })

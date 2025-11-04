@@ -1,7 +1,5 @@
-import { BiomarkerConfigsConfirmation } from '@/components/BiomarkerConfigsConfirmation'
 import { BiomarkerRecordsConfirmation } from '@/components/BiomarkerRecordsConfirmation'
 import { DocumentConfirmation } from '@/components/DocumentConfirmation'
-import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments } from '@/db/models/document'
 
@@ -11,19 +9,12 @@ export const ConfirmationPanel = (props: ConfirmationPanelProps) => {
     const { className } = props
 
     const { data: unconfirmedDocuments, loading: documentsLoading } = useDocuments({ filter: (item) => !item.approved })
-    const { data: unconfirmedConfigs, loading: configsLoading } = useBiomarkerConfigs({ filter: (item) => !item.approved })
     const { data: unconfirmedRecords, loading: recordsLoading } = useBiomarkerRecords({ filter: (item) => !item.approved })
 
-    const loading = documentsLoading || configsLoading || recordsLoading
+    const loading = documentsLoading || recordsLoading
 
     if (loading) {
         return null
-    }
-
-    if (unconfirmedConfigs.length > 0) {
-        return (
-            <BiomarkerConfigsConfirmation configs={unconfirmedConfigs} className={className}/>
-        )
     }
 
     if (unconfirmedRecords.length > 0) {

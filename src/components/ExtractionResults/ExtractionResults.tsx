@@ -11,7 +11,7 @@ import { validateRanges } from '@/aggrid/validators/rangeValidators'
 import { CreateBiomarkerModal } from '@/components/CreateBiomarkerModal'
 import { CreateUnitModal } from '@/components/CreateUnitModal'
 import { ValidationWarning } from '@/components/ValidationWarning'
-import { updateBiomarkerConfig, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
+import { bulkDeleteBiomarkerConfigs, bulkUpdateBiomarkerConfigs, updateBiomarkerConfig, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { deleteBiomarkerRecord, updateBiomarkerRecord } from '@/db/models/biomarkerRecord'
 import { useUnits } from '@/db/models/unit'
 import { ExtractedBiomarker } from '@/openai/openai.biomarkers'
@@ -51,6 +51,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
 
     const columnDefs = useMemo<Array<ColDef<ExtractedBiomarker>>>(() => [
         createPageColumn<ExtractedBiomarker>(),
+        createOriginalNameColumn<ExtractedBiomarker>(),
         {
             field: 'name',
             headerName: 'Name',
@@ -86,7 +87,6 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
             },
             cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.name),
         },
-        createOriginalNameColumn<ExtractedBiomarker>(),
         createValueColumn<ExtractedBiomarker>(units),
         createNormalRangeMinColumn<ExtractedBiomarker>(),
         createNormalRangeMaxColumn<ExtractedBiomarker>(),
@@ -146,7 +146,37 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
         setRowData(biomarkers)
     }, [biomarkers])
 
-    const handleSave = () => {
+    const handleSave = async () => {
+        const approvedBiomarkerIds = new Set(rowData.map(b => b.biomarkerId).filter((id): id is string => !!id))
+        const originalBiomarkerIds = new Set(biomarkers.map(b => b.biomarkerId).filter((id): id is string => !!id))
+
+        const updatedConfigs = rowData
+            .filter(biomarker => biomarker.biomarkerId)
+            .map(biomarker => {
+                const config = configs.find(c => c.id === biomarker.biomarkerId)
+                if (!config) return null
+                return {
+                    ...config,
+                    approved: true,
+                    ucumCode: biomarker.ucumCode ?? config.ucumCode,
+                    normalRange: biomarker.normalRange ?? config.normalRange,
+                    targetRange: biomarker.targetRange ?? config.targetRange,
+                }
+            })
+            .filter((config): config is NonNullable<typeof config> => config !== null)
+
+        const configsToDelete = configs
+            .filter(config => originalBiomarkerIds.has(config.id) && !approvedBiomarkerIds.has(config.id))
+            .map(config => config.id)
+
+        if (updatedConfigs.length > 0) {
+            await bulkUpdateBiomarkerConfigs(updatedConfigs)
+        }
+
+        if (configsToDelete.length > 0) {
+            await bulkDeleteBiomarkerConfigs(configsToDelete)
+        }
+
         captureEvent(posthog, 'extraction_results_saved', {
             biomarkersCount: rowData.length,
         })
@@ -204,7 +234,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
                 >
                     Cancel
                 </Button>
-                <Button type='primary' onClick={handleSave} disabled={hasInvalidBiomarkers}>
+                <Button type='primary' onClick={() => { void handleSave() }} disabled={hasInvalidBiomarkers}>
                     Save Results
                 </Button>
             </div>

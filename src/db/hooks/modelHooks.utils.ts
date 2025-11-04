@@ -109,5 +109,11 @@ export function createModelHooks<T extends object, K extends keyof T & string> (
             })
             await table.bulkPut(updatedItems as Array<InsertType<T, K>>)
         },
+
+        bulkDelete: async (ids: IDParam<T, K>[]): Promise<void> => {
+            if (ids.length > 0) {
+                await table.bulkDelete(ids)
+            }
+        },
     }
 }
