@@ -1,3 +1,5 @@
+import { useMemo } from 'react'
+
 import { BiomarkerRecordsConfirmation } from '@/components/BiomarkerRecordsConfirmation'
 import { DocumentConfirmation } from '@/components/DocumentConfirmation'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
@@ -9,7 +11,16 @@ export const ConfirmationPanel = (props: ConfirmationPanelProps) => {
     const { className } = props
 
     const { data: unconfirmedDocuments, loading: documentsLoading } = useDocuments({ filter: (item) => !item.approved })
-    const { data: unconfirmedRecords, loading: recordsLoading } = useBiomarkerRecords({ filter: (item) => !item.approved })
+    const { data: allRecords, loading: recordsLoading } = useBiomarkerRecords()
+
+    const unapprovedDocumentId = useMemo(() => {
+        return unconfirmedDocuments.length > 0 ? unconfirmedDocuments[0].id : null
+    }, [unconfirmedDocuments])
+
+    const recordsForDocument = useMemo(() => {
+        if (!unapprovedDocumentId) return []
+        return allRecords.filter(record => record.documentId === unapprovedDocumentId)
+    }, [allRecords, unapprovedDocumentId])
 
     const loading = documentsLoading || recordsLoading
 
@@ -17,9 +28,9 @@ export const ConfirmationPanel = (props: ConfirmationPanelProps) => {
         return null
     }
 
-    if (unconfirmedRecords.length > 0) {
+    if (recordsForDocument.length > 0) {
         return (
-            <BiomarkerRecordsConfirmation records={unconfirmedRecords} className={className}/>
+            <BiomarkerRecordsConfirmation records={recordsForDocument} className={className}/>
         )
     }
 

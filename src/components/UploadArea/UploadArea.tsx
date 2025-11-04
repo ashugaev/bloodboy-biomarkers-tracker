@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { ExtractionErrorModal } from '@/components/ExtractionErrorModal'
 import { UploadDropZone } from '@/components/UploadDropZone'
 import { UploadStatus, UploadStage } from '@/components/UploadStatus'
-import { createBiomarkerConfigs, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
+import { BiomarkerConfig, bulkUpdateBiomarkerConfigs, createBiomarkerConfigs, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { createBiomarkerRecords, useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { addDocument, useDocuments, DocumentType } from '@/db/models/document'
 import { createUnits, useUnits } from '@/db/models/unit'
@@ -214,40 +214,98 @@ export const UploadArea = () => {
                 }
             })
 
-        const uniqueExtractedBiomarkerNames = new Set(biomarkers.map(b => b.name).filter((n): n is string => !!n))
-        const existingBiomarkerConfigNames = new Set(configs.map(c => c.name))
+        const uniqueBiomarkerKeys = new Set(
+            biomarkers
+                .map(b => {
+                    const name = b.name || ''
+                    const ucum = b.ucumCode || ''
+                    return `${name}|${ucum}`
+                })
+                .filter(key => key !== '|'),
+        )
+        const existingConfigKeys = new Set(
+            configs.map(c => {
+                const name = c.name || ''
+                const ucum = c.ucumCode || ''
+                return `${name}|${ucum}`
+            }),
+        )
         const newConfigIds: Record<string, string> = {}
 
-        const newConfigs = Array.from(uniqueExtractedBiomarkerNames)
-            .filter((name): name is string => !existingBiomarkerConfigNames.has(name))
-            .map(name => {
-                const biomarker = biomarkers.find(b => b.name === name)
-                const configId = uuidv4()
-                newConfigIds[name] = configId
+        const configsToUpdate: BiomarkerConfig[] = []
 
-                const biomarkerName = name ?? ''
-                const biomarkerUcumCode = biomarker?.ucumCode ?? ''
+        Array.from(uniqueBiomarkerKeys).forEach(key => {
+            const [name, ucum] = key.split('|')
+            const matchingBiomarkers = biomarkers.filter(b =>
+                (b.name || '') === name && (b.ucumCode || '') === ucum,
+            )
+            if (matchingBiomarkers.length === 0) return
+
+            const existingConfig = configs.find(c => {
+                const configName = c.name || ''
+                const configUcum = c.ucumCode || ''
+                return configName === name && configUcum === ucum
+            })
+
+            if (existingConfig) {
+                const biomarker = matchingBiomarkers[0]
+
+                configsToUpdate.push({
+                    ...existingConfig,
+                    originalName: existingConfig.originalName ?? biomarker.originalName,
+                    ucumCode: existingConfig.ucumCode ?? biomarker.ucumCode,
+                    normalRange: biomarker.referenceRange ? {
+                        min: biomarker.referenceRange.min ?? existingConfig.normalRange?.min,
+                        max: biomarker.referenceRange.max ?? existingConfig.normalRange?.max,
+                    } : existingConfig.normalRange,
+                    updatedAt: now,
+                })
+            }
+        })
+
+        const newConfigs = Array.from(uniqueBiomarkerKeys)
+            .filter(key => !existingConfigKeys.has(key))
+            .map(key => {
+                const [name, ucum] = key.split('|')
+                const matchingBiomarkers = biomarkers.filter(b =>
+                    (b.name || '') === name && (b.ucumCode || '') === ucum,
+                )
+                if (matchingBiomarkers.length === 0) return null
+
+                const biomarker = matchingBiomarkers[0]
+
+                const configId = uuidv4()
+                newConfigIds[key] = configId
+
                 return {
                     id: configId,
                     userId,
-                    name: biomarkerName,
-                    originalName: biomarker?.originalName ?? undefined,
-                    ucumCode: biomarkerUcumCode,
-                    normalRange: biomarker?.referenceRange ? {
+                    name: name || '',
+                    originalName: biomarker.originalName,
+                    ucumCode: biomarker.ucumCode || '',
+                    normalRange: biomarker.referenceRange ? {
                         min: biomarker.referenceRange.min ?? undefined,
                         max: biomarker.referenceRange.max ?? undefined,
                     } : undefined,
                     approved: false,
-                    order: biomarker?.order ?? undefined,
+                    order: biomarker.order,
                     createdAt: now,
                     updatedAt: now,
                 }
             })
+            .filter((config): config is NonNullable<typeof config> => config !== null)
 
         const candidateRecords = biomarkers
             .map(biomarker => {
-                const existingConfig = configs.find(c => c.name === biomarker.name)
-                const biomarkerId = existingConfig?.id ?? newConfigIds[biomarker.name ?? '']
+                const name = biomarker.name || ''
+                const ucum = biomarker.ucumCode || ''
+                const key = `${name}|${ucum}`
+                const existingConfig = configs.find(c => {
+                    const configName = c.name || ''
+                    const configUcum = c.ucumCode || ''
+                    return configName === name && configUcum === ucum
+                })
+                const biomarkerId = existingConfig?.id ?? newConfigIds[key]
 
                 if (!biomarkerId) return null
 
@@ -287,7 +345,7 @@ export const UploadArea = () => {
             void message.warning(`${duplicatesCount} duplicate record${duplicatesCount > 1 ? 's' : ''} excluded`)
         }
 
-        if (newRecords.length === 0 && newConfigs.length === 0 && newUnits.length === 0) {
+        if (newRecords.length === 0 && newConfigs.length === 0 && newUnits.length === 0 && configsToUpdate.length === 0) {
             void message.info('No new data to save')
             return
         }
@@ -331,6 +389,10 @@ export const UploadArea = () => {
             bulkOperations.push(createUnits(newUnits))
         }
 
+        if (configsToUpdate.length > 0) {
+            bulkOperations.push(bulkUpdateBiomarkerConfigs(configsToUpdate))
+        }
+
         if (newConfigs.length > 0) {
             bulkOperations.push(createBiomarkerConfigs(newConfigs))
         }
@@ -346,6 +408,7 @@ export const UploadArea = () => {
             biomarkersCount: biomarkers.length,
             newRecordsCount: newRecords.length,
             newConfigsCount: newConfigs.length,
+            updatedConfigsCount: configsToUpdate.length,
             newUnitsCount: newUnits.length,
             duplicatesCount,
             hasLab: !!extractionResult.labName,

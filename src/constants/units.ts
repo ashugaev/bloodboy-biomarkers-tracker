@@ -55,11 +55,11 @@ export const UNIT_CONFIGS: UnitConfig[] = [
         ucum: '{cells}/uL',
     },
     {
-        title: 'K/μL',
+        title: '×10³/µL',
         ucum: '10*3/uL',
     },
     {
-        title: 'M/μL',
+        title: '×10⁶/µL',
         ucum: '10*6/uL',
     },
     {

@@ -11,6 +11,7 @@ Track and visualize your blood test results over time with AI-powered data extra
 - **Privacy First** - Everything stays on your device
 - **No Subscriptions** - Free for personal use, forever
 - **You Own Your Data**  - Export and backup anytime
+- **Any Biomarkers** - Supports extracting and tracking any biomarkers with any units
 
 ## ✨ Features
 

@@ -26,7 +26,7 @@ export const createOriginalNameColumn = <T extends { originalName?: string | nul
     field: 'originalName' as never,
     headerName: 'Original Name',
     flex: 0.8,
-    minWidth: 150,
+    minWidth: 250,
     editable: false,
     sortable: true,
 })

@@ -1,10 +1,10 @@
 import { usePostHog } from 'posthog-js/react'
 
 import { ExtractionResults } from '@/components/ExtractionResults'
+import { ExtractedBiomarkerWithApproval } from '@/components/ExtractionResults/ExtractionResults.types'
 import { useCancelUnapproved } from '@/db/hooks/useCancelUnapproved'
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { bulkUpdateBiomarkerRecords, comparePageAndOrder, createBiomarkerRecords } from '@/db/models/biomarkerRecord'
-import { ExtractedBiomarker } from '@/openai/openai.biomarkers'
 import { captureEvent } from '@/utils'
 
 import { BiomarkerRecordsConfirmationProps } from './BiomarkerRecordsConfirmation.types'
@@ -15,7 +15,7 @@ export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmation
     const { data: configs } = useBiomarkerConfigs()
     const { cancelAll } = useCancelUnapproved()
 
-    const handleSave = async (biomarkers: ExtractedBiomarker[]) => {
+    const handleSave = async (biomarkers: ExtractedBiomarkerWithApproval[]) => {
         const updatedRecords = records
             .slice(0, biomarkers.length)
             .map(record => ({
@@ -37,10 +37,11 @@ export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmation
             ucumCode: '',
             approved: false,
             latest: true,
+            documentId: records[0]?.documentId,
         }])
     }
 
-    const extractedBiomarkers: ExtractedBiomarker[] = records.map(record => {
+    const extractedBiomarkers: ExtractedBiomarkerWithApproval[] = records.map(record => {
         const config = configs.find(c => c.id === record.biomarkerId)
 
         return {
@@ -56,6 +57,7 @@ export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmation
             targetRange: config?.targetRange,
             order: record.order,
             page: record.page,
+            approved: record.approved,
         }
     }).sort(comparePageAndOrder)
 

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CellValueChangedEvent, ColDef } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
-import { Button, message } from 'antd'
+import { Button, Checkbox, message } from 'antd'
 import { usePostHog } from 'posthog-js/react'
 
 import { createNormalRangeMaxColumn, createNormalRangeMinColumn, createOriginalNameColumn, createPageColumn, createValueColumn } from '@/aggrid/columns/biomarkerColumns'
@@ -14,16 +14,15 @@ import { ValidationWarning } from '@/components/ValidationWarning'
 import { bulkDeleteBiomarkerConfigs, bulkUpdateBiomarkerConfigs, updateBiomarkerConfig, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { deleteBiomarkerRecord, updateBiomarkerRecord } from '@/db/models/biomarkerRecord'
 import { useUnits } from '@/db/models/unit'
-import { ExtractedBiomarker } from '@/openai/openai.biomarkers'
 import { captureEvent } from '@/utils'
 import { getInvalidCellStyle } from '@/utils/cellStyle'
 
-import { ExtractionResultsProps } from './ExtractionResults.types'
+import { ExtractedBiomarkerWithApproval, ExtractionResultsProps } from './ExtractionResults.types'
 
 export const ExtractionResults = (props: ExtractionResultsProps) => {
     const { biomarkers, onSave, onCancel, onAddNew, className } = props
     const posthog = usePostHog()
-    const [rowData, setRowData] = useState<ExtractedBiomarker[]>(biomarkers)
+    const [rowData, setRowData] = useState<ExtractedBiomarkerWithApproval[]>(biomarkers)
     const [isBiomarkerModalOpen, setIsBiomarkerModalOpen] = useState(false)
     const [isUnitModalOpen, setIsUnitModalOpen] = useState(false)
     const { data: units } = useUnits()
@@ -32,6 +31,16 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
     const handleDelete = useCallback(async (id?: string) => {
         if (id) {
             await deleteBiomarkerRecord(id)
+        }
+    }, [])
+
+    const handleApprove = useCallback(async (id?: string, checked?: boolean) => {
+        if (id) {
+            await updateBiomarkerRecord(id, { approved: checked ?? false })
+            setRowData(prev => prev.map(row => row.id === id ? {
+                ...row,
+                approved: checked ?? false,
+            } : row))
         }
     }, [])
 
@@ -49,9 +58,9 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
         })
     }, [configs, units])
 
-    const columnDefs = useMemo<Array<ColDef<ExtractedBiomarker>>>(() => [
-        createPageColumn<ExtractedBiomarker>(),
-        createOriginalNameColumn<ExtractedBiomarker>(),
+    const columnDefs = useMemo<Array<ColDef<ExtractedBiomarkerWithApproval>>>(() => [
+        createPageColumn<ExtractedBiomarkerWithApproval>(),
+        createOriginalNameColumn<ExtractedBiomarkerWithApproval>(),
         {
             field: 'name',
             headerName: 'Name',
@@ -85,11 +94,14 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
                 }
                 return false
             },
-            cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.name),
+            cellStyle: (params) => {
+                const style = getInvalidCellStyle(params, (data) => !data?.name)
+                return style
+            },
         },
-        createValueColumn<ExtractedBiomarker>(units),
-        createNormalRangeMinColumn<ExtractedBiomarker>(),
-        createNormalRangeMaxColumn<ExtractedBiomarker>(),
+        createValueColumn<ExtractedBiomarkerWithApproval>(units),
+        createNormalRangeMinColumn<ExtractedBiomarkerWithApproval>(),
+        createNormalRangeMaxColumn<ExtractedBiomarkerWithApproval>(),
         {
             colId: 'delete',
             headerName: '',
@@ -99,7 +111,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
             sortable: false,
             filter: false,
             editable: false,
-            cellRenderer: (params: { data: ExtractedBiomarker }) => {
+            cellRenderer: (params: { data: ExtractedBiomarkerWithApproval }) => {
                 return (
                     <Button
                         type='text'
@@ -110,9 +122,28 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
                 )
             },
         },
-    ], [handleDelete, biomarkerOptions, configs, units])
+        {
+            colId: 'approve',
+            headerName: '',
+            minWidth: 65,
+            maxWidth: 65,
+            sortable: false,
+            filter: false,
+            editable: false,
+            pinned: 'right',
+            cellRenderer: (params: { data: ExtractedBiomarkerWithApproval }) => {
+                return (
+                    <Checkbox
+                        checked={params.data.approved ?? false}
+                        onChange={(e) => { void handleApprove(params.data.id, e.target.checked) }}
+                        disabled={!params.data.name || (params.data.value === undefined && !params.data.textValue)}
+                    />
+                )
+            },
+        },
+    ], [handleDelete, handleApprove, biomarkerOptions, configs, units])
 
-    const onCellValueChanged = useCallback(async (event: CellValueChangedEvent<ExtractedBiomarker>) => {
+    const onCellValueChanged = useCallback(async (event: CellValueChangedEvent<ExtractedBiomarkerWithApproval>) => {
         const row = event.data
 
         if (row) {
@@ -235,7 +266,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
                     Cancel
                 </Button>
                 <Button type='primary' onClick={() => { void handleSave() }} disabled={hasInvalidBiomarkers}>
-                    Save Results
+                    Confirm All and Continue
                 </Button>
             </div>
 

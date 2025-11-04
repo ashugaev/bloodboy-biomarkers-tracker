@@ -15,9 +15,18 @@ export const useCancelUnapproved = () => {
         const recordIds = unapprovedRecords.map(item => item.id)
         const documentIds = unapprovedDocuments.map(item => item.id)
 
+        const recordsByDocumentId = documentIds.length > 0
+            ? await db.biomarkerRecords.where('documentId').anyOf(documentIds).toArray()
+            : []
+
+        const allRecordIds = [
+            ...recordIds,
+            ...recordsByDocumentId.map(item => item.id),
+        ]
+
         await Promise.all([
             configIds.length > 0 ? db.biomarkerConfigs.bulkDelete(configIds) : Promise.resolve(),
-            recordIds.length > 0 ? db.biomarkerRecords.bulkDelete(recordIds) : Promise.resolve(),
+            allRecordIds.length > 0 ? db.biomarkerRecords.bulkDelete(allRecordIds) : Promise.resolve(),
             documentIds.length > 0 ? db.uploadedFiles.bulkDelete(documentIds) : Promise.resolve(),
         ])
     }, [])

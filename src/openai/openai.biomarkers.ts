@@ -125,7 +125,7 @@ ${existingBiomarkers.length > 0 ? `\nExisting biomarkers in the system (match th
         return `- ${b.name} | UCUM: ${ucum}${type}${opts}`
     }).join('\n')}\n` : ''}
 Biomarker Naming Rules (STRICT):
-- originalName: extract EXACTLY as it appears in the document (preserve original language, case, spacing)
+ - originalName: extract as it appears in the document, then SANITIZE by removing formatting-related characters and artifacts (line breaks, tabs, bullet marks, dot leaders, page/column numbers) and normalizing whitespace to single spaces; preserve original language and casing after sanitization
   * If biomarker name appears in multiple languages, prioritize: English > Russian > other languages
   * Example: if document has "Glucose / Глюкоза / 葡萄糖", use originalName: "Glucose"
 - name: normalized English standardized name following these rules:
@@ -159,10 +159,12 @@ Unit and UCUM Rules (STRICT):
 - unit: provide a short label that approximates how the unit appears in the document, but normalized to English and consistent casing/font (e.g., "mg/dL", "μIU/mL", "K/μL", "cells/μL"). Use "No Unit" for dimensionless numeric values. Use null if not available.
 - ucumCode: provide the UCUM csCode string (case-sensitive), e.g., mg/dL, mmol/L, [iU]/L, ug/mL. If there is a unit but no specific UCUM code exists, use the format {anyName} (e.g., {appearance}, {blood_type}). For dimensionless numeric values, use "{no_unit}". Use null only if unit is also null.
 - Do not invent units. If there is a unit, there must be a corresponding ucumCode (either standard UCUM or {anyName} format).
+- When creating a NEW unit (not present in the existing list), choose the unit label (title) most similar to the one used in the document, normalized to English and consistent casing.
 
 Multiple Units for the Same Biomarker (IMPORTANT):
 - If the same biomarker appears in complementary units in the same document (e.g., percentage and absolute count in a complete blood count), output SEPARATE entries for each unit. Use the same normalized biomarker name for all such entries, each with its own value, unit, ucumCode and referenceRange. Preserve the original order; do not merge or convert between units.
-- If a biomarker exists in the provided existing list but that specific ucumCode is not listed for it, still output the result using the SAME biomarker name with the new ucumCode. This creates a new biomarker + unit (ucum) pair; never drop such results.
+- Do NOT output two absolute values for the same biomarker in different absolute units (e.g., "x10^9/L" and "K/μL"). Output only ONE absolute entry; if both appear, keep the first occurrence in document order.
+- If a biomarker exists in the provided existing list but that specific ucumCode is not listed for it, still output the result using the SAME biomarker name with the new ucumCode. This creates a new biomarker + unit (ucum) pair; except when both results are absolute for the same biomarker (keep only one absolute entry as above).
 Example:
 - "Neutrophils 29.7 %" and "Neutrophils 0.55 x10^9/L" → two entries:
   1) name: "Neutrophils", value: 29.7, unit: "%", ucumCode: "%"
