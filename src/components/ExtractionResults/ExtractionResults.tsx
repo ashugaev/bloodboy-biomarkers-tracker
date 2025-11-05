@@ -454,7 +454,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
         } finally {
             setRetrying(false)
         }
-    }, [documentId, document, currentPage, currentPageData, configs, allRecords, extractFromPdf, posthog])
+    }, [documentId, document, currentPage, currentPageData, configs, allRecords, extractFromPdf, posthog, followUpPrompt])
 
     return (
         <div className={`bg-white p-4 rounded border border-gray-100 flex flex-col ${className ?? ''}`}>
