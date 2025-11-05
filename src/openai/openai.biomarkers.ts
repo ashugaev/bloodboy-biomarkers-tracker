@@ -145,6 +145,7 @@ Biomarker Naming Rules (STRICT):
     - "cholesterol total", "Total chol" → "Total Cholesterol"
     - "hemoglobin", "HGB", "Hb" → "Hemoglobin"
     - "tsh", "Tsh" → "TSH"
+  * If the biomarker belongs to a category/panel mentioned in the document (e.g., "Urinalysis", "Thyroid Panel") and the extracted name alone is not self-explanatory (e.g., "Color", "Appearance"), include the category in the normalized name to make it clear (e.g., "Urine Color", "Urine Appearance").
 
 Examples of correct naming:
 - "Глюкоза" → originalName: "Глюкоза", name: "Glucose"
@@ -154,6 +155,10 @@ Examples of correct naming:
 - "tsh" → originalName: "tsh", name: "TSH"
 - "Лейкоциты" → originalName: "Лейкоциты", name: "White Blood Cells"
 - "Vit D" → originalName: "Vit D", name: "Vitamin D"
+
+Urinalysis examples (make the name explicit by including the context):
+- "pH" → originalName: "pH", name: "Urine pH"
+- "Proteínas" → originalName: "Proteínas", name: "Urine Protein"
 
 Unit and UCUM Rules (STRICT):
 - unit: provide a short label that approximates how the unit appears in the document, but normalized to English and consistent casing/font (e.g., "mg/dL", "μIU/mL", "K/μL", "cells/μL"). Use "No Unit" for dimensionless numeric values. Use null if not available.

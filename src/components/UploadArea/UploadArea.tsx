@@ -19,7 +19,7 @@ import { ExtractionResult } from '@/openai/openai.biomarkers'
 import { captureEvent } from '@/utils'
 
 import { usePdfExtraction } from './UploadArea.hooks'
-import { createRecordKey, createDocumentKey } from './UploadArea.utils'
+import { createDocumentKey, createRecordKey, createRecordsFromExtractedBiomarkers } from './UploadArea.utils'
 
 export const UploadArea = () => {
     const posthog = usePostHog()
@@ -153,7 +153,7 @@ export const UploadArea = () => {
             return
         }
 
-        await saveToDatabase(file, extractionResult.result)
+        await saveToDatabase(file, extractionResult.result, extractionResult.totalPages)
 
         setUploadStage(null)
         setCurrentPage(0)
@@ -187,6 +187,7 @@ export const UploadArea = () => {
     const saveToDatabase = async (
         file: RcFile,
         extractionResult: ExtractionResult,
+        totalPages: number,
     ) => {
         const now = new Date()
         const documentId = uuidv4()
@@ -217,16 +218,16 @@ export const UploadArea = () => {
         const uniqueBiomarkerKeys = new Set(
             biomarkers
                 .map(b => {
-                    const name = b.name || ''
-                    const ucum = b.ucumCode || ''
+                    const name = b.name ?? ''
+                    const ucum = b.ucumCode ?? ''
                     return `${name}|${ucum}`
                 })
                 .filter(key => key !== '|'),
         )
         const existingConfigKeys = new Set(
             configs.map(c => {
-                const name = c.name || ''
-                const ucum = c.ucumCode || ''
+                const name = c.name ?? ''
+                const ucum = c.ucumCode ?? ''
                 return `${name}|${ucum}`
             }),
         )
@@ -237,13 +238,13 @@ export const UploadArea = () => {
         Array.from(uniqueBiomarkerKeys).forEach(key => {
             const [name, ucum] = key.split('|')
             const matchingBiomarkers = biomarkers.filter(b =>
-                (b.name || '') === name && (b.ucumCode || '') === ucum,
+                (b.name ?? '') === name && (b.ucumCode ?? '') === ucum,
             )
             if (matchingBiomarkers.length === 0) return
 
             const existingConfig = configs.find(c => {
-                const configName = c.name || ''
-                const configUcum = c.ucumCode || ''
+                const configName = c.name ?? ''
+                const configUcum = c.ucumCode ?? ''
                 return configName === name && configUcum === ucum
             })
 
@@ -253,7 +254,7 @@ export const UploadArea = () => {
                 configsToUpdate.push({
                     ...existingConfig,
                     originalName: existingConfig.originalName ?? biomarker.originalName,
-                    ucumCode: existingConfig.ucumCode ?? biomarker.ucumCode,
+                    ucumCode: existingConfig.ucumCode ?? (biomarker.ucumCode ?? undefined),
                     normalRange: biomarker.referenceRange ? {
                         min: biomarker.referenceRange.min ?? existingConfig.normalRange?.min,
                         max: biomarker.referenceRange.max ?? existingConfig.normalRange?.max,
@@ -268,7 +269,7 @@ export const UploadArea = () => {
             .map(key => {
                 const [name, ucum] = key.split('|')
                 const matchingBiomarkers = biomarkers.filter(b =>
-                    (b.name || '') === name && (b.ucumCode || '') === ucum,
+                    (b.name ?? '') === name && (b.ucumCode ?? '') === ucum,
                 )
                 if (matchingBiomarkers.length === 0) return null
 
@@ -280,9 +281,9 @@ export const UploadArea = () => {
                 return {
                     id: configId,
                     userId,
-                    name: name || '',
+                    name: name ?? '',
                     originalName: biomarker.originalName,
-                    ucumCode: biomarker.ucumCode || '',
+                    ucumCode: biomarker.ucumCode ?? '',
                     normalRange: biomarker.referenceRange ? {
                         min: biomarker.referenceRange.min ?? undefined,
                         max: biomarker.referenceRange.max ?? undefined,
@@ -295,38 +296,13 @@ export const UploadArea = () => {
             })
             .filter((config): config is NonNullable<typeof config> => config !== null)
 
-        const candidateRecords = biomarkers
-            .map(biomarker => {
-                const name = biomarker.name || ''
-                const ucum = biomarker.ucumCode || ''
-                const key = `${name}|${ucum}`
-                const existingConfig = configs.find(c => {
-                    const configName = c.name || ''
-                    const configUcum = c.ucumCode || ''
-                    return configName === name && configUcum === ucum
-                })
-                const biomarkerId = existingConfig?.id ?? newConfigIds[key]
-
-                if (!biomarkerId) return null
-
-                return {
-                    id: uuidv4(),
-                    userId,
-                    biomarkerId,
-                    documentId,
-                    value: biomarker.value ?? undefined,
-                    textValue: biomarker.textValue ?? undefined,
-                    ucumCode: biomarker.ucumCode ?? '',
-                    originalName: biomarker.originalName ?? undefined,
-                    approved: false,
-                    latest: true,
-                    order: biomarker.order ?? undefined,
-                    page: biomarker.page ?? undefined,
-                    createdAt: now,
-                    updatedAt: now,
-                }
-            })
-            .filter((record): record is NonNullable<typeof record> => record !== null)
+        const candidateRecords = createRecordsFromExtractedBiomarkers({
+            biomarkers,
+            configs,
+            documentId,
+            userId,
+            newConfigIds,
+        })
 
         const existingKeys = new Set(
             records
@@ -379,6 +355,7 @@ export const UploadArea = () => {
             lab: extractionResult.labName ?? undefined,
             testDate,
             notes: '',
+            totalPages,
             createdAt: now,
             updatedAt: now,
         })

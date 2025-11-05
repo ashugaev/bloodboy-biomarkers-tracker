@@ -57,3 +57,11 @@ alwaysApply: true
 - Always use color constants from `src/constants/colors.ts`
 - Import: `import { COLORS } from '@/constants/colors'`
 - Never use hardcoded color values like `#ff4d4f`, use `COLORS.ERROR` instead
+
+## PostHog Product Metrics
+- **All user actions and key interactions must be tracked with PostHog**
+- Use `usePostHog()` hook from `posthog-js/react` in React components
+- Use `captureEvent(posthog, eventName, properties?)` and `captureException(posthog, error, context?)` from `@/utils`
+- Event naming: `snake_case` (e.g., `document_upload_started`, `biomarker_extraction_failed`)
+- Track: clicks, form submissions, CRUD operations, uploads/downloads, errors, navigation, modal actions
+- Include relevant properties in events

@@ -6,8 +6,10 @@ export interface ExtractedBiomarkerWithApproval extends ExtractedBiomarker {
 
 export interface ExtractionResultsProps {
     biomarkers: ExtractedBiomarkerWithApproval[]
-    onSave: (biomarkers: ExtractedBiomarkerWithApproval[]) => void
+    documentId?: string
+    onSave?: (biomarkers: ExtractedBiomarkerWithApproval[]) => void
     onCancel: () => void
-    onAddNew?: () => void
+    onAddNew?: (page: number) => void
+    onPageChange?: (page: number) => void
     className?: string
 }

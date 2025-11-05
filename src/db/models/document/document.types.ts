@@ -19,4 +19,6 @@ export interface UploadedDocument extends BaseEntity {
     fileData?: ArrayBuffer
     thumbnailPath?: string
     extractedText?: string
+    approvedPages?: number[]
+    totalPages?: number
 }

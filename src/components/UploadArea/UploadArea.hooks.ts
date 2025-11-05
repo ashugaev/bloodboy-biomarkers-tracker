@@ -18,12 +18,13 @@ export interface ExtractionWithErrors {
     result: ExtractionResult
     failedPageIndices: number[]
     pageResults: Map<number, ExtractionResult | null>
+    totalPages: number
 }
 
 interface UsePdfExtractionParams {
     extractBiomarkers: (imageBase64: string, followUpMessage?: string, model?: string) => Promise<ExtractionResult | null>
-    onPageProgress: (completedPages: number) => void
-    onTotalPagesFound: (totalPages: number) => void
+    onPageProgress?: (completedPages: number) => void
+    onTotalPagesFound?: (totalPages: number) => void
 }
 
 export const usePdfExtraction = ({ extractBiomarkers, onPageProgress, onTotalPagesFound }: UsePdfExtractionParams) => {
@@ -32,16 +33,21 @@ export const usePdfExtraction = ({ extractBiomarkers, onPageProgress, onTotalPag
         pageIndex: number,
         completedPagesRef: { current: number },
         model?: string,
+        userFollowUp?: string,
     ): Promise<PageExtractionResult> => {
         const MAX_RETRIES = 1
         const imageBase64 = await renderPageToBase64(page)
         let retryCount = 0
         let parsedExtractionResult: ExtractionResult | null = null
         const followUpMessage: string[] = []
+        if (userFollowUp) {
+            followUpMessage.push(`HIGH PRIORITY USER REQUEST:\n${userFollowUp}`)
+        }
 
         while (retryCount <= MAX_RETRIES) {
             try {
-                const extractionResult = await extractBiomarkers(imageBase64, followUpMessage.join('\n'), model)
+                const followUpText = followUpMessage.length > 0 ? followUpMessage.join('\n\n') : undefined
+                const extractionResult = await extractBiomarkers(imageBase64, followUpText, model)
 
                 if (extractionResult) {
                     try {
@@ -113,7 +119,7 @@ export const usePdfExtraction = ({ extractBiomarkers, onPageProgress, onTotalPag
         }
 
         completedPagesRef.current++
-        onPageProgress(completedPagesRef.current)
+        onPageProgress?.(completedPagesRef.current)
         return {
             result: parsedExtractionResult,
             pageIndex,
@@ -126,11 +132,12 @@ export const usePdfExtraction = ({ extractBiomarkers, onPageProgress, onTotalPag
         failedPageIndices?: number[],
         model?: string,
         existingPageResults?: Map<number, ExtractionResult | null>,
+        userFollowUp?: string,
     ): Promise<ExtractionWithErrors> => {
         const pdfDocument = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
         const numPages = pdfDocument.numPages
 
-        onTotalPagesFound(numPages)
+        onTotalPagesFound?.(numPages)
 
         const pagePromises: Array<Promise<pdfjsLib.PDFPageProxy>> = []
         for (let i = 1; i <= numPages; i++) {
@@ -152,7 +159,7 @@ export const usePdfExtraction = ({ extractBiomarkers, onPageProgress, onTotalPag
             }))
 
         const pagesExtractionResults = await Promise.all(
-            pagesToExtract.map(({ page, index }) => extractPage(page, index, completedPagesRef, model)),
+            pagesToExtract.map(({ page, index }) => extractPage(page, index, completedPagesRef, model, userFollowUp)),
         )
 
         const attemptedPageIndices = new Set(pagesToExtract.map(({ index }) => index))
@@ -202,6 +209,7 @@ export const usePdfExtraction = ({ extractBiomarkers, onPageProgress, onTotalPag
             result,
             failedPageIndices: failedIndices,
             pageResults,
+            totalPages: numPages,
         }
     }, [extractPage, onTotalPagesFound])
 

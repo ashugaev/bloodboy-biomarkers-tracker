@@ -19,4 +19,6 @@ export const uploadedDocumentSchema = baseEntitySchema.extend({
     fileData: z.instanceof(ArrayBuffer).optional(),
     thumbnailPath: z.string().optional(),
     extractedText: z.string().optional(),
+    approvedPages: z.array(z.number()).optional(),
+    totalPages: z.number().positive().optional(),
 })

@@ -16,7 +16,7 @@ import { captureEvent } from '@/utils'
 import { ContentAreaProps } from './ContentArea.types'
 
 export const ContentArea = (props: ContentAreaProps) => {
-    const { className } = props
+    const { className, currentPage } = props
     const posthog = usePostHog()
     const [activeTab, setActiveTab] = useState<'biomarkers' | 'files'>('biomarkers')
     const { data: unconfirmedDocuments } = useDocuments({ filter: (item) => !item.approved })
@@ -45,6 +45,7 @@ export const ContentArea = (props: ContentAreaProps) => {
                     <PdfViewer
                         fileData={currentDocument.fileData}
                         fileName={currentDocument.originalName}
+                        currentPage={currentPage}
                     />
                 </div>
             </div>

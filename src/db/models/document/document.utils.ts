@@ -15,6 +15,7 @@ export const createDocument = async (
         type: DocumentType.PDF,
         approved: false,
         uploadDate: now,
+        approvedPages: [],
         ...partial,
     }
 }

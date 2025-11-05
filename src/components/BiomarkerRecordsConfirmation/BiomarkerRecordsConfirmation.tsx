@@ -10,7 +10,7 @@ import { captureEvent } from '@/utils'
 import { BiomarkerRecordsConfirmationProps } from './BiomarkerRecordsConfirmation.types'
 
 export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmationProps) => {
-    const { records, className } = props
+    const { records, documentId, className, onPageChange } = props
     const posthog = usePostHog()
     const { data: configs } = useBiomarkerConfigs()
     const { cancelAll } = useCancelUnapproved()
@@ -29,7 +29,7 @@ export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmation
         })
     }
 
-    const handleAddNew = async () => {
+    const handleAddNew = async (page: number) => {
         if (configs.length === 0) return
 
         await createBiomarkerRecords([{
@@ -38,6 +38,7 @@ export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmation
             approved: false,
             latest: true,
             documentId: records[0]?.documentId,
+            page,
         }])
     }
 
@@ -64,9 +65,11 @@ export const BiomarkerRecordsConfirmation = (props: BiomarkerRecordsConfirmation
     return (
         <ExtractionResults
             biomarkers={extractedBiomarkers}
+            documentId={documentId}
             onSave={(biomarkers) => { void handleSave(biomarkers) }}
             onCancel={() => { void cancelAll() }}
-            onAddNew={() => { void handleAddNew() }}
+            onAddNew={(page) => { void handleAddNew(page) }}
+            onPageChange={onPageChange}
             className={className}
         />
     )

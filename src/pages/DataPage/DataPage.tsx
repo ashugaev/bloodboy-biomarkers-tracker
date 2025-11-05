@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 import { ApiKeyInput } from '@/components/ApiKeyInput'
 import { ConfirmationPanel } from '@/components/ConfirmationPanel'
 import { ContentArea } from '@/components/ContentArea'
@@ -16,6 +18,7 @@ export const DataPage = (props: DataPageProps) => {
     const { data: unconfirmedDocuments } = useDocuments({ filter: (item) => !item.approved })
     const { data: unconfirmedConfigs } = useBiomarkerConfigs({ filter: (item) => !item.approved })
     const { data: unconfirmedRecords } = useBiomarkerRecords({ filter: (item) => !item.approved })
+    const [currentPage, setCurrentPage] = useState<number | undefined>()
 
     const hasPendingConfirmations =
         unconfirmedDocuments.length > 0 ||
@@ -39,8 +42,14 @@ export const DataPage = (props: DataPageProps) => {
                         {!hasPendingConfirmations && <UploadArea/>}
 
                         <div className='flex flex-col md:flex-row flex-1 gap-4 overflow-hidden'>
-                            <ConfirmationPanel className='w-full md:flex-[5] flex flex-col overflow-hidden'/>
-                            <ContentArea className={`w-full flex flex-col overflow-hidden ${hasPendingConfirmations ? 'md:flex-[5]' : 'md:flex-1'}`}/>
+                            <ConfirmationPanel
+                                className='w-full md:flex-[5] flex flex-col overflow-hidden'
+                                onPageChange={setCurrentPage}
+                            />
+                            <ContentArea
+                                className={`w-full flex flex-col overflow-hidden ${hasPendingConfirmations ? 'md:flex-[5]' : 'md:flex-1'}`}
+                                currentPage={currentPage}
+                            />
                         </div>
                     </div>
                 )}

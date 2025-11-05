@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 
-import { EntityTable, IDType, UpdateSpec, InsertType } from 'dexie'
+import { EntityTable, IDType, UpdateSpec, InsertType, IndexableType } from 'dexie'
 import { useLiveQuery } from 'dexie-react-hooks'
 
 import { createBaseEntity } from '@/db/utils/entity.utils'
@@ -28,7 +28,7 @@ export function createModelHooks<T extends object, K extends keyof T & string> (
                 if (!rawData) return []
                 let items = rawData
                 if (options?.filter) {
-                    items = items.filter(options.filter)
+                    items = items.filter(Boolean).filter(options.filter)
                 }
                 const sortFn = options?.sort ?? config?.defaultSort
                 return sortFn ? items.sort(sortFn) : items
@@ -98,16 +98,25 @@ export function createModelHooks<T extends object, K extends keyof T & string> (
         },
 
         bulkUpdate: async (items: T[]): Promise<void> => {
-            const updatedItems = items.map(item => {
-                if ('updatedAt' in item) {
-                    return {
-                        ...item,
-                        updatedAt: new Date(),
-                    } as T
-                }
-                return item
-            })
-            await table.bulkPut(updatedItems as Array<InsertType<T, K>>)
+            if (items.length === 0) return
+
+            const primKey = table.schema.primKey.keyPath as K
+            const ids = items.map(item => (item as T & Record<K, IDParam<T, K>>)[primKey])
+            const now = new Date()
+
+            await table
+                .where(primKey)
+                .anyOf(ids as IndexableType[])
+                .modify((item) => {
+                    const itemId = (item as T & Record<K, IDParam<T, K>>)[primKey]
+                    const updateItem = items.find(i => (i as T & Record<K, IDParam<T, K>>)[primKey] === itemId)
+                    if (updateItem) {
+                        Object.assign(item, updateItem)
+                        if ('updatedAt' in item) {
+                            (item as T & { updatedAt: Date }).updatedAt = now
+                        }
+                    }
+                })
         },
 
         bulkDelete: async (ids: Array<IDParam<T, K>>): Promise<void> => {

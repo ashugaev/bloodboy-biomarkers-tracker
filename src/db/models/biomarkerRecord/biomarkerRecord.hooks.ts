@@ -12,6 +12,7 @@ export const {
     removeItem: deleteBiomarkerRecord,
     modifyItem: modifyBiomarkerRecord,
     bulkUpdate: bulkUpdateBiomarkerRecords,
+    bulkDelete: bulkDeleteBiomarkerRecords,
 } = createModelHooks(db.biomarkerRecords, {
     defaultSort: compareBiomarkerRecords,
 })

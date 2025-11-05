@@ -8,7 +8,7 @@ import { useDocuments } from '@/db/models/document'
 import { ConfirmationPanelProps } from './ConfirmationPanel.types'
 
 export const ConfirmationPanel = (props: ConfirmationPanelProps) => {
-    const { className } = props
+    const { className, onPageChange } = props
 
     const { data: unconfirmedDocuments, loading: documentsLoading } = useDocuments({ filter: (item) => !item.approved })
     const { data: allRecords, loading: recordsLoading } = useBiomarkerRecords()
@@ -24,13 +24,22 @@ export const ConfirmationPanel = (props: ConfirmationPanelProps) => {
 
     const loading = documentsLoading || recordsLoading
 
+    const hasUnapprovedRecords = useMemo(() => {
+        return recordsForDocument.some(record => !record.approved)
+    }, [recordsForDocument])
+
     if (loading) {
         return null
     }
 
-    if (recordsForDocument.length > 0) {
+    if (recordsForDocument.length > 0 && hasUnapprovedRecords) {
         return (
-            <BiomarkerRecordsConfirmation records={recordsForDocument} className={className}/>
+            <BiomarkerRecordsConfirmation
+                records={recordsForDocument}
+                documentId={unapprovedDocumentId ?? undefined}
+                className={className}
+                onPageChange={onPageChange}
+            />
         )
     }
 
