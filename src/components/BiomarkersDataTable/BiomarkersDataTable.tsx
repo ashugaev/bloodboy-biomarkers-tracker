@@ -27,7 +27,8 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
     const { data: documents } = useDocuments()
     const { data: units } = useUnits()
     const navigate = useNavigate()
-    const [documentId, setDocumentId] = useState<string | undefined>()
+    const [documentId, setDocumentId] = useState<string[] | undefined>()
+    const [biomarkerIds, setBiomarkerIds] = useState<string[] | undefined>()
     const [outOfRange, setOutOfRange] = useState<RangeType | undefined>()
 
     const handleDelete = useCallback(async (id: string) => {
@@ -40,15 +41,33 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
 
     const rowData = useMemo(() => {
         let filteredRecords = records
-        if (documentId) {
-            filteredRecords = filteredRecords.filter(r => r.documentId === documentId)
+        if (documentId && documentId.length > 0) {
+            filteredRecords = filteredRecords.filter(r => r.documentId && documentId.includes(r.documentId))
         }
 
-        return configs
+        let filteredConfigs = configs
+        if (biomarkerIds && biomarkerIds.length > 0) {
+            filteredConfigs = filteredConfigs.filter(c => biomarkerIds.includes(c.id))
+        }
+
+        return filteredConfigs
             .map(config => {
                 const configRecords = filteredRecords.filter(r => r.biomarkerId === config.id)
+                const allConfigRecords = records.filter(r => r.biomarkerId === config.id)
 
                 const sortedData = configRecords
+                    .map(record => {
+                        const document = documents.find(d => d.id === record.documentId)
+                        const date = document?.testDate
+                        return {
+                            record,
+                            date,
+                            timestamp: date?.getTime() ?? 0,
+                        }
+                    })
+                    .sort((a, b) => a.timestamp - b.timestamp)
+
+                const allSortedData = allConfigRecords
                     .map(record => {
                         const document = documents.find(d => d.id === record.documentId)
                         const date = document?.testDate
@@ -64,9 +83,13 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
                     .map(item => item.record.value)
                     .filter((v): v is number => v !== undefined)
 
+                const allValues = allSortedData
+                    .map(item => item.record.value)
+                    .filter((v): v is number => v !== undefined)
+
                 const unit = units.find(u => u.ucumCode === config.ucumCode)
 
-                const lastFiveData = sortedData
+                const lastFiveData = allSortedData
                     .filter((item): item is typeof item & { record: { value: number } } => item.record.value !== undefined)
                     .slice(-5)
                     .map(item => ({
@@ -84,8 +107,8 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
                     stats: {
                         lastMeasurement: values.length > 0 ? values[values.length - 1] : undefined,
                         lastValue,
-                        maxResult: values.length > 0 ? Math.max(...values) : undefined,
-                        minResult: values.length > 0 ? Math.min(...values) : undefined,
+                        maxResult: allValues.length > 0 ? Math.max(...allValues) : undefined,
+                        minResult: allValues.length > 0 ? Math.min(...allValues) : undefined,
                     },
                     hasRecords: configRecords.length > 0,
                 }
@@ -113,7 +136,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
 
                 return true
             })
-    }, [configs, records, documents, units, documentId, outOfRange])
+    }, [configs, records, documents, units, documentId, biomarkerIds, outOfRange])
 
     const ViewButtonCellRenderer = useMemo(() => {
         return memo((cellProps: ICellRendererParams<BiomarkerRowData>) => (
@@ -301,8 +324,10 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
             <div className='mb-2'>
                 <BiomarkersDataTableFilters
                     documentId={documentId}
+                    biomarkerIds={biomarkerIds}
                     outOfRange={outOfRange}
                     onDocumentChange={setDocumentId}
+                    onBiomarkerChange={setBiomarkerIds}
                     onOutOfRangeChange={setOutOfRange}
                 />
             </div>

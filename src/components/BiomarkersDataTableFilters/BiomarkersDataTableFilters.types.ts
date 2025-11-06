@@ -4,8 +4,10 @@ export enum RangeType {
 }
 
 export interface BiomarkersDataTableFiltersProps {
-    documentId?: string
+    documentId?: string[]
+    biomarkerIds?: string[]
     outOfRange?: RangeType
-    onDocumentChange?: (documentId: string | undefined) => void
+    onDocumentChange?: (documentId: string[] | undefined) => void
+    onBiomarkerChange?: (biomarkerIds: string[] | undefined) => void
     onOutOfRangeChange?: (outOfRange: RangeType | undefined) => void
 }
