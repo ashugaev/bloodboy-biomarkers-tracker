@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useRef } from 'react'
+import { memo, useCallback, useMemo, useRef, useState } from 'react'
 
 import { CellValueChangedEvent, ColDef, ICellRendererParams, GridApi } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { createNameColumn, createNormalRangeMaxColumn, createNormalRangeMinColumn, createTargetRangeMaxColumn, createTargetRangeMinColumn, createUnitColumn } from '@/aggrid/columns/biomarkerColumns'
 import { validateRanges } from '@/aggrid/validators/rangeValidators'
+import { BiomarkersDataTableFilters, RangeType } from '@/components/BiomarkersDataTableFilters'
 import { MiniBarChart } from '@/components/MiniBarChart'
 import { deleteBiomarkerConfig, updateBiomarkerConfig, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
@@ -26,6 +27,8 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
     const { data: documents } = useDocuments()
     const { data: units } = useUnits()
     const navigate = useNavigate()
+    const [documentId, setDocumentId] = useState<string | undefined>()
+    const [outOfRange, setOutOfRange] = useState<RangeType | undefined>()
 
     const handleDelete = useCallback(async (id: string) => {
         await deleteBiomarkerConfig(id)
@@ -36,9 +39,14 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
     }, [navigate])
 
     const rowData = useMemo(() => {
+        let filteredRecords = records
+        if (documentId) {
+            filteredRecords = filteredRecords.filter(r => r.documentId === documentId)
+        }
+
         return configs
             .map(config => {
-                const configRecords = records.filter(r => r.biomarkerId === config.id)
+                const configRecords = filteredRecords.filter(r => r.biomarkerId === config.id)
 
                 const sortedData = configRecords
                     .map(record => {
@@ -82,8 +90,30 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
                     hasRecords: configRecords.length > 0,
                 }
             })
-            .filter(row => row.hasRecords || !row.isDefault)
-    }, [configs, records, documents, units])
+            .filter(row => {
+                if (!row.hasRecords && !row.isDefault) return false
+
+                if (outOfRange) {
+                    if (typeof row.stats.lastValue !== 'number') return false
+
+                    const value = row.stats.lastValue
+                    if (outOfRange === RangeType.NORMAL) {
+                        const isOutsideNormal =
+                            (row.normalRange?.min !== undefined && value < row.normalRange.min) ||
+                            (row.normalRange?.max !== undefined && value > row.normalRange.max)
+                        return isOutsideNormal
+                    }
+                    if (outOfRange === RangeType.TARGET) {
+                        const isOutsideTarget =
+                            (row.targetRange?.min !== undefined && value < row.targetRange.min) ||
+                            (row.targetRange?.max !== undefined && value > row.targetRange.max)
+                        return isOutsideTarget
+                    }
+                }
+
+                return true
+            })
+    }, [configs, records, documents, units, documentId, outOfRange])
 
     const ViewButtonCellRenderer = useMemo(() => {
         return memo((cellProps: ICellRendererParams<BiomarkerRowData>) => (
@@ -268,6 +298,14 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
 
     return (
         <div className={`flex flex-col h-full min-h-0 ${className ?? ''}`}>
+            <div className='mb-2'>
+                <BiomarkersDataTableFilters
+                    documentId={documentId}
+                    outOfRange={outOfRange}
+                    onDocumentChange={setDocumentId}
+                    onOutOfRangeChange={setOutOfRange}
+                />
+            </div>
             <div className='ag-theme-material flex-1 min-h-0'>
                 <AgGridReact
                     rowData={rowData}

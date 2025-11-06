@@ -29,8 +29,6 @@ export const UploadArea = () => {
     const { data: units } = useUnits()
     const { data: documents } = useDocuments()
     const { data: unconfirmedDocuments } = useDocuments({ filter: (item) => !item.approved })
-    const { data: unconfirmedConfigs } = useBiomarkerConfigs({ filter: (item) => !item.approved })
-    const { data: unconfirmedRecords } = useBiomarkerRecords({ filter: (item) => !item.approved })
 
     const [uploadStage, setUploadStage] = useState<UploadStage | null>(null)
     const [currentPage, setCurrentPage] = useState<number>(0)
@@ -55,9 +53,8 @@ export const UploadArea = () => {
 
     const isUploading = uploadStage !== null
     const hasUnconfirmed =
-        unconfirmedDocuments.length > 0 ||
-        unconfirmedConfigs.length > 0 ||
-        unconfirmedRecords.length > 0
+        unconfirmedDocuments.length > 0
+
     const isDisabled = isUploading || hasUnconfirmed
 
     const handleUpload = async (data: UploadRequestOption) => {

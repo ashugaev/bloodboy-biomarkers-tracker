@@ -84,7 +84,7 @@ export const ContentArea = (props: ContentAreaProps) => {
                     ]}
                     className='flex-shrink-0'
                 />
-                <div className='flex-1 min-h-0 mt-4'>
+                <div className='flex-1 min-h-0 mt-1'>
                     {activeTab === 'biomarkers' ? (
                         <BiomarkersDataTable className='h-full'/>
                     ) : (

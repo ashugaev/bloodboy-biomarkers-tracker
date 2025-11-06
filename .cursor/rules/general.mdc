@@ -65,3 +65,10 @@ alwaysApply: true
 - Event naming: `snake_case` (e.g., `document_upload_started`, `biomarker_extraction_failed`)
 - Track: clicks, form submissions, CRUD operations, uploads/downloads, errors, navigation, modal actions
 - Include relevant properties in events
+
+## Enums
+- **Always use enums instead of string literal unions for fixed sets of values**
+- **Global enums**: `src/types/{Name}.types.ts` - for types used across multiple components/modules
+- **Component-local enums**: `{ComponentName}.types.ts` - for types used only within that component
+- Naming: PascalCase ending in `Type`/`Mode` (e.g., `RangeType`, `ViewMode`), values: UPPER_SNAKE_CASE (e.g., `RangeType.NORMAL`)
+- ✅ Good: `outOfRange?: RangeType` | ❌ Bad: `type Status = 'active' | 'inactive'`
