@@ -6,7 +6,6 @@ export const COLORS = {
     ERROR: '#ef4444',
     CHART_BAR: '#3b82f6',
     INVALID_CELL_BG: '#fee2e2',
-    INVALID_CELL_BORDER: '#fca5a5',
     OUT_OF_NORMAL_BG: '#ffebee',
     OUT_OF_TARGET_BG: '#fff9c4',
     GRAY_50: '#f9fafb',

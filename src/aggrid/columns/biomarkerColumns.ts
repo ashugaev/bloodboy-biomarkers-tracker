@@ -41,6 +41,7 @@ export const createPageColumn = <T extends { page?: number | null }>(): ColDef<T
 })
 
 export const createNormalRangeMinColumn = <T extends BiomarkerWithRanges>(): ColDef<T> => ({
+    colId: 'normalRangeMin',
     field: 'normalRange' as never,
     headerName: 'Normal Min',
     flex: 0.7,
@@ -58,11 +59,12 @@ export const createNormalRangeMinColumn = <T extends BiomarkerWithRanges>(): Col
         return false
     },
     cellStyle: (params) => getInvalidCellStyle(params, (data) =>
-        isRangeInvalid(data?.normalRange, data?.targetRange),
+        isRangeInvalid(data?.normalRange, undefined),
     ),
 })
 
 export const createNormalRangeMaxColumn = <T extends BiomarkerWithRanges>(): ColDef<T> => ({
+    colId: 'normalRangeMax',
     field: 'normalRange' as never,
     headerName: 'Normal Max',
     flex: 0.7,
@@ -80,11 +82,12 @@ export const createNormalRangeMaxColumn = <T extends BiomarkerWithRanges>(): Col
         return false
     },
     cellStyle: (params) => getInvalidCellStyle(params, (data) =>
-        isRangeInvalid(data?.normalRange, data?.targetRange),
+        isRangeInvalid(data?.normalRange, undefined),
     ),
 })
 
 export const createTargetRangeMinColumn = <T extends BiomarkerWithRanges>(): ColDef<T> => ({
+    colId: 'targetRangeMin',
     field: 'targetRange' as never,
     headerName: 'Target Min',
     flex: 0.7,
@@ -102,11 +105,12 @@ export const createTargetRangeMinColumn = <T extends BiomarkerWithRanges>(): Col
         return false
     },
     cellStyle: (params) => getInvalidCellStyle(params, (data) =>
-        isRangeInvalid(data?.normalRange, data?.targetRange),
+        isRangeInvalid(undefined, data?.targetRange),
     ),
 })
 
 export const createTargetRangeMaxColumn = <T extends BiomarkerWithRanges>(): ColDef<T> => ({
+    colId: 'targetRangeMax',
     field: 'targetRange' as never,
     headerName: 'Target Max',
     flex: 0.7,
@@ -124,7 +128,7 @@ export const createTargetRangeMaxColumn = <T extends BiomarkerWithRanges>(): Col
         return false
     },
     cellStyle: (params) => getInvalidCellStyle(params, (data) =>
-        isRangeInvalid(data?.normalRange, data?.targetRange),
+        isRangeInvalid(undefined, data?.targetRange),
     ),
 })
 

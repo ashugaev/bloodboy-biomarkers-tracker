@@ -1,6 +1,6 @@
-import { memo, useCallback, useMemo } from 'react'
+import { memo, useCallback, useMemo, useRef } from 'react'
 
-import { CellValueChangedEvent, ColDef, ICellRendererParams } from '@ag-grid-community/core'
+import { CellValueChangedEvent, ColDef, ICellRendererParams, GridApi } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
 import { DeleteOutlined, RightOutlined } from '@ant-design/icons'
 import { Button, message } from 'antd'
@@ -20,6 +20,7 @@ import { BiomarkerRowData, BiomarkersDataTableProps } from './BiomarkersDataTabl
 
 export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
     const { className } = props
+    const gridApiRef = useRef<GridApi | null>(null)
     const { data: configs } = useBiomarkerConfigs({ filter: (c) => c.approved })
     const { data: records } = useBiomarkerRecords({ filter: (r) => r.approved })
     const { data: documents } = useDocuments()
@@ -226,13 +227,34 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
 
     const onCellValueChanged = useCallback(async (event: CellValueChangedEvent<BiomarkerRowData>) => {
         const row = event.data
+        const colId = event.column?.getColId()
 
-        if (row?.id) {
+        if (row?.id && gridApiRef.current) {
             const validation = validateRanges(row.normalRange, row.targetRange)
 
             if (!validation.isValid) {
                 void message.error(validation.errors.join('. '))
-                return
+            }
+
+            const rowNode = event.node
+            if (rowNode && row) {
+                requestAnimationFrame(() => {
+                    if (gridApiRef.current && rowNode) {
+                        if (colId === 'normalRangeMin' || colId === 'normalRangeMax') {
+                            gridApiRef.current.refreshCells({
+                                rowNodes: [rowNode],
+                                columns: ['normalRangeMin', 'normalRangeMax'],
+                                force: true,
+                            })
+                        } else if (colId === 'targetRangeMin' || colId === 'targetRangeMax') {
+                            gridApiRef.current.refreshCells({
+                                rowNodes: [rowNode],
+                                columns: ['targetRangeMin', 'targetRangeMax'],
+                                force: true,
+                            })
+                        }
+                    }
+                })
             }
 
             await updateBiomarkerConfig(row.id, {
@@ -252,6 +274,9 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
                     columnDefs={columnDefs}
                     domLayout='normal'
                     getRowId={(params) => params.data.id}
+                    onGridReady={(params) => {
+                        gridApiRef.current = params.api
+                    }}
                     onCellValueChanged={(event) => { void onCellValueChanged(event) }}
                 />
             </div>

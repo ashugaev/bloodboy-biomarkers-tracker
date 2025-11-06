@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { ColDef, CellValueChangedEvent } from '@ag-grid-community/core'
+import { ColDef, CellValueChangedEvent, GridApi } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Form, Input, message, Modal } from 'antd'
@@ -21,6 +21,7 @@ interface NewUnitFormData {
 
 export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
     const { biomarkers, onSave, onCancel, className } = props
+    const gridApiRef = useRef<GridApi | null>(null)
     const [rowData, setRowData] = useState<NewBiomarkerRow[]>(biomarkers)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [form] = Form.useForm<NewUnitFormData>()
@@ -102,6 +103,7 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
 
     const onCellValueChanged = useCallback(async (event: CellValueChangedEvent<NewBiomarkerRow>) => {
         const row = event.data
+        const colId = event.column?.getColId()
 
         if (row) {
             const validation = validateRanges(row.normalRange, row.targetRange)
@@ -112,6 +114,27 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
         }
 
         setRowData(prev => [...prev])
+
+        const rowNode = event.node
+        if (gridApiRef.current && rowNode && row) {
+            requestAnimationFrame(() => {
+                if (gridApiRef.current && rowNode) {
+                    if (colId === 'normalRangeMin' || colId === 'normalRangeMax') {
+                        gridApiRef.current.refreshCells({
+                            rowNodes: [rowNode],
+                            columns: ['normalRangeMin', 'normalRangeMax'],
+                            force: true,
+                        })
+                    } else if (colId === 'targetRangeMin' || colId === 'targetRangeMax') {
+                        gridApiRef.current.refreshCells({
+                            rowNodes: [rowNode],
+                            columns: ['targetRangeMin', 'targetRangeMax'],
+                            force: true,
+                        })
+                    }
+                }
+            })
+        }
 
         if (row?.id) {
             await updateBiomarkerConfig(row.id, {
@@ -154,6 +177,9 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
                         rowData={rowData}
                         columnDefs={columnDefs}
                         domLayout='normal'
+                        onGridReady={(params) => {
+                            gridApiRef.current = params.api
+                        }}
                         onCellValueChanged={(event) => { void onCellValueChanged(event) }}
                     />
                 </div>

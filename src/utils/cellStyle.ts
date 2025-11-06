@@ -8,12 +8,13 @@ export const getInvalidCellStyle = <T>(
     isInvalid: (data: T | undefined) => boolean,
 ): CellStyle | null => {
     if (!params.data || !isInvalid(params.data)) {
-        return null
+        return {
+            backgroundColor: 'transparent',
+        }
     }
 
     return {
         backgroundColor: COLORS.INVALID_CELL_BG,
-        border: `1px solid ${COLORS.INVALID_CELL_BORDER}`,
     }
 }
 
@@ -25,7 +26,6 @@ export const getRangeCellStyle = (
     if (value === undefined) {
         return {
             backgroundColor: COLORS.INVALID_CELL_BG,
-            border: `1px solid ${COLORS.INVALID_CELL_BORDER}`,
         }
     }
 
@@ -45,5 +45,7 @@ export const getRangeCellStyle = (
         return { backgroundColor: COLORS.OUT_OF_TARGET_BG }
     }
 
-    return {}
+    return {
+        backgroundColor: 'transparent',
+    }
 }

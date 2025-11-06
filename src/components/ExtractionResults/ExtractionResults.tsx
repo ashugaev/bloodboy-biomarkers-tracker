@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { CellValueChangedEvent, ColDef, ICellRendererParams } from '@ag-grid-community/core'
+import { CellValueChangedEvent, ColDef, ICellRendererParams, GridApi } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
 import { DeleteOutlined, PlusOutlined, QuestionCircleOutlined } from '@ant-design/icons'
 import { Button, Checkbox, Dropdown, Input, message, Tooltip } from 'antd'
@@ -28,6 +28,7 @@ import { ExtractedBiomarkerWithApproval, ExtractionResultsProps } from './Extrac
 export const ExtractionResults = (props: ExtractionResultsProps) => {
     const { biomarkers, documentId, onCancel, onAddNew, onPageChange, className } = props
     const posthog = usePostHog()
+    const gridApiRef = useRef<GridApi | null>(null)
     const [rowData, setRowData] = useState<ExtractedBiomarkerWithApproval[]>(biomarkers)
     const [isBiomarkerModalOpen, setIsBiomarkerModalOpen] = useState(false)
     const [isUnitModalOpen, setIsUnitModalOpen] = useState(false)
@@ -192,6 +193,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
 
     const onCellValueChanged = useCallback(async (event: CellValueChangedEvent<ExtractedBiomarkerWithApproval>) => {
         const row = event.data
+        const colId = event.column?.getColId()
 
         if (row) {
             const validation = validateRanges(row.normalRange, row.targetRange)
@@ -199,6 +201,27 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
             if (!validation.isValid) {
                 void message.error(validation.errors.join('. '))
             }
+        }
+
+        const rowNode = event.node
+        if (gridApiRef.current && rowNode && row) {
+            requestAnimationFrame(() => {
+                if (gridApiRef.current && rowNode) {
+                    if (colId === 'normalRangeMin' || colId === 'normalRangeMax') {
+                        gridApiRef.current.refreshCells({
+                            rowNodes: [rowNode],
+                            columns: ['normalRangeMin', 'normalRangeMax'],
+                            force: true,
+                        })
+                    } else if (colId === 'targetRangeMin' || colId === 'targetRangeMax') {
+                        gridApiRef.current.refreshCells({
+                            rowNodes: [rowNode],
+                            columns: ['targetRangeMin', 'targetRangeMax'],
+                            force: true,
+                        })
+                    }
+                }
+            })
         }
 
         if (row?.id) {
@@ -512,6 +535,9 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
                     // @ts-expect-error - params.node.id is available at runtime even though types don't reflect it
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                     getRowId={(params) => params.data.id ?? String(params.node.id)}
+                    onGridReady={(params) => {
+                        gridApiRef.current = params.api
+                    }}
                     onCellValueChanged={(event) => { void onCellValueChanged(event) }}
                 />
             </div>
