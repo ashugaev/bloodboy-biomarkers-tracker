@@ -138,6 +138,7 @@ export const BiomarkersDataTableFilters = (props: BiomarkersDataTableFiltersProp
                     size='small'
                     maxTagCount='responsive'
                     showSearch
+                    autoClearSearchValue={false}
                     filterOption={(input, option) =>
                         (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                     }

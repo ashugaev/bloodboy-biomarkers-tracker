@@ -1,14 +1,17 @@
-import { memo, useCallback, useMemo } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 
-import { ColDef, ICellRendererParams } from '@ag-grid-community/core'
+import { ColDef, ICellRendererParams, RowClickedEvent } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
 import { DeleteOutlined, DownloadOutlined } from '@ant-design/icons'
-import { Button } from 'antd'
+import { Button, Modal } from 'antd'
 import cn from 'classnames'
+import { usePostHog } from 'posthog-js/react'
 
 import { dateComparator } from '@/aggrid/comparators/dateComprator'
+import { PdfViewer } from '@/components/PdfViewer'
 import { deleteDocument, useDocuments } from '@/db/models/document'
 import { formatFileSize } from '@/db/models/document/document.utils'
+import { captureEvent } from '@/utils'
 
 import { FileRowData, FilesTableProps } from './FilesTable.types'
 
@@ -27,6 +30,8 @@ const downloadFile = (fileData: ArrayBuffer, originalName: string) => {
 export const FilesTable = (props: FilesTableProps) => {
     const { className } = props
     const { data: documents } = useDocuments()
+    const posthog = usePostHog()
+    const [selectedDocument, setSelectedDocument] = useState<FileRowData | null>(null)
 
     const handleDelete = useCallback(async (id: string) => {
         await deleteDocument(id)
@@ -36,6 +41,29 @@ export const FilesTable = (props: FilesTableProps) => {
         if (!fileData) return
         downloadFile(fileData, originalName)
     }, [])
+
+    const handleRowClick = useCallback((event: RowClickedEvent<FileRowData>) => {
+        const target = event.event?.target as HTMLElement
+        const buttonElement = target?.closest('button') ?? target?.closest('.ant-btn')
+        if (buttonElement) {
+            return
+        }
+
+        if (event.data?.fileData) {
+            captureEvent(posthog, 'document_viewer_opened', {
+                documentId: event.data.id,
+                fileName: event.data.originalName,
+            })
+            setSelectedDocument(event.data)
+        }
+    }, [posthog])
+
+    const handleCloseViewer = useCallback(() => {
+        captureEvent(posthog, 'document_viewer_closed', {
+            documentId: selectedDocument?.id,
+        })
+        setSelectedDocument(null)
+    }, [posthog, selectedDocument?.id])
 
     const rowData = useMemo(() => {
         return documents
@@ -138,15 +166,40 @@ export const FilesTable = (props: FilesTableProps) => {
     ], [DownloadButtonCellRenderer, DeleteButtonCellRenderer])
 
     return (
-        <div className={cn('flex flex-col h-full min-h-0', className)}>
-            <div className='ag-theme-material flex-1 min-h-0'>
-                <AgGridReact
-                    rowData={rowData}
-                    columnDefs={columnDefs}
-                    domLayout='normal'
-                    getRowId={(params) => params.data.id}
-                />
+        <>
+            <div className={cn('flex flex-col h-full min-h-0', className)}>
+                <div className='ag-theme-material flex-1 min-h-0'>
+                    <AgGridReact
+                        rowData={rowData}
+                        columnDefs={columnDefs}
+                        domLayout='normal'
+                        getRowId={(params) => params.data.id}
+                        onRowClicked={handleRowClick}
+                        rowSelection='single'
+                    />
+                </div>
             </div>
-        </div>
+            <Modal
+                open={!!selectedDocument}
+                onCancel={handleCloseViewer}
+                footer={null}
+                width='90vw'
+                style={{ top: 20 }}
+                styles={{
+                    body: {
+                        height: 'calc(100vh - 100px)',
+                        padding: 0,
+                    },
+                }}
+                title={selectedDocument?.originalName}
+            >
+                {selectedDocument?.fileData && (
+                    <PdfViewer
+                        fileData={selectedDocument.fileData}
+                        fileName={selectedDocument.originalName}
+                    />
+                )}
+            </Modal>
+        </>
     )
 }
