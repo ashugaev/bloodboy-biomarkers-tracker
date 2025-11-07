@@ -21,6 +21,7 @@ export const biomarkerConfigSchema = baseEntitySchema.extend({
     normalRange: rangeSchema.optional(),
     targetRange: rangeSchema.optional(),
     ucumCode: z.string().optional(),
+    molecularWeight: z.number().positive().optional(),
     approved: z.boolean(),
     order: z.number().optional(),
 })

@@ -20,6 +20,7 @@ Track and visualize your blood test results over time with AI-powered data extra
 - **Data Visualization** - Interactive charts and trend analysis
 - **Local Storage** - All data stored locally using IndexedDB
 - **Professional Tables** - Sorting, filtering, and inline editing with AG-Grid
+- **Saved Filters** - Save and quickly apply custom filter combinations
 - **Modern UI** - Clean interface built with AntDesign and Tailwind CSS
 - **Import/Export** - Backup and restore your data anytime
 

@@ -116,6 +116,8 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
             .filter(row => {
                 if (!row.hasRecords && !row.isDefault) return false
 
+                if (row.stats.lastValue === undefined || row.stats.lastValue === '') return false
+
                 if (outOfRange) {
                     if (typeof row.stats.lastValue !== 'number') return false
 

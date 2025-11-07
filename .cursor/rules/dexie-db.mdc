@@ -108,22 +108,7 @@ export const {
 })
 ```
 
-**Utils:** Create helpers + preload data
-```typescript
-export const createBiomarkerRecord = async (
-    partial: Partial<BiomarkerRecord>
-): Promise<BiomarkerRecord> => {
-    return {
-        ...await createBaseEntity(),
-        biomarkerId: '',
-        value: undefined,
-        ucumCode: '',
-        approved: false,
-        order: undefined,
-        ...partial,
-    }
-}
-```
+**Utils:** Any helpers 
 
 ## Usage Patterns
 
