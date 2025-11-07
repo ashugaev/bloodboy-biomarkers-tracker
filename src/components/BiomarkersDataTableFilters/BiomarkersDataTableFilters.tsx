@@ -183,7 +183,7 @@ export const BiomarkersDataTableFilters = (props: BiomarkersDataTableFiltersProp
                             onClick={() => { handleApplyFilter(filter) }}
                             style={{ cursor: 'pointer' }}
                         >
-                            <span onClick={(e) => { e.stopPropagation() }}>{filter.name}</span>
+                            {filter.name}
                             <CloseOutlined
                                 onClick={(e) => { handleDeleteFilter(filter.id, filter.name, e) }}
                                 style={{
