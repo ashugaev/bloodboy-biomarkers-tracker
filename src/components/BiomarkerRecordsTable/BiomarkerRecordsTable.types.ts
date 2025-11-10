@@ -5,6 +5,7 @@ export interface BiomarkerRecordRowData extends BiomarkerRecord {
     unitTitle?: string
     date?: Date
     lab?: string
+    name?: string
 }
 
 export interface BiomarkerRecordsTableProps {

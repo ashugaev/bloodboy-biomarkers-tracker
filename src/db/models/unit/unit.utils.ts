@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { UNIT_CONFIGS } from '@/constants/units'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/db/services/db.service'
+import { getUnitType } from '@/utils/ucum/unitType'
 
 import { Unit } from './unit.types'
 
@@ -20,6 +21,7 @@ export const preloadUnits = async (): Promise<void> => {
         title: config.title,
         valueType: config.valueType,
         options: config.options,
+        unitType: getUnitType(config.ucum),
         approved: true,
         createdAt: now,
         updatedAt: now,
@@ -32,4 +34,10 @@ export const getUnitTitle = async (ucumCode?: string): Promise<string | undefine
     if (!ucumCode) return undefined
     const unit = await db.units.where('ucumCode').equals(ucumCode).first()
     return unit?.title
+}
+
+export const getUnitTypeForUnit = async (ucumCode?: string): Promise<string | undefined> => {
+    if (!ucumCode) return undefined
+    const unit = await db.units.where('ucumCode').equals(ucumCode).first()
+    return unit?.unitType ?? getUnitType(ucumCode)
 }

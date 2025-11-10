@@ -5,7 +5,7 @@ const utils = UcumLhcUtils.getInstance()
 
 export const convertUnitValue = (value: number, from: string, to: string): number => {
     if (from === to) return value
-    const res = utils.convertUnitTo(value, from, to)
+    const res = utils.convertUnitTo(from, value, to)
     if (!res || res.status !== 'succeeded' || typeof res.toVal !== 'number') {
         throw new Error('UCUM conversion failed')
     }

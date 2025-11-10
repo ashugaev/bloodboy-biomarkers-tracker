@@ -8,6 +8,7 @@ import { UploadedDocument } from '@/db/models/document'
 import { SavedFilter } from '@/db/models/savedFilter'
 import { Unit } from '@/db/models/unit'
 import { User } from '@/db/models/user'
+import { VerifiedConversion } from '@/db/models/verifiedConversion'
 
 let currentUserId: string | null = null
 
@@ -27,6 +28,7 @@ class BloodTestDatabase extends Dexie {
     users!: EntityTable<User, 'id'>
     units!: EntityTable<Unit, 'id'>
     savedFilters!: EntityTable<SavedFilter, 'id'>
+    verifiedConversions!: EntityTable<VerifiedConversion, 'id'>
 
     constructor () {
         super(DB_NAME)
@@ -76,11 +78,23 @@ class BloodTestDatabase extends Dexie {
             savedFilters: 'id, userId, createdAt, updatedAt',
         })
 
+        this.version(6).stores({
+            biomarkerConfigs: 'id, userId, approved, createdAt, updatedAt',
+            biomarkerRecords: 'id, userId, biomarkerId, documentId, approved, latest, createdAt, updatedAt',
+            uploadedFiles: 'id, userId, type, approved, uploadDate, createdAt, updatedAt',
+            appSettings: 'id, createdAt, updatedAt',
+            users: 'id, createdAt, updatedAt',
+            units: 'id, ucumCode, approved, createdAt, updatedAt',
+            savedFilters: 'id, userId, createdAt, updatedAt',
+            verifiedConversions: 'id, userId, biomarkerName, sourceUnit, targetUnit, createdAt, updatedAt',
+        })
+
         const tablesWithUserId = [
             this.biomarkerConfigs,
             this.biomarkerRecords,
             this.uploadedFiles,
             this.savedFilters,
+            this.verifiedConversions,
         ]
 
         tablesWithUserId.forEach(table => {

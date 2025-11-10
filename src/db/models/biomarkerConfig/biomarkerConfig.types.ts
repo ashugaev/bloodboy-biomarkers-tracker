@@ -8,6 +8,8 @@ export interface BiomarkerConfig extends BaseEntity {
     normalRange?: Range
     targetRange?: Range
     ucumCode?: string
+    molecularWeight?: number
+    conversionFactor?: number
     approved: boolean
     order?: number
     isDefault?: boolean

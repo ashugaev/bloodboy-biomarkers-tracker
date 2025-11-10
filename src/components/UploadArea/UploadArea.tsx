@@ -14,9 +14,11 @@ import { createBiomarkerRecords, useBiomarkerRecords } from '@/db/models/biomark
 import { addDocument, useDocuments, DocumentType } from '@/db/models/document'
 import { createUnits, useUnits } from '@/db/models/unit'
 import { getCurrentUserId } from '@/db/models/user'
+import { useVerifiedConversions } from '@/db/models/verifiedConversion'
 import { useExtractBiomarkers } from '@/openai'
 import { ExtractionResult } from '@/openai/openai.biomarkers'
 import { captureEvent } from '@/utils'
+import { getUnitType } from '@/utils/ucum/unitType'
 
 import { usePdfExtraction } from './UploadArea.hooks'
 import { createDocumentKey, createRecordKey, createRecordsFromExtractedBiomarkers } from './UploadArea.utils'
@@ -29,6 +31,7 @@ export const UploadArea = () => {
     const { data: units } = useUnits()
     const { data: documents } = useDocuments()
     const { data: unconfirmedDocuments } = useDocuments({ filter: (item) => !item.approved })
+    const { data: verifiedConversions } = useVerifiedConversions()
 
     const [uploadStage, setUploadStage] = useState<UploadStage | null>(null)
     const [currentPage, setCurrentPage] = useState<number>(0)
@@ -206,6 +209,7 @@ export const UploadArea = () => {
                 return {
                     ucumCode,
                     title: biomarkerWithUnit?.unit ?? ucumCode,
+                    unitType: getUnitType(ucumCode),
                     approved: false,
                     createdAt: now,
                     updatedAt: now,
@@ -293,12 +297,13 @@ export const UploadArea = () => {
             })
             .filter((config): config is NonNullable<typeof config> => config !== null)
 
-        const candidateRecords = createRecordsFromExtractedBiomarkers({
+        const candidateRecords = await createRecordsFromExtractedBiomarkers({
             biomarkers,
             configs,
             documentId,
             userId,
             newConfigIds,
+            verifiedConversions: verifiedConversions || [],
         })
 
         const existingKeys = new Set(

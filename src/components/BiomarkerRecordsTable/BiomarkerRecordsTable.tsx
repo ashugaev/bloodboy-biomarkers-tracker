@@ -8,6 +8,7 @@ import { Button } from 'antd'
 import { createUnitColumn, createValueColumn } from '@/aggrid/columns/biomarkerColumns'
 import { dateComparator } from '@/aggrid/comparators/dateComprator'
 import { COLORS } from '@/constants/colors'
+import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { deleteBiomarkerRecord, updateBiomarkerRecord, useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments, updateDocument } from '@/db/models/document'
 import { useUnits } from '@/db/models/unit'
@@ -22,23 +23,36 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
     })
     const { data: documents } = useDocuments()
     const { data: units } = useUnits()
+    const { data: configs } = useBiomarkerConfigs()
 
     const handleDelete = useCallback(async (id: string) => {
         await deleteBiomarkerRecord(id)
     }, [])
 
+    const biomarkerOptions = useMemo(() => {
+        return configs.map(config => {
+            const unit = units.find(u => u.ucumCode === config.ucumCode)
+            return {
+                value: config.id,
+                label: `${config.name} (${unit?.title ?? 'N/A'})`,
+            }
+        }).sort((a, b) => a.label.localeCompare(b.label))
+    }, [configs, units])
+
     const rowData = useMemo(() => {
         return records.map(record => {
             const document = documents.find(d => d.id === record.documentId)
             const unit = units.find(u => u.ucumCode === record.ucumCode)
+            const config = configs.find(c => c.id === record.biomarkerId)
             return {
                 ...record,
                 unitTitle: unit?.title,
                 date: document?.testDate,
                 lab: document?.lab,
+                name: config?.name,
             }
         })
-    }, [records, documents, units])
+    }, [records, documents, units, configs])
 
     const DeleteButtonCellRenderer = useMemo(() => {
         return memo((cellProps: ICellRendererParams<BiomarkerRecordRowData>) => (
@@ -72,6 +86,40 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
             },
         },
         {
+            field: 'name',
+            headerName: 'Biomarker',
+            flex: 1.5,
+            minWidth: 250,
+            editable: true,
+            cellEditor: 'agSelectCellEditor',
+            cellEditorParams: {
+                values: biomarkerOptions.map(opt => opt.label),
+            },
+            valueGetter: (params) => {
+                const config = configs.find(c => c.id === params.data?.biomarkerId)
+                if (config) {
+                    const unit = units.find(u => u.ucumCode === config.ucumCode)
+                    return `${config.name} (${unit?.title ?? 'N/A'})`
+                }
+                return params.data?.name
+            },
+            valueSetter: (params) => {
+                if (params.data) {
+                    const selectedOption = biomarkerOptions.find(opt => opt.label === params.newValue)
+                    if (selectedOption) {
+                        const config = configs.find(c => c.id === selectedOption.value)
+                        if (config) {
+                            params.data.biomarkerId = config.id
+                            params.data.name = config.name
+                            params.data.ucumCode = config.ucumCode ?? params.data.ucumCode
+                            return true
+                        }
+                    }
+                }
+                return false
+            },
+        },
+        {
             field: 'lab',
             headerName: 'Lab',
             flex: 1,
@@ -84,6 +132,21 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
         ),
         createUnitColumn<BiomarkerRecordRowData>(units),
         {
+            field: 'originalValue',
+            headerName: 'Original Value',
+            flex: 1,
+            minWidth: 150,
+            editable: false,
+            sortable: true,
+            valueFormatter: (params) => {
+                const row = params.data
+                if (!row) return ''
+                if (row.originalValue === undefined) return ''
+                const unit = row.originalUnit ?? ''
+                return `${row.originalValue} ${unit}`.trim()
+            },
+        },
+        {
             colId: 'delete',
             headerName: '',
             minWidth: 90,
@@ -94,7 +157,7 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
             editable: false,
             cellRenderer: DeleteButtonCellRenderer,
         },
-    ], [normalRange, targetRange, DeleteButtonCellRenderer, units])
+    ], [normalRange, targetRange, DeleteButtonCellRenderer, units, biomarkerOptions, configs])
 
     const onCellValueChanged = useCallback(async (event: CellValueChangedEvent<BiomarkerRecordRowData>) => {
         const row = event.data
@@ -111,6 +174,14 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
             await updateBiomarkerRecord(row.id, {
                 value: row.value,
                 textValue: row.textValue,
+                ucumCode: row.ucumCode,
+            })
+            return
+        }
+
+        if (row.id && colId === 'name') {
+            await updateBiomarkerRecord(row.id, {
+                biomarkerId: row.biomarkerId,
                 ucumCode: row.ucumCode,
             })
         }

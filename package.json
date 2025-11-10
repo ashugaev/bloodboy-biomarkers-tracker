@@ -43,10 +43,10 @@
   "scripts": {
     "preinstall": "npx only-allow npm",
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run lint && vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint ./src --ext .js,.ts,.tsx --quiet --max-warnings 0",
-    "lint:fix": "npm run typecheck && eslint ./src --ext .js,.ts,.tsx --fix",
+    "lint:fix": "npm run typecheck && eslint ./src --ext .js,.ts,.tsx --fix --max-warnings 0",
     "preview": "vite preview"
   },
   "dependencies": {

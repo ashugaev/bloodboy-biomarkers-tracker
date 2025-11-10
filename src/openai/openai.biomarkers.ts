@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useUnits } from '@/db/models/unit'
 import { Range } from '@/db/types'
+import { getUnitType } from '@/utils/ucum/unitType'
 
 import { useOpenAI } from './openai.client'
 
@@ -228,6 +229,7 @@ export const useExtractBiomarkers = () => {
                 ucumCode: c.ucumCode,
                 valueType: unit?.valueType,
                 options: unit?.options,
+                unitType: unit?.unitType ?? (c.ucumCode ? getUnitType(c.ucumCode) : undefined),
             }
         })
         const prompt = buildExtractionPrompt(existingBiomarkers)

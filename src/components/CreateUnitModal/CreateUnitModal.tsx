@@ -4,6 +4,7 @@ import { AutoComplete, Form, message, Modal } from 'antd'
 
 import { addUnit, useUnits } from '@/db/models/unit'
 import { validateUcumCode } from '@/utils/ucum'
+import { getUnitType } from '@/utils/ucum/unitType'
 
 import { CreateUnitModalProps } from './CreateUnitModal.types'
 
@@ -36,6 +37,7 @@ export const CreateUnitModal = (props: CreateUnitModalProps) => {
             await addUnit({
                 ucumCode: values.ucumCode,
                 title: values.title,
+                unitType: getUnitType(values.ucumCode),
                 approved: true,
             })
             void message.success('Unit created successfully')

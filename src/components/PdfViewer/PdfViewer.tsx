@@ -4,7 +4,7 @@ import { Document, Page, pdfjs } from 'react-pdf'
 
 import { PdfViewerProps } from './PdfViewer.types'
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
 
 export const PdfViewer = (props: PdfViewerProps) => {
     const { fileData } = props

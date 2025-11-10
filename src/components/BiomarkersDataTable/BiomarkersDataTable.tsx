@@ -114,6 +114,16 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
                 }
             })
             .filter(row => {
+                const hasDocumentFilter = (documentId?.length ?? 0) > 0
+                const hasBiomarkerFilter = (biomarkerIds?.length ?? 0) > 0
+                const hasFilters = hasDocumentFilter || hasBiomarkerFilter
+
+                // For the new records
+                const isDefault = row.isDefault ?? false
+                if (!hasFilters && (isDefault || !row.hasRecords)) {
+                    return true
+                }
+
                 if (!row.hasRecords && !row.isDefault) return false
 
                 if (row.stats.lastValue === undefined || row.stats.lastValue === '') return false

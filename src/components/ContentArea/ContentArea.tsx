@@ -1,11 +1,14 @@
 import { useState } from 'react'
 
-import { Tabs } from 'antd'
+import { MergeCellsOutlined } from '@ant-design/icons'
+import { Button, Tabs } from 'antd'
 import cn from 'classnames'
 import { usePostHog } from 'posthog-js/react'
 
 import { AddNewButton } from '@/components/AddNewButton'
+import { BiomarkerMergeModal } from '@/components/BiomarkerMergeModal'
 import { BiomarkersDataTable } from '@/components/BiomarkersDataTable'
+import { useMergeableBiomarkers } from '@/components/BiomarkersDataTable/BiomarkersDataTable.merger.hooks'
 import { FilesTable } from '@/components/FilesTable'
 import { PdfViewer } from '@/components/PdfViewer'
 import { createBiomarkerConfigs, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
@@ -19,10 +22,12 @@ export const ContentArea = (props: ContentAreaProps) => {
     const { className, currentPage } = props
     const posthog = usePostHog()
     const [activeTab, setActiveTab] = useState<'biomarkers' | 'files'>('biomarkers')
+    const [isMergeModalOpen, setIsMergeModalOpen] = useState(false)
     const { data: unconfirmedDocuments } = useDocuments({ filter: (item) => !item.approved })
     const { data: records } = useBiomarkerRecords({ filter: (r) => r.approved })
     const { data: documents } = useDocuments()
     const { data: configs } = useBiomarkerConfigs({ filter: (c) => c.approved })
+    const { mergeableBiomarkers, records: allRecords } = useMergeableBiomarkers()
 
     const currentDocument = unconfirmedDocuments[0]
 
@@ -59,7 +64,18 @@ export const ContentArea = (props: ContentAreaProps) => {
                     {activeTab === 'biomarkers' ? `Biomarkers (${configsWithRecordsCount})` : `Files (${filesCount})`}
                 </h3>
                 {activeTab === 'biomarkers' && (
-                    <AddNewButton onClick={() => { void handleAddNew() }}/>
+                    <div className='flex gap-2'>
+                        {mergeableBiomarkers.length > 0 && (
+                            <Button
+                                icon={<MergeCellsOutlined/>}
+                                onClick={() => { setIsMergeModalOpen(true) }}
+                                size='small'
+                            >
+                                Merge Suggestions ({mergeableBiomarkers.length})
+                            </Button>
+                        )}
+                        <AddNewButton onClick={() => { void handleAddNew() }}/>
+                    </div>
                 )}
             </div>
             <div className='bg-white px-6 pb-6 rounded border border-gray-100 flex flex-col flex-1 min-h-0'>
@@ -92,6 +108,14 @@ export const ContentArea = (props: ContentAreaProps) => {
                     )}
                 </div>
             </div>
+            {activeTab === 'biomarkers' && (
+                <BiomarkerMergeModal
+                    open={isMergeModalOpen}
+                    mergeableBiomarkers={mergeableBiomarkers}
+                    records={allRecords}
+                    onCancel={() => { setIsMergeModalOpen(false) }}
+                />
+            )}
         </div>
     )
 }

@@ -79,7 +79,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
                 value: config.id,
                 label: `${config.name} (${unit?.title ?? 'N/A'})`,
             }
-        })
+        }).sort((a, b) => a.label.localeCompare(b.label))
     }, [configs, units])
 
     const columnDefs = useMemo<Array<ColDef<ExtractedBiomarkerWithApproval>>>(() => [
@@ -423,7 +423,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
                 await createBiomarkerConfigs(newConfigs)
             }
 
-            const candidateRecords = createRecordsFromExtractedBiomarkers({
+            const candidateRecords = await createRecordsFromExtractedBiomarkers({
                 biomarkers: pageResult.biomarkers,
                 configs,
                 documentId,

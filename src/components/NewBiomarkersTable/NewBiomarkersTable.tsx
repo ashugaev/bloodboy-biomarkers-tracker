@@ -11,6 +11,7 @@ import { ValidationWarning } from '@/components/ValidationWarning'
 import { createBiomarkerConfigs, deleteBiomarkerConfig, updateBiomarkerConfig } from '@/db/models/biomarkerConfig'
 import { addUnit, useUnits } from '@/db/models/unit'
 import { validateUcumCode } from '@/utils/ucum'
+import { getUnitType } from '@/utils/ucum/unitType'
 
 import { NewBiomarkerRow, NewBiomarkersTableProps } from './NewBiomarkersTable.types'
 
@@ -45,6 +46,7 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
             await addUnit({
                 ucumCode: values.ucumCode,
                 title: values.title,
+                unitType: getUnitType(values.ucumCode),
                 approved: true,
             })
             void message.success('Unit created successfully')
