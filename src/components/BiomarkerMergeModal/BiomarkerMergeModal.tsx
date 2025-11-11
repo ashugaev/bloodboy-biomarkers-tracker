@@ -8,8 +8,9 @@ import { MergePreview } from '@/components/BiomarkersDataTable/BiomarkersDataTab
 import { createMergePreview, getConversionStatus, getMostPopularUnit } from '@/components/BiomarkersDataTable/BiomarkersDataTable.merger.utils'
 import { BiomarkerRecord } from '@/db/models/biomarkerRecord'
 import { useUnits } from '@/db/models/unit'
-import { addVerifiedConversion, VerifiedConversionMethod } from '@/db/models/verifiedConversion'
+import { addVerifiedConversion, createVerifiedConversionKey, useVerifiedConversions, VerifiedConversionMethod } from '@/db/models/verifiedConversion'
 import { captureEvent } from '@/utils'
+import { verifiedConversionsConfig } from '@/utils/ucum/verifiedConversions.config'
 
 import { BiomarkerMergeModalProps, MergePreviewProps } from './BiomarkerMergeModal.types'
 
@@ -17,6 +18,7 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
     const { preview, onBack, onMerge, onTargetUnitChange, onConfigToggle, merging } = props
     const posthog = usePostHog()
     const { data: units } = useUnits()
+    const { data: verifiedConversions } = useVerifiedConversions()
 
     const unitTitleMap = useMemo(() => {
         const map = new Map<string, string>()
@@ -34,7 +36,8 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
         const units = selectedConfigs
             .filter(c => !c.isTarget && c.config.ucumCode !== preview.targetUnit)
             .map(c => c.config.ucumCode)
-        return [...new Set(units)].filter(Boolean)
+            .filter((unit): unit is string => Boolean(unit))
+        return [...new Set(units)]
     }, [selectedConfigs, preview.targetUnit])
 
     const selectedConfigsCount = selectedConfigs.length
@@ -81,6 +84,39 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
     }, [selectedFailedConversions, preview.records])
 
     const hasSelectedErrors = selectedFailedConversions.length > 0
+
+    const verifiedConversionsMap = useMemo(() => {
+        const map = new Map<string, boolean>()
+
+        const config = verifiedConversionsConfig
+
+        // Admin verified
+        for (const vc of config.verifiedConversions) {
+            for (const sourceUnit of vc.sourceUnits) {
+                for (const targetUnit of vc.targetUnits) {
+                    const key = createVerifiedConversionKey(vc.biomarkerName, sourceUnit, targetUnit)
+                    map.set(key, true)
+                }
+            }
+        }
+
+        // User verified
+        if (verifiedConversions) {
+            for (const vc of verifiedConversions) {
+                const key = createVerifiedConversionKey(vc.biomarkerName, vc.sourceUnit, vc.targetUnit)
+                map.set(key, true)
+            }
+        }
+
+        return map
+    }, [verifiedConversions])
+
+    const hasDefaultVerifiedConversions = useMemo(() => {
+        return sourceUnits.some(sourceUnit => {
+            const key = createVerifiedConversionKey(preview.biomarkerName, sourceUnit, preview.targetUnit)
+            return verifiedConversionsMap.has(key)
+        })
+    }, [sourceUnits, preview.biomarkerName, preview.targetUnit, verifiedConversionsMap])
 
     const canMerge = selectedConfigsCount >= 2 && !hasSelectedErrors && sourceUnits.length > 0
 
@@ -231,10 +267,18 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
                     <Alert
                         description={(
                             <span>
-                                After confirming the merge, records for "<b>{targetConfigInfo?.config.name}</b>" will be automatically converted from <b>{sourceUnits.join(', ')}</b> to <b>{preview.targetUnit}</b> in future uploads.
+                                {hasDefaultVerifiedConversions ? (
+                                    <>
+                                        This conversion is verified. Records for "<b>{targetConfigInfo?.config.name}</b>" will be automatically converted from <b>{sourceUnits.join(', ')}</b> to <b>{preview.targetUnit}</b> in future uploads.
+                                    </>
+                                ) : (
+                                    <>
+                                        This conversion is not yet verified. Please review the conversion carefully. After confirming the merge, records for "<b>{targetConfigInfo?.config.name}</b>" will be automatically converted from <b>{sourceUnits.join(', ')}</b> to <b>{preview.targetUnit}</b> in future uploads.
+                                    </>
+                                )}
                             </span>
                         )}
-                        type='info'
+                        type={hasDefaultVerifiedConversions ? 'success' : 'warning'}
                         className='mt-4'
                         showIcon
                         style={{ padding: '12px 12px' }}
@@ -414,7 +458,7 @@ export const BiomarkerMergeModal = (props: BiomarkerMergeModalProps) => {
                 const sourceUnit = configInfo.config.ucumCode
                 if (!sourceUnit || sourceUnit === preview.targetUnit) continue
 
-                const conversionKey = `${preview.biomarkerName}|${sourceUnit}|${preview.targetUnit}`
+                const conversionKey = createVerifiedConversionKey(preview.biomarkerName, sourceUnit, preview.targetUnit)
                 if (savedConversions.has(conversionKey)) continue
 
                 const sampleRecord = preview.records.find(r =>

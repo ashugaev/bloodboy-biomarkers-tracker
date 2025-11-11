@@ -43,6 +43,13 @@ export const specialFormulas: SpecialFormula[] = [
         source: 'IDMS traceability standard',
     },
     {
+        analyte: 'Creatinine',
+        fromUnit: 'mg/dL',
+        toUnit: 'µmol/L',
+        convert: (from: number) => from * 88.4,
+        source: 'IDMS traceability standard (inverse)',
+    },
+    {
         analyte: 'Urea (BUN)',
         fromUnit: 'mmol/L',
         toUnit: 'mg/dL',
@@ -55,6 +62,13 @@ export const specialFormulas: SpecialFormula[] = [
         toUnit: 'µg/dL',
         convert: (from: number) => from * 5.585,
         source: 'standard molar-mass conversion',
+    },
+    {
+        analyte: 'Iron',
+        fromUnit: 'µg/dL',
+        toUnit: 'µmol/L',
+        convert: (from: number) => from / 5.585,
+        source: 'standard molar-mass conversion (inverse)',
     },
     {
         analyte: 'Zinc',
