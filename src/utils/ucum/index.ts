@@ -1,4 +1,4 @@
-export { validateUcumCode } from './validate'
+export { validateUcumCode, isAmbiguousUcumCode } from './validate'
 export { getCommensurableUnits } from './commensurables'
 export { convertUnitValue } from './convert'
 export { convertWithMolecularWeight } from './convertWithMolecularWeight'

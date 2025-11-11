@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useUnits } from '@/db/models/unit'
 import { Range } from '@/db/types'
+import { isAmbiguousUcumCode } from '@/utils/ucum'
 import { getUnitType } from '@/utils/ucum/unitType'
 
 import { useOpenAI } from './openai.client'
@@ -65,7 +66,12 @@ export const extractedBiomarkerSchema = z.object({
     }),
     ucumCode: z.string({
         message: 'ucumCode must be a string',
-    }).nullable().optional(),
+    }).nullable().optional().refine((val) => {
+        if (!val) return true
+        return !isAmbiguousUcumCode(val)
+    }, {
+        message: 'ucumCode cannot be an ambiguous value like a plain number (e.g., "1", "2"). Use proper UCUM codes or {name} format.',
+    }),
     referenceRange: referenceRangeSchema.optional(),
     order: z.number({
         message: 'order must be a number',
@@ -164,6 +170,7 @@ Urinalysis examples (make the name explicit by including the context):
 Unit and UCUM Rules (STRICT):
 - unit: provide a short label that approximates how the unit appears in the document, but normalized to English and consistent casing/font (e.g., "mg/dL", "μIU/mL", "K/μL", "cells/μL"). Use "No Unit" for dimensionless numeric values. Use null if not available.
 - ucumCode: provide the UCUM csCode string (case-sensitive), e.g., mg/dL, mmol/L, [iU]/L, ug/mL. If there is a unit but no specific UCUM code exists, use the format {anyName} (e.g., {appearance}, {blood_type}). For dimensionless numeric values, use "{no_unit}". Use null only if unit is also null.
+- CRITICAL: NEVER use ambiguous ucumCode values that are just plain numbers (e.g., "1", "2", "3"). These are invalid and will be rejected. Always use proper UCUM codes or descriptive {name} format.
 - Do not invent units. If there is a unit, there must be a corresponding ucumCode (either standard UCUM or {anyName} format).
 - When creating a NEW unit (not present in the existing list), choose the unit label (title) most similar to the one used in the document, normalized to English and consistent casing.
 

@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
 
 import { DeleteOutlined, DownloadOutlined, MenuOutlined, UploadOutlined } from '@ant-design/icons'
-import { Button, Dropdown, Modal, MenuProps } from 'antd'
+import { Button, Checkbox, Dropdown, Modal, MenuProps } from 'antd'
 import { usePostHog } from 'posthog-js/react'
 
-import { COLORS, DB_NAME } from '@/constants'
+import { COLORS, DB_NAME, PRESERVED_OPENAI_TOKEN_KEY } from '@/constants'
+import { useAppSettings } from '@/db/models/appSettings'
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments } from '@/db/models/document'
@@ -21,6 +22,7 @@ export const ImportButton = (props: ImportButtonProps) => {
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [isModalVisible, setIsModalVisible] = useState(false)
     const [isResetting, setIsResetting] = useState(false)
+    const [preserveToken, setPreserveToken] = useState(true)
 
     const { data: configs } = useBiomarkerConfigs({
         filter: onlyApproved ? (c) => c.approved : undefined,
@@ -31,6 +33,7 @@ export const ImportButton = (props: ImportButtonProps) => {
     const { data: documents } = useDocuments({
         filter: onlyApproved ? (d) => d.approved : undefined,
     })
+    const { data: settings } = useAppSettings()
 
     const handleImportClick = () => {
         fileInputRef.current?.click()
@@ -79,19 +82,41 @@ export const ImportButton = (props: ImportButtonProps) => {
             configsCount: configs.length,
             recordsCount: records.length,
             documentsCount: documents.length,
+            preserveToken,
         })
+
+        const currentSettings = settings[0]
+        const tokenToPreserve = preserveToken && currentSettings?.openaiApiKey
+            ? currentSettings.openaiApiKey
+            : null
+
+        if (tokenToPreserve) {
+            sessionStorage.setItem(PRESERVED_OPENAI_TOKEN_KEY, tokenToPreserve)
+        }
+
         setIsResetting(true)
         const deleteRequest = indexedDB.deleteDatabase(DB_NAME)
 
         deleteRequest.onsuccess = () => {
             localStorage.clear()
-            sessionStorage.clear()
+            if (!tokenToPreserve) {
+                sessionStorage.clear()
+            } else {
+                const preservedToken = sessionStorage.getItem(PRESERVED_OPENAI_TOKEN_KEY)
+                sessionStorage.clear()
+                if (preservedToken) {
+                    sessionStorage.setItem(PRESERVED_OPENAI_TOKEN_KEY, preservedToken)
+                }
+            }
             reloadApp()
         }
 
         deleteRequest.onerror = (error) => {
             console.error('Failed to reset database:', error)
             setIsResetting(false)
+            if (tokenToPreserve) {
+                sessionStorage.removeItem(PRESERVED_OPENAI_TOKEN_KEY)
+            }
         }
 
         deleteRequest.onblocked = () => {
@@ -169,6 +194,13 @@ export const ImportButton = (props: ImportButtonProps) => {
                     <li>📄 All uploaded documents</li>
                     <li>⚙️ All custom configurations</li>
                 </ul>
+                <Checkbox
+                    checked={preserveToken}
+                    onChange={(e) => { setPreserveToken(e.target.checked) }}
+                    style={{ marginTop: '16px' }}
+                >
+                    Preserve OpenAI API token
+                </Checkbox>
             </Modal>
         </>
     )

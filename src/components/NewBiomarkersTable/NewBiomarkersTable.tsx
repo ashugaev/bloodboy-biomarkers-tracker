@@ -240,7 +240,7 @@ export const NewBiomarkersTable = (props: NewBiomarkersTableProps) => {
                                 validator: (_, value: string) => {
                                     if (!value) return Promise.resolve()
 
-                                    const existingUnit = units.find(u => u.ucumCode === value)
+                                    const existingUnit = units.find(u => u.ucumCode.toLowerCase() === value.toLowerCase())
                                     if (existingUnit) {
                                         return Promise.reject(new Error(`Unit with code "${value}" already exists`))
                                     }

@@ -17,6 +17,7 @@ Track and visualize your blood test results over time with AI-powered data extra
 
 - **PDF Upload** - Drag & drop blood test PDFs for automatic data extraction
 - **Built-in PDF Viewer** - View uploaded documents directly in the app 
+- **File Organization** - Organize your files and keep them in one place near to extracted values
 - **AI-Powered** - OpenAI integration for intelligent biomarker extraction
 - **Unit Converter** - Automatic unit conversion
 - **Data Visualization** - Interactive charts and trend analysis

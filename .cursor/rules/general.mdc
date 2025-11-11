@@ -72,3 +72,6 @@ alwaysApply: true
 - **Component-local enums**: `{ComponentName}.types.ts` - for types used only within that component
 - Naming: PascalCase ending in `Type`/`Mode` (e.g., `RangeType`, `ViewMode`), values: UPPER_SNAKE_CASE (e.g., `RangeType.NORMAL`)
 - ✅ Good: `outOfRange?: RangeType` | ❌ Bad: `type Status = 'active' | 'inactive'`
+
+## Constants
+- **Never use hardcoded string keys** for localStorage, sessionStorage, IndexedDB keys, API endpoints, etc. **Always define constants** in appropriate constants files 

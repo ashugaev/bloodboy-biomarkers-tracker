@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { Button, Input } from 'antd'
 import { usePostHog } from 'posthog-js/react'
 
-import { MAIN_SETTINGS_ID } from '@/constants'
+import { MAIN_SETTINGS_ID, PRESERVED_OPENAI_TOKEN_KEY } from '@/constants'
 import { addAppSettings, updateAppSettings, useAppSettings } from '@/db/models/appSettings'
 import { captureEvent } from '@/utils'
 
@@ -13,9 +13,32 @@ export const ApiKeyInput = (props: ApiKeyInputProps) => {
     const { className } = props
     const posthog = usePostHog()
     const [apiKeyInput, setApiKeyInput] = useState('')
-    const { data: settings } = useAppSettings()
+    const { data: settings, loading } = useAppSettings()
 
     const currentSettings = settings[0]
+
+    useEffect(() => {
+        if (loading) return
+
+        const preservedToken = sessionStorage.getItem(PRESERVED_OPENAI_TOKEN_KEY)
+        if (preservedToken && !currentSettings?.openaiApiKey) {
+            const restoreSettings = async () => {
+                const newSettings = {
+                    id: MAIN_SETTINGS_ID,
+                    openaiApiKey: preservedToken,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                }
+                if (currentSettings) {
+                    await updateAppSettings(MAIN_SETTINGS_ID, newSettings)
+                } else {
+                    await addAppSettings(newSettings)
+                }
+                sessionStorage.removeItem(PRESERVED_OPENAI_TOKEN_KEY)
+            }
+            void restoreSettings()
+        }
+    }, [currentSettings, loading])
 
     const handleSaveApiKey = async () => {
         if (!apiKeyInput.trim()) return
