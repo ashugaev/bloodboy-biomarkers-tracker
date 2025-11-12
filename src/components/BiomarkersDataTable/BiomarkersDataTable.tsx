@@ -3,7 +3,7 @@ import { memo, useCallback, useMemo, useRef, useState } from 'react'
 import { CellValueChangedEvent, ColDef, ICellRendererParams, GridApi } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
 import { DeleteOutlined, RightOutlined } from '@ant-design/icons'
-import { Button, message } from 'antd'
+import { Button, message, Tag, Tooltip } from 'antd'
 import { useNavigate } from 'react-router-dom'
 
 import { createNameColumn, createNormalRangeMaxColumn, createNormalRangeMinColumn, createTargetRangeMaxColumn, createTargetRangeMinColumn, createUnitColumn } from '@/aggrid/columns/biomarkerColumns'
@@ -13,10 +13,12 @@ import { MiniBarChart } from '@/components/MiniBarChart'
 import { deleteBiomarkerConfig, updateBiomarkerConfig, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments } from '@/db/models/document'
+import { useSavedFilters } from '@/db/models/savedFilter'
 import { useUnits } from '@/db/models/unit'
 import { ViewMode } from '@/types/viewMode.types'
 import { getRangeCellStyle } from '@/utils/cellStyle'
 
+import { matchesFilter, matchesOutOfRangeFilter } from './BiomarkersDataTable.filter.utils'
 import { BiomarkerRowData, BiomarkersDataTableProps } from './BiomarkersDataTable.types'
 
 export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
@@ -26,6 +28,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
     const { data: records } = useBiomarkerRecords({ filter: (r) => r.approved })
     const { data: documents } = useDocuments()
     const { data: units } = useUnits()
+    const { data: savedFilters } = useSavedFilters()
     const navigate = useNavigate()
     const [documentId, setDocumentId] = useState<string[] | undefined>()
     const [biomarkerIds, setBiomarkerIds] = useState<string[] | undefined>()
@@ -129,21 +132,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
                 if (row.stats.lastValue === undefined || row.stats.lastValue === '') return false
 
                 if (outOfRange) {
-                    if (typeof row.stats.lastValue !== 'number') return false
-
-                    const value = row.stats.lastValue
-                    if (outOfRange === RangeType.NORMAL) {
-                        const isOutsideNormal =
-                            (row.normalRange?.min !== undefined && value < row.normalRange.min) ||
-                            (row.normalRange?.max !== undefined && value > row.normalRange.max)
-                        return isOutsideNormal
-                    }
-                    if (outOfRange === RangeType.TARGET) {
-                        const isOutsideTarget =
-                            (row.targetRange?.min !== undefined && value < row.targetRange.min) ||
-                            (row.targetRange?.max !== undefined && value > row.targetRange.max)
-                        return isOutsideTarget
-                    }
+                    return matchesOutOfRangeFilter(row, outOfRange)
                 }
 
                 return true
@@ -203,6 +192,47 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
             )
         })
     }, [handleViewRecords])
+
+    const handleApplyFilter = useCallback((filter: { documentId?: string[], biomarkerIds?: string[], outOfRange?: RangeType }) => {
+        setDocumentId(filter.documentId)
+        setBiomarkerIds(filter.biomarkerIds)
+        setOutOfRange(filter.outOfRange)
+    }, [])
+
+    const FiltersCellRenderer = useMemo(() => {
+        return memo((cellProps: ICellRendererParams<BiomarkerRowData>) => {
+            const row = cellProps.data
+            if (!row) return null
+
+            const matchingFilters = savedFilters.filter(filter =>
+                matchesFilter(row, filter, records),
+            )
+
+            if (matchingFilters.length === 0) return null
+
+            return (
+                <div className='flex flex-wrap gap-1'>
+                    {matchingFilters.map(filter => (
+                        <Tooltip key={filter.id} title={filter.name}>
+                            <Tag
+                                color={filter.color}
+                                onClick={() => { handleApplyFilter(filter) }}
+                                style={{
+                                    cursor: 'pointer',
+                                    maxWidth: '100%',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                {filter.name}
+                            </Tag>
+                        </Tooltip>
+                    ))}
+                </div>
+            )
+        })
+    }, [savedFilters, records, handleApplyFilter])
 
     // eslint-disable-next-line react-hooks/preserve-manual-memoization
     const columnDefs = useMemo<Array<ColDef<BiomarkerRowData>>>(() => [
@@ -278,6 +308,19 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
             cellRenderer: HistoryCellRenderer,
         },
         {
+            colId: 'filters',
+            headerName: 'Filters',
+            minWidth: 100,
+            maxWidth: 200,
+            sortable: false,
+            filter: false,
+            editable: false,
+            cellRenderer: FiltersCellRenderer,
+            autoHeight: true,
+            wrapText: true,
+            resizable: true,
+        },
+        {
             colId: 'delete',
             headerName: '',
             minWidth: 90,
@@ -288,7 +331,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
             editable: false,
             cellRenderer: DeleteButtonCellRenderer,
         },
-    ], [ViewButtonCellRenderer, DeleteButtonCellRenderer, HistoryCellRenderer, units])
+    ], [ViewButtonCellRenderer, DeleteButtonCellRenderer, HistoryCellRenderer, FiltersCellRenderer, units])
 
     const onCellValueChanged = useCallback(async (event: CellValueChangedEvent<BiomarkerRowData>) => {
         const row = event.data
