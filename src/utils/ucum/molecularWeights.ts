@@ -32,7 +32,7 @@ export const molecularWeights: Record<string, number> = {
     'Vitamin K1': 450.70,
     'Vitamin B12': 1355.37,
     Folate: 441.40,
-    'Vitamin D': 384.64,
+    'Vitamin D': 400.6,
     T3: 651.0,
     T4: 776.87,
     Testosterone: 288.42,

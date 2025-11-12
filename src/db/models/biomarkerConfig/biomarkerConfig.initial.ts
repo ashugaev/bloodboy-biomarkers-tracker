@@ -163,7 +163,7 @@ export const BIOMARKER_CONFIGS: Array<Partial<BiomarkerConfig>> = [
         isDefault: true,
     },
     {
-        name: 'Urea',
+        name: 'Blood urea nitrogen',
         ucumCode: 'mg/dL',
         description: 'Blood urea nitrogen (BUN)',
         order: 23,
