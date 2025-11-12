@@ -112,7 +112,8 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
     }, [verifiedConversions])
 
     const hasDefaultVerifiedConversions = useMemo(() => {
-        return sourceUnits.some(sourceUnit => {
+        if (sourceUnits.length === 0) return false
+        return sourceUnits.every(sourceUnit => {
             const key = createVerifiedConversionKey(preview.biomarkerName, sourceUnit, preview.targetUnit)
             return verifiedConversionsMap.has(key)
         })
@@ -166,7 +167,10 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
                     return <Tag color='default'>No Conversion</Tag>
                 }
                 if (status === 'converted') {
-                    return <Tag color='success' icon={<CheckCircleOutlined/>}>Converted</Tag>
+                    const isVerified = record.originalUnit && record.originalUnit !== preview.targetUnit
+                        ? verifiedConversionsMap.has(createVerifiedConversionKey(preview.biomarkerName, record.originalUnit, preview.targetUnit))
+                        : false
+                    return <Tag color={isVerified ? 'success' : 'warning'} icon={<CheckCircleOutlined/>}>Converted</Tag>
                 }
                 if (status === 'failed') {
                     return <Tag color='error' icon={<CloseCircleOutlined/>}>Failed</Tag>
