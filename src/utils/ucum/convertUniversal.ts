@@ -4,6 +4,7 @@ import { convertUnitValue } from './convert'
 import { convertWithMolecularWeight } from './convertWithMolecularWeight'
 import { getMolecularWeight } from './molecularWeights'
 import { findSpecialFormula } from './specialFormulas'
+import { normalizeUnitForUcum } from './unitNormalization.config'
 import { isInternationalUnit, isMassUnit, isMolarUnit } from './unitType'
 
 export interface ConversionConfig {
@@ -71,17 +72,25 @@ const convertSimpleMath = (
     const normalizedTo = normalizeUnit(to)
 
     const fromMiuL = normalizedFrom.includes('miu/l') || normalizedFrom.includes('m[iu]/l')
+    const fromMiuMl = normalizedFrom.includes('miu/ml') || normalizedFrom.includes('m[iu]/ml')
     const fromIuL = normalizedFrom.includes('[iu]/l') && !normalizedFrom.includes('miu')
     const fromUiuMl = normalizedFrom.includes('u[iu]/ml')
     const toMiuL = normalizedTo.includes('miu/l') || normalizedTo.includes('m[iu]/l')
+    const toMiuMl = normalizedTo.includes('miu/ml') || normalizedTo.includes('m[iu]/ml')
     const toIuL = normalizedTo.includes('[iu]/l') && !normalizedTo.includes('miu')
     const toUiuMl = normalizedTo.includes('u[iu]/ml')
 
+    if (fromMiuMl && toIuL) {
+        return value
+    }
+    if (fromIuL && toMiuMl) {
+        return value
+    }
     if (fromMiuL && toIuL) {
-        return value * 1000
+        return value / 1000
     }
     if (fromIuL && toMiuL) {
-        return value / 1000
+        return value * 1000
     }
     if (fromUiuMl && toMiuL) {
         return value * 1000
@@ -243,8 +252,10 @@ export const convertUniversal = (
 
     if (!needsMolecularWeight && !needsConversionFactor) {
         try {
-            if (canConvert(from, to)) {
-                const converted = convertUnitValue(value, from, to)
+            const normalizedFrom = normalizeUnitForUcum(from)
+            const normalizedTo = normalizeUnitForUcum(to)
+            if (canConvert(normalizedFrom, normalizedTo)) {
+                const converted = convertUnitValue(value, normalizedFrom, normalizedTo)
                 return {
                     value: converted,
                     method: 'ucum',

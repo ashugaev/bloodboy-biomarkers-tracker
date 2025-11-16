@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 import { UcumLhcUtils } from '@lhncbc/ucum-lhc'
 
+import { normalizeUnitForUcum } from './unitNormalization.config'
 import { isMassUnit, isMolarUnit } from './unitType'
 
 const utils = UcumLhcUtils.getInstance()
@@ -24,7 +25,10 @@ export const convertWithMolecularWeight = (
         throw new Error(`Cannot convert ${from} to ${to} using molecular weight. Units must be mass ↔ molar`)
     }
 
-    const res = utils.convertUnitTo(from, value, to, {
+    const normalizedFrom = normalizeUnitForUcum(from)
+    const normalizedTo = normalizeUnitForUcum(to)
+
+    const res = utils.convertUnitTo(normalizedFrom, value, normalizedTo, {
         molecularWeight,
     })
 

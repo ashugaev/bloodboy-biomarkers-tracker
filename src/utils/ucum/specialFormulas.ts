@@ -120,6 +120,13 @@ export const specialFormulas: SpecialFormula[] = [
         source: 'atomic mass 40.08 g/mol',
     },
     {
+        analyte: 'Ionized Calcium',
+        fromUnit: 'mmol/L',
+        toUnit: 'mg/dL',
+        convert: (from: number) => from * 4.0,
+        source: 'atomic mass 40.078 g/mol',
+    },
+    {
         analyte: 'Phosphate',
         fromUnit: 'mmol/L',
         toUnit: 'mg/dL',

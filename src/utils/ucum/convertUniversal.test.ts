@@ -27,7 +27,7 @@ describe('convertUniversal', () => {
                                 )
 
                                 expect(result.method).toBe(verifiedConversion.expectedMethod)
-                                const tolerance = testCase.tolerance ?? 0.01
+                                const tolerance = 0.01
                                 expect(Math.abs(result.value - testCase.expectedValue)).toBeLessThanOrEqual(tolerance)
                                 expect(result.error).toBeUndefined()
                             })

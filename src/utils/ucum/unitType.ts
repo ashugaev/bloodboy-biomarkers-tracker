@@ -1,11 +1,11 @@
 import { UnitType } from '@/db/models/unit/unit.types'
 
 export const isMassUnit = (ucum: string): boolean => {
-    return /(kg|g|mg|ug|ng|pg)/.test(ucum) && !/(mol)/.test(ucum)
+    return /(kg|g|mg|ug|µg|μg|ng|pg)/.test(ucum) && !/(mol)/.test(ucum)
 }
 
 export const isMolarUnit = (ucum: string): boolean => {
-    return /(mol|mmol|umol|nmol|pmol)/.test(ucum)
+    return /(mol|mmol|umol|µmol|μmol|nmol|pmol)/.test(ucum)
 }
 
 export const isInternationalUnit = (ucum: string): boolean => {

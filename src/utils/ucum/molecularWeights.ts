@@ -37,6 +37,7 @@ export const molecularWeights: Record<string, number> = {
     T4: 776.87,
     Testosterone: 288.42,
     'Testosterone biologically active': 288.42,
+    'Testosterone total': 288.42,
     Estradiol: 272.38,
     '17-Beta Estradiol': 272.38,
     '17-Beta Estradiol (E2)': 272.38,
