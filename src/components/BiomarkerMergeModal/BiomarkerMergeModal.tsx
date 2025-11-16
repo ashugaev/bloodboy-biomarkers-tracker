@@ -6,13 +6,14 @@ import { usePostHog } from 'posthog-js/react'
 
 import { MergePreview } from '@/components/BiomarkersDataTable/BiomarkersDataTable.merger.types'
 import { createMergePreview, getConversionStatus, getMostPopularUnit } from '@/components/BiomarkersDataTable/BiomarkersDataTable.merger.utils'
+import { COLORS } from '@/constants/colors'
 import { BiomarkerRecord } from '@/db/models/biomarkerRecord'
 import { useUnits } from '@/db/models/unit'
 import { addVerifiedConversion, createVerifiedConversionKey, useVerifiedConversions, VerifiedConversionMethod } from '@/db/models/verifiedConversion'
 import { captureEvent } from '@/utils'
-import { verifiedConversionsConfig } from '@/utils/ucum/verifiedConversions.config'
 
 import { BiomarkerMergeModalProps, MergePreviewProps } from './BiomarkerMergeModal.types'
+import { buildVerifiedConversionsMap, isBiomarkerFullyVerified } from './BiomarkerMergeModal.utils'
 
 const MergePreviewScreen = (props: MergePreviewProps) => {
     const { preview, onBack, onMerge, onTargetUnitChange, onConfigToggle, merging } = props
@@ -86,29 +87,7 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
     const hasSelectedErrors = selectedFailedConversions.length > 0
 
     const verifiedConversionsMap = useMemo(() => {
-        const map = new Map<string, boolean>()
-
-        const config = verifiedConversionsConfig
-
-        // Admin verified
-        for (const vc of config.verifiedConversions) {
-            for (const sourceUnit of vc.sourceUnits) {
-                for (const targetUnit of vc.targetUnits) {
-                    const key = createVerifiedConversionKey(vc.biomarkerName, sourceUnit, targetUnit)
-                    map.set(key, true)
-                }
-            }
-        }
-
-        // User verified
-        if (verifiedConversions) {
-            for (const vc of verifiedConversions) {
-                const key = createVerifiedConversionKey(vc.biomarkerName, vc.sourceUnit, vc.targetUnit)
-                map.set(key, true)
-            }
-        }
-
-        return map
+        return buildVerifiedConversionsMap(verifiedConversions)
     }, [verifiedConversions])
 
     const hasDefaultVerifiedConversions = useMemo(() => {
@@ -353,6 +332,24 @@ export const BiomarkerMergeModal = (props: BiomarkerMergeModalProps) => {
     const [selectedBiomarker, setSelectedBiomarker] = useState<string | null>(null)
     const [preview, setPreview] = useState<MergePreview | null>(null)
     const [merging, setMerging] = useState(false)
+    const { data: verifiedConversions } = useVerifiedConversions()
+
+    const verifiedConversionsMap = useMemo(() => {
+        return buildVerifiedConversionsMap(verifiedConversions)
+    }, [verifiedConversions])
+
+    const biomarkerVerificationStatus = useMemo(() => {
+        const statusMap = new Map<string, boolean>()
+        for (const biomarker of mergeableBiomarkers) {
+            const isVerified = isBiomarkerFullyVerified(biomarker, records, verifiedConversionsMap)
+            statusMap.set(biomarker.name, isVerified)
+        }
+        return statusMap
+    }, [mergeableBiomarkers, records, verifiedConversionsMap])
+
+    const verifiedBiomarkers = useMemo(() => {
+        return mergeableBiomarkers.filter(b => biomarkerVerificationStatus.get(b.name) === true)
+    }, [mergeableBiomarkers, biomarkerVerificationStatus])
 
     const handleBiomarkerSelect = useCallback((name: string) => {
         const biomarker = mergeableBiomarkers.find(b => b.name === name)
@@ -402,6 +399,87 @@ export const BiomarkerMergeModal = (props: BiomarkerMergeModalProps) => {
         setPreview(newPreview)
     }, [preview])
 
+    const executeMerge = useCallback(async (previewToMerge: MergePreview) => {
+        const selectedConfigs = previewToMerge.configs.filter(c => c.selected)
+        const targetConfig = selectedConfigs.find(c => c.isTarget)
+
+        if (!targetConfig) {
+            throw new Error('Target config not found')
+        }
+
+        const recordsToUpdate: BiomarkerRecord[] = []
+        const configsToDelete: string[] = []
+
+        for (const configInfo of selectedConfigs) {
+            if (configInfo.isTarget) continue
+
+            const configRecords = previewToMerge.records.filter(r =>
+                r.config.id === configInfo.config.id &&
+                r.conversionResult.method !== 'failed' &&
+                r.convertedValue !== undefined,
+            )
+
+            for (const recordInfo of configRecords) {
+                const updatedRecord: BiomarkerRecord = {
+                    ...recordInfo.record,
+                    biomarkerId: targetConfig.config.id,
+                    originalValue: recordInfo.originalValue ?? recordInfo.record.value,
+                    originalUnit: recordInfo.originalUnit || recordInfo.record.ucumCode,
+                    value: recordInfo.convertedValue !== undefined
+                        ? Math.round(recordInfo.convertedValue * 100) / 100
+                        : undefined,
+                    ucumCode: previewToMerge.targetUnit,
+                }
+                recordsToUpdate.push(updatedRecord)
+            }
+
+            configsToDelete.push(configInfo.config.id)
+        }
+
+        const { db } = await import('@/db/services/db.service')
+
+        await db.biomarkerRecords.bulkPut(recordsToUpdate)
+        await db.biomarkerConfigs.bulkDelete(configsToDelete)
+
+        const savedConversions = new Set<string>()
+
+        for (const configInfo of selectedConfigs) {
+            if (configInfo.isTarget) continue
+
+            const sourceUnit = configInfo.config.ucumCode
+            if (!sourceUnit || sourceUnit === previewToMerge.targetUnit) continue
+
+            const conversionKey = createVerifiedConversionKey(previewToMerge.biomarkerName, sourceUnit, previewToMerge.targetUnit)
+            if (savedConversions.has(conversionKey)) continue
+
+            const sampleRecord = previewToMerge.records.find(r =>
+                r.config.id === configInfo.config.id &&
+                r.conversionResult.method !== 'failed',
+            )
+
+            if (!sampleRecord) continue
+
+            const conversionMethod = sampleRecord.conversionResult.method
+            if (conversionMethod === 'failed') continue
+
+            await addVerifiedConversion({
+                biomarkerName: previewToMerge.biomarkerName,
+                sourceUnit,
+                targetUnit: previewToMerge.targetUnit,
+                conversionMethod: conversionMethod as VerifiedConversionMethod,
+                molecularWeight: configInfo.config.molecularWeight,
+                conversionFactor: configInfo.config.conversionFactor,
+            })
+
+            savedConversions.add(conversionKey)
+        }
+
+        return {
+            recordsMerged: recordsToUpdate.length,
+            configsDeleted: configsToDelete.length,
+        }
+    }, [])
+
     const handleMerge = useCallback(async () => {
         if (!preview || !selectedBiomarker) return
 
@@ -413,85 +491,13 @@ export const BiomarkerMergeModal = (props: BiomarkerMergeModalProps) => {
         })
 
         try {
-            const selectedConfigs = preview.configs.filter(c => c.selected)
-            const targetConfig = selectedConfigs.find(c => c.isTarget)
-
-            if (!targetConfig) {
-                throw new Error('Target config not found')
-            }
-
-            const recordsToUpdate: BiomarkerRecord[] = []
-            const configsToDelete: string[] = []
-
-            for (const configInfo of selectedConfigs) {
-                if (configInfo.isTarget) continue
-
-                const configRecords = preview.records.filter(r =>
-                    r.config.id === configInfo.config.id &&
-                    r.conversionResult.method !== 'failed' &&
-                    r.convertedValue !== undefined,
-                )
-
-                for (const recordInfo of configRecords) {
-                    const updatedRecord: BiomarkerRecord = {
-                        ...recordInfo.record,
-                        biomarkerId: targetConfig.config.id,
-                        originalValue: recordInfo.originalValue ?? recordInfo.record.value,
-                        originalUnit: recordInfo.originalUnit || recordInfo.record.ucumCode,
-                        value: recordInfo.convertedValue !== undefined
-                            ? Math.round(recordInfo.convertedValue * 100) / 100
-                            : undefined,
-                        ucumCode: preview.targetUnit,
-                    }
-                    recordsToUpdate.push(updatedRecord)
-                }
-
-                configsToDelete.push(configInfo.config.id)
-            }
-
-            const { db } = await import('@/db/services/db.service')
-
-            await db.biomarkerRecords.bulkPut(recordsToUpdate)
-            await db.biomarkerConfigs.bulkDelete(configsToDelete)
-
-            const savedConversions = new Set<string>()
-
-            for (const configInfo of selectedConfigs) {
-                if (configInfo.isTarget) continue
-
-                const sourceUnit = configInfo.config.ucumCode
-                if (!sourceUnit || sourceUnit === preview.targetUnit) continue
-
-                const conversionKey = createVerifiedConversionKey(preview.biomarkerName, sourceUnit, preview.targetUnit)
-                if (savedConversions.has(conversionKey)) continue
-
-                const sampleRecord = preview.records.find(r =>
-                    r.config.id === configInfo.config.id &&
-                    r.conversionResult.method !== 'failed',
-                )
-
-                if (!sampleRecord) continue
-
-                const conversionMethod = sampleRecord.conversionResult.method
-                if (conversionMethod === 'failed') continue
-
-                await addVerifiedConversion({
-                    biomarkerName: preview.biomarkerName,
-                    sourceUnit,
-                    targetUnit: preview.targetUnit,
-                    conversionMethod: conversionMethod as VerifiedConversionMethod,
-                    molecularWeight: configInfo.config.molecularWeight,
-                    conversionFactor: configInfo.config.conversionFactor,
-                })
-
-                savedConversions.add(conversionKey)
-            }
+            const result = await executeMerge(preview)
 
             captureEvent(posthog, 'biomarker_merge_completed', {
                 biomarkerName: preview.biomarkerName,
                 targetUnit: preview.targetUnit,
-                recordsMerged: recordsToUpdate.length,
-                configsDeleted: configsToDelete.length,
+                recordsMerged: result.recordsMerged,
+                configsDeleted: result.configsDeleted,
             })
 
             setMerging(false)
@@ -501,7 +507,94 @@ export const BiomarkerMergeModal = (props: BiomarkerMergeModalProps) => {
         } catch {
             setMerging(false)
         }
-    }, [preview, selectedBiomarker, posthog, onCancel])
+    }, [preview, selectedBiomarker, posthog, onCancel, executeMerge])
+
+    const handleMergeAllVerified = useCallback(async () => {
+        if (verifiedBiomarkers.length === 0) return
+
+        setMerging(true)
+        captureEvent(posthog, 'biomarker_merge_all_verified_started', {
+            biomarkersCount: verifiedBiomarkers.length,
+        })
+
+        const results: Array<{ biomarkerName: string, success: boolean, recordsMerged?: number, configsDeleted?: number, error?: string }> = []
+
+        for (const biomarker of verifiedBiomarkers) {
+            try {
+                const biomarkerRecords = records.filter(r =>
+                    biomarker.configs.some(c => c.id === r.biomarkerId) && r.approved,
+                )
+
+                if (biomarkerRecords.length === 0) {
+                    results.push({
+                        biomarkerName: biomarker.name,
+                        success: false,
+                        error: 'No records found',
+                    })
+                    continue
+                }
+
+                const targetUnit = getMostPopularUnit(biomarker.configs, biomarkerRecords) ?? biomarker.configs[0]?.ucumCode ?? ''
+                if (!targetUnit) {
+                    results.push({
+                        biomarkerName: biomarker.name,
+                        success: false,
+                        error: 'No target unit found',
+                    })
+                    continue
+                }
+
+                const previewToMerge = createMergePreview(biomarker.name, biomarker.configs, biomarkerRecords, targetUnit)
+
+                if (previewToMerge.hasErrors && previewToMerge.failedConversions.length > 0) {
+                    results.push({
+                        biomarkerName: biomarker.name,
+                        success: false,
+                        error: 'Has conversion errors',
+                    })
+                    continue
+                }
+
+                const selectedConfigs = previewToMerge.configs.filter(c => c.selected && c.recordsCount > 0)
+                if (selectedConfigs.length < 2) {
+                    results.push({
+                        biomarkerName: biomarker.name,
+                        success: false,
+                        error: 'Not enough configs to merge',
+                    })
+                    continue
+                }
+
+                const result = await executeMerge(previewToMerge)
+                results.push({
+                    biomarkerName: biomarker.name,
+                    success: true,
+                    recordsMerged: result.recordsMerged,
+                    configsDeleted: result.configsDeleted,
+                })
+            } catch (error) {
+                results.push({
+                    biomarkerName: biomarker.name,
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Unknown error',
+                })
+            }
+        }
+
+        const successful = results.filter(r => r.success)
+        const failed = results.filter(r => !r.success)
+
+        captureEvent(posthog, 'biomarker_merge_all_verified_completed', {
+            totalBiomarkers: verifiedBiomarkers.length,
+            successfulCount: successful.length,
+            failedCount: failed.length,
+            totalRecordsMerged: successful.reduce((sum, r) => sum + (r.recordsMerged ?? 0), 0),
+            totalConfigsDeleted: successful.reduce((sum, r) => sum + (r.configsDeleted ?? 0), 0),
+        })
+
+        setMerging(false)
+        onCancel()
+    }, [verifiedBiomarkers, records, posthog, onCancel, executeMerge])
 
     const handleCancel = useCallback(() => {
         if (merging) return
@@ -525,27 +618,52 @@ export const BiomarkerMergeModal = (props: BiomarkerMergeModalProps) => {
         >
             {!selectedBiomarker ? (
                 <div>
-                    <h3 className='text-lg font-semibold mb-4'>Select Biomarker to Merge</h3>
+                    <div className='mb-4 flex justify-between items-center'>
+                        <h3 className='text-lg font-semibold'>Select Biomarker to Merge</h3>
+                        {verifiedBiomarkers.length > 0 && (
+                            <Button
+                                type='primary'
+                                onClick={() => { void handleMergeAllVerified() }}
+                                disabled={merging}
+                                loading={merging}
+                            >
+                                Merge All Verified ({verifiedBiomarkers.length})
+                            </Button>
+                        )}
+                    </div>
                     <List
                         dataSource={mergeableBiomarkers}
-                        renderItem={(biomarker) => (
-                            <List.Item
-                                actions={[
-                                    <Button
-                                        key='preview'
-                                        type='link'
-                                        onClick={() => { handleBiomarkerSelect(biomarker.name) }}
-                                    >
-                                        Preview Merge
-                                    </Button>,
-                                ]}
-                            >
-                                <List.Item.Meta
-                                    title={biomarker.name}
-                                    description={`${biomarker.configs.length} configs, ${biomarker.recordsCount} records`}
-                                />
-                            </List.Item>
-                        )}
+                        renderItem={(biomarker) => {
+                            const isVerified = biomarkerVerificationStatus.get(biomarker.name) === true
+                            return (
+                                <List.Item
+                                    actions={[
+                                        <Button
+                                            key='preview'
+                                            type='link'
+                                            onClick={() => { handleBiomarkerSelect(biomarker.name) }}
+                                            disabled={merging}
+                                        >
+                                            Preview Merge
+                                        </Button>,
+                                    ]}
+                                >
+                                    <List.Item.Meta
+                                        title={(
+                                            <span className='flex items-center gap-2'>
+                                                {isVerified ? (
+                                                    <CheckCircleOutlined style={{ color: COLORS.SUCCESS }}/>
+                                                ) : (
+                                                    <ExclamationCircleOutlined style={{ color: COLORS.WARNING }}/>
+                                                )}
+                                                {biomarker.name}
+                                            </span>
+                                        )}
+                                        description={`${biomarker.configs.length} configs, ${biomarker.recordsCount} records`}
+                                    />
+                                </List.Item>
+                            )
+                        }}
                     />
                 </div>
             ) : (

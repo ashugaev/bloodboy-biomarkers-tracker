@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 
 import { DeleteOutlined, DownloadOutlined, MenuOutlined, UploadOutlined } from '@ant-design/icons'
-import { Button, Checkbox, Dropdown, Modal, MenuProps } from 'antd'
+import { Button, Checkbox, Dropdown, Modal, MenuProps, message } from 'antd'
 import { usePostHog } from 'posthog-js/react'
 
 import { COLORS, DB_NAME, PRESERVED_OPENAI_TOKEN_KEY } from '@/constants'
@@ -21,8 +21,10 @@ export const ImportButton = (props: ImportButtonProps) => {
     const posthog = usePostHog()
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [isModalVisible, setIsModalVisible] = useState(false)
+    const [isImportModalVisible, setIsImportModalVisible] = useState(false)
     const [isResetting, setIsResetting] = useState(false)
     const [preserveToken, setPreserveToken] = useState(true)
+    const [pendingFile, setPendingFile] = useState<File | null>(null)
 
     const { data: configs } = useBiomarkerConfigs({
         filter: onlyApproved ? (c) => c.approved : undefined,
@@ -39,28 +41,39 @@ export const ImportButton = (props: ImportButtonProps) => {
         fileInputRef.current?.click()
     }
 
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
         if (file) {
-            captureEvent(posthog, 'data_import_started', {
-                fileSize: file.size,
-            })
-            try {
-                await importData(file)
-                captureEvent(posthog, 'data_imported', {
-                    configsCount: configs.length,
-                    recordsCount: records.length,
-                    documentsCount: documents.length,
-                })
-            } catch (error) {
-                captureEvent(posthog, 'data_import_failed', {
-                    error: error instanceof Error ? error.constructor.name : 'UnknownError',
-                })
-            }
-            if (fileInputRef.current) {
-                fileInputRef.current.value = ''
-            }
+            setPendingFile(file)
+            setIsImportModalVisible(true)
         }
+        if (fileInputRef.current) {
+            fileInputRef.current.value = ''
+        }
+    }
+
+    const handleImportConfirm = async () => {
+        if (!pendingFile) return
+
+        setIsImportModalVisible(false)
+        captureEvent(posthog, 'data_import_started', {
+            fileSize: pendingFile.size,
+        })
+        try {
+            await importData(pendingFile)
+            captureEvent(posthog, 'data_imported', {
+                configsCount: configs.length,
+                recordsCount: records.length,
+                documentsCount: documents.length,
+            })
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to import data'
+            void message.error(errorMessage)
+            captureEvent(posthog, 'data_import_failed', {
+                error: error instanceof Error ? error.constructor.name : 'UnknownError',
+            })
+        }
+        setPendingFile(null)
     }
 
     const handleExport = () => {
@@ -157,7 +170,7 @@ export const ImportButton = (props: ImportButtonProps) => {
                 type='file'
                 accept='.json'
                 style={{ display: 'none' }}
-                onChange={(e) => { void handleFileChange(e) }}
+                onChange={handleFileChange}
             />
             <Dropdown menu={{ items }} trigger={['click']}>
                 <Button
@@ -201,6 +214,43 @@ export const ImportButton = (props: ImportButtonProps) => {
                 >
                     Preserve OpenAI API token
                 </Checkbox>
+            </Modal>
+            <Modal
+                title='Import Database'
+                open={isImportModalVisible}
+                onOk={() => { void handleImportConfirm() }}
+                onCancel={() => {
+                    setIsImportModalVisible(false)
+                    setPendingFile(null)
+                }}
+                okText='Yes, Import'
+                cancelText='Cancel'
+                okButtonProps={{
+                    danger: true,
+                    style: { backgroundColor: COLORS.ERROR },
+                }}
+            >
+                <p>Are you sure you want to import data from the selected file?</p>
+                <p>This will permanently replace all existing data:</p>
+                <ul
+                    style={{
+                        marginLeft: '20px',
+                        marginTop: '8px',
+                        marginBottom: '12px',
+                    }}
+                >
+                    <li>🩸 All biomarker records</li>
+                    <li>📄 All uploaded documents</li>
+                    <li>⚙️ All custom configurations</li>
+                </ul>
+                <p
+                    style={{
+                        marginTop: '12px',
+                        fontWeight: 'bold',
+                    }}
+                >
+                    Current data will be lost!
+                </p>
             </Modal>
         </>
     )

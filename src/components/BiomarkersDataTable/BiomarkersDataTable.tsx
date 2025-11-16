@@ -319,6 +319,8 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
             autoHeight: true,
             wrapText: true,
             resizable: true,
+            cellClass: 'flex items-center',
+            cellStyle: { padding: '4px' },
         },
         {
             colId: 'delete',

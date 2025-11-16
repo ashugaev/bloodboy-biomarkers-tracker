@@ -1,13 +1,15 @@
 import { message } from 'antd'
 import { importDB } from 'dexie-export-import'
 
+import { config } from '@/config'
 import { MAIN_SETTINGS_ID, PRESERVED_OPENAI_TOKEN_KEY } from '@/constants'
 // eslint-disable-next-line no-restricted-imports
-import { db } from '@/db/services/db.service'
-import { reloadApp } from '@/utils/reloadApp'
+import { db, setIsImporting } from '@/db/services/db.service'
 
 export const importData = async (file: File) => {
     try {
+        setIsImporting(true)
+
         const currentSettings = await db.appSettings.toArray()
         const tokenToPreserve = currentSettings[0]?.openaiApiKey || null
 
@@ -44,10 +46,14 @@ export const importData = async (file: File) => {
 
         void message.success('Data imported successfully. Refreshing...')
         setTimeout(() => {
-            reloadApp()
+            setIsImporting(false)
+            const baseUrl = config.baseUrl || '/'
+            const dataUrl = `${window.location.origin}${baseUrl}data`
+            window.location.replace(dataUrl)
         }, 1000)
     } catch (error) {
         console.error('Import error:', error)
+        setIsImporting(false)
         void message.error('Failed to import data. Make sure you selected a valid JSON backup file.')
         const preservedToken = sessionStorage.getItem(PRESERVED_OPENAI_TOKEN_KEY)
         if (preservedToken) {

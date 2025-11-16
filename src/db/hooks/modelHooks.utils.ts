@@ -23,17 +23,15 @@ export function createModelHooks<T extends object, K extends keyof T & string> (
     return {
         useItems: (options?: UseItemsOptions<T>) => {
             const rawData = useLiveQuery(async () => await table.toArray(), [])
-
             const data = useMemo(() => {
                 if (!rawData) return []
-                let items = rawData
+                let items = rawData.filter((item): item is T => item != null)
                 if (options?.filter) {
                     items = items.filter(Boolean).filter(options.filter)
                 }
                 const sortFn = options?.sort ?? config?.defaultSort
                 return sortFn ? items.sort(sortFn) : items
             }, [rawData, options?.filter, options?.sort])
-
             return {
                 data,
                 loading: rawData === undefined,

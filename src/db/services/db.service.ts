@@ -11,6 +11,7 @@ import { User } from '@/db/models/user'
 import { VerifiedConversion } from '@/db/models/verifiedConversion'
 
 let currentUserId: string | null = null
+let isImporting = false
 
 export const setCurrentUserId = (userId: string) => {
     currentUserId = userId
@@ -18,6 +19,14 @@ export const setCurrentUserId = (userId: string) => {
 
 export const getCurrentUserIdSync = (): string | null => {
     return currentUserId
+}
+
+export const setIsImporting = (value: boolean) => {
+    isImporting = value
+}
+
+export const getIsImporting = (): boolean => {
+    return isImporting
 }
 
 class BloodTestDatabase extends Dexie {
@@ -89,20 +98,20 @@ class BloodTestDatabase extends Dexie {
             verifiedConversions: 'id, userId, biomarkerName, sourceUnit, targetUnit, createdAt, updatedAt',
         })
 
-        const tablesWithUserId = [
-            this.biomarkerConfigs,
-            this.biomarkerRecords,
-            this.uploadedFiles,
-            this.savedFilters,
-            this.verifiedConversions,
-        ]
-
-        tablesWithUserId.forEach(table => {
-            table.hook('reading', obj => {
-                const userId = getCurrentUserIdSync()
-                return userId && obj.userId !== userId ? undefined : obj
-            })
-        })
+        // Disabled until user switch is implemented
+        // const tablesWithUserId = [
+        //     this.biomarkerConfigs,
+        //     this.biomarkerRecords,
+        //     this.uploadedFiles,
+        //     this.savedFilters,
+        //     this.verifiedConversions,
+        // ]
+        // tablesWithUserId.forEach(table => {
+        //     table.hook('reading', obj => {
+        //         const userId = getCurrentUserIdSync()
+        //         return userId && obj.userId !== userId ? undefined : obj
+        //     })
+        // })
     }
 }
 

@@ -20,7 +20,14 @@ export const BiomarkersDataTableFilters = (props: BiomarkersDataTableFiltersProp
     const [form] = Form.useForm<{ name: string }>()
 
     const documentOptions = useMemo(() => {
-        const documentIds = new Set(records.map(r => r.documentId).filter((id): id is string => !!id))
+        if (!documents || documents.length === 0) return []
+        if (!records || records.length === 0) return []
+
+        const documentIds = new Set(
+            records
+                .map(r => r.documentId)
+                .filter((id): id is string => !!id),
+        )
         const docs = documents
             .filter(d => documentIds.has(d.id))
             .map(d => ({
@@ -44,6 +51,8 @@ export const BiomarkersDataTableFilters = (props: BiomarkersDataTableFiltersProp
     }, [records, documents])
 
     const biomarkerOptions = useMemo(() => {
+        if (!configs || configs.length === 0) return []
+
         return configs
             .map(config => ({
                 value: config.id,

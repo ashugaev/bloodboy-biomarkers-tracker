@@ -17,15 +17,32 @@ export const GitHubStarsButton = (props: GitHubStarsButtonProps) => {
     const repoUrl = `https://github.com/${username}/${repo}`
 
     useEffect(() => {
-        fetch(`https://api.github.com/repos/${username}/${repo}`)
-            .then((response) => response.json())
+        const abortController = new AbortController()
+
+        fetch(`https://api.github.com/repos/${username}/${repo}`, {
+            signal: abortController.signal,
+        })
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error(`GitHub API error: ${response.status}`)
+                }
+                return response.json()
+            })
             .then((data: { stargazers_count?: number }) => {
                 if (data && typeof data.stargazers_count === 'number') {
                     setStars(data.stargazers_count)
                 }
             })
-            .catch(console.error)
+            .catch((error) => {
+                if (error instanceof Error && error.name !== 'AbortError') {
+                    console.error('Failed to fetch GitHub stars:', error)
+                }
+            })
             .finally(() => { setIsLoading(false) })
+
+        return () => {
+            abortController.abort()
+        }
     }, [username, repo])
 
     const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {

@@ -30,16 +30,20 @@ export const MiniBarChart = memo((props: MiniBarChartProps) => {
     const range = maxValue - minValue
 
     const getBarColor = (value: number) => {
-        if (normalRange?.min !== undefined && normalRange?.max !== undefined) {
-            if (value < normalRange.min || value > normalRange.max) {
-                return COLORS.ERROR
-            }
+        const isOutsideNormal =
+            (normalRange?.min !== undefined && value < normalRange.min) ||
+            (normalRange?.max !== undefined && value > normalRange.max)
+
+        const isOutsideTarget =
+            (targetRange?.min !== undefined && value < targetRange.min) ||
+            (targetRange?.max !== undefined && value > targetRange.max)
+
+        if (isOutsideNormal) {
+            return COLORS.ERROR
         }
 
-        if (targetRange?.min !== undefined && targetRange?.max !== undefined) {
-            if (value < targetRange.min || value > targetRange.max) {
-                return COLORS.WARNING
-            }
+        if (isOutsideTarget) {
+            return COLORS.WARNING
         }
 
         return COLORS.SUCCESS
