@@ -29,11 +29,17 @@ Track and visualize your blood test results over time with AI-powered data extra
 
 ## 🖼️ Screenshots
 
-<!-- Add your screenshots here:
-![Upload Interface](./docs/screenshots/upload.png)
-![Biomarker Table](./docs/screenshots/biomarkers.png)
-![Charts](./docs/screenshots/charts.png)
--->
+### Upload
+
+<img src="./docs/screenshots/3.png" alt="Upload" style="max-width: 80%; border-radius: 12px; clip-path: inset(4px); display: block; margin: 0 auto;" />
+
+### Dashboard
+
+<img src="./docs/screenshots/1.png" alt="Dashboard" style="max-width: 80%; border-radius: 12px; clip-path: inset(4px); display: block; margin: 0 auto;" />
+
+### Charts
+
+<img src="./docs/screenshots/2.png" alt="Charts" style="max-width: 80%; border-radius: 12px; clip-path: inset(4px); display: block; margin: 0 auto;" />
 
 ## 🚀 Getting Started
 
