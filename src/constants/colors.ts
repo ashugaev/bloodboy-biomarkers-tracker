@@ -5,6 +5,8 @@ export const COLORS = {
     WARNING: '#f59e0b',
     ERROR: '#ef4444',
     CHART_BAR: '#3b82f6',
+    CHART_NORMAL_ZONE: '#93c5fd',
+    CHART_TARGET_ZONE: '#86efac',
     INVALID_CELL_BG: '#fee2e2',
     OUT_OF_NORMAL_BG: '#ffebee',
     OUT_OF_TARGET_BG: '#fff9c4',

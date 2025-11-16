@@ -197,7 +197,7 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
                             style={{ backgroundColor: COLORS.OUT_OF_NORMAL_BG }}
                         />
                         <span className='text-sm text-gray-700'>
-                            Normal Range: {normalRange.min ?? '—'} - {normalRange.max ?? '—'}
+                            Out of Normal Range: {normalRange.min ?? '—'} - {normalRange.max ?? '—'}
                         </span>
                     </div>
                 )}
@@ -208,7 +208,7 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
                             style={{ backgroundColor: COLORS.OUT_OF_TARGET_BG }}
                         />
                         <span className='text-sm text-gray-700'>
-                            Target Range: {targetRange.min ?? '—'} - {targetRange.max ?? '—'}
+                            Out of Target Range: {targetRange.min ?? '—'} - {targetRange.max ?? '—'}
                         </span>
                     </div>
                 )}

@@ -111,7 +111,7 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
                     <div className='flex items-center gap-2'>
                         <div
                             className='w-4 h-4 rounded'
-                            style={{ backgroundColor: COLORS.OUT_OF_NORMAL_BG }}
+                            style={{ backgroundColor: COLORS.CHART_NORMAL_ZONE }}
                         />
                         <span className='text-sm text-gray-700'>
                             Normal Range: {normalRange.min ?? '—'} - {normalRange.max ?? '—'}
@@ -122,7 +122,7 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
                     <div className='flex items-center gap-2'>
                         <div
                             className='w-4 h-4 rounded'
-                            style={{ backgroundColor: COLORS.OUT_OF_TARGET_BG }}
+                            style={{ backgroundColor: COLORS.CHART_TARGET_ZONE }}
                         />
                         <span className='text-sm text-gray-700'>
                             Target Range: {targetRange.min ?? '—'} - {targetRange.max ?? '—'}
@@ -153,7 +153,7 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
                             <ReferenceArea
                                 y1={normalRange.min}
                                 y2={normalRange.max}
-                                fill={COLORS.OUT_OF_NORMAL_BG}
+                                fill={COLORS.CHART_NORMAL_ZONE}
                                 fillOpacity={0.5}
                             />
                         )}
@@ -162,7 +162,7 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
                             <ReferenceArea
                                 y1={targetRange.min}
                                 y2={targetRange.max}
-                                fill={COLORS.OUT_OF_TARGET_BG}
+                                fill={COLORS.CHART_TARGET_ZONE}
                                 fillOpacity={0.5}
                             />
                         )}
