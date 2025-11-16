@@ -832,6 +832,40 @@ const allVerifiedConversions: VerifiedConversionConfig[] = [
         ],
     },
     {
+        biomarkerName: 'T3',
+        sourceUnits: ['pmol/L', 'pmol/l'],
+        targetUnits: ['nmol/L', 'nmol/l'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 2000.0,
+                expectedValue: 2.0,
+            },
+            {
+                value: 3000.0,
+                expectedValue: 3.0,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'T3',
+        sourceUnits: ['nmol/L', 'nmol/l'],
+        targetUnits: ['pmol/L', 'pmol/l'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 2.0,
+                expectedValue: 2000.0,
+            },
+            {
+                value: 3.0,
+                expectedValue: 3000.0,
+            },
+        ],
+    },
+    {
         biomarkerName: 'T4',
         sourceUnits: ['pmol/L', 'pmol/l'],
         targetUnits: ['ng/dL', 'ng/dl'],
@@ -1248,7 +1282,7 @@ const allVerifiedConversions: VerifiedConversionConfig[] = [
     {
         biomarkerName: 'LH',
         sourceUnits: ['mIU/mL', 'mIU/ml', 'm[iU]/mL', 'm[iu]/ml'],
-        targetUnits: ['[IU]/L', '[IU]/l'],
+        targetUnits: ['[IU]/L', '[IU]/l', '[iU]/L', '[iu]/l'],
         expectedMethod: 'simple-math',
         manuallyVerified: true,
         testCases: [
@@ -1276,6 +1310,23 @@ const allVerifiedConversions: VerifiedConversionConfig[] = [
             {
                 value: 7.0,
                 expectedValue: 416.394,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'Uric Acid',
+        sourceUnits: ['µmol/L', 'umol/L', 'µmol/l', 'umol/l'],
+        targetUnits: ['mg/dL', 'mg/dl'],
+        expectedMethod: 'molecular-weight',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 297.4243,
+                expectedValue: 5.0,
+            },
+            {
+                value: 416.394,
+                expectedValue: 7.0,
             },
         ],
     },
