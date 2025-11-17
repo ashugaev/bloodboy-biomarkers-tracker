@@ -1,29 +1,45 @@
 import { useCallback, useMemo, useState } from 'react'
 
-import { ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined, StopOutlined } from '@ant-design/icons'
 import { Alert, Button, Checkbox, List, Modal, Select, Table, Tag } from 'antd'
 import { usePostHog } from 'posthog-js/react'
 
 import { MergePreview } from '@/components/BiomarkersDataTable/BiomarkersDataTable.merger.types'
-import { createMergePreview, getConversionStatus, getMostPopularUnit } from '@/components/BiomarkersDataTable/BiomarkersDataTable.merger.utils'
+import { createMergePreview, getConversionStatus } from '@/components/BiomarkersDataTable/BiomarkersDataTable.merger.utils'
 import { COLORS } from '@/constants/colors'
 import { BiomarkerRecord } from '@/db/models/biomarkerRecord'
+import { addBlockedMergePair, createBlockedMergeKey, useBlockedMerges, deleteBlockedMerge } from '@/db/models/blockedMerge'
 import { getNameByUcum, useUnits } from '@/db/models/unit'
 import { addVerifiedConversion, createVerifiedConversionKey, useVerifiedConversions, VerifiedConversionMethod } from '@/db/models/verifiedConversion'
 import { captureEvent } from '@/utils'
 
 import { BiomarkerMergeModalProps, MergePreviewProps } from './BiomarkerMergeModal.types'
-import { buildVerifiedConversionsMap, isBiomarkerFullyVerified } from './BiomarkerMergeModal.utils'
+import { buildBlockedMergesMap, buildVerifiedConversionsMap, getBestTargetUnit, isBiomarkerFullyVerified, isConversionBlocked } from './BiomarkerMergeModal.utils'
+import { useFilteredMergeableBiomarkers } from '@/components/BiomarkersDataTable/BiomarkersDataTable.merger.hooks'
 
 const MergePreviewScreen = (props: MergePreviewProps) => {
     const { preview, onBack, onMerge, onTargetUnitChange, onConfigToggle, merging } = props
     const posthog = usePostHog()
     const { data: units } = useUnits()
     const { data: verifiedConversions } = useVerifiedConversions()
+    const { data: blockedMerges } = useBlockedMerges()
+    const [showBlockConfirmation, setShowBlockConfirmation] = useState(false)
 
     const targetConfigInfo = useMemo(() => preview.configs.find(c => c.isTarget), [preview.configs])
 
-    const selectedConfigs = preview.configs.filter(c => c.selected)
+    const blockedMergesMap = useMemo(() => {
+        return buildBlockedMergesMap(blockedMerges)
+    }, [blockedMerges])
+
+    const selectedConfigs = preview.configs.filter(c => {
+        if (!c.selected) return false
+        if (c.isTarget) return true
+        
+        const configUnit = c.config.ucumCode
+        if (!configUnit || configUnit === preview.targetUnit) return true
+        
+        return !isConversionBlocked(preview.biomarkerName, configUnit, preview.targetUnit, blockedMergesMap)
+    })
 
     const sourceUnits = useMemo(() => {
         const units = selectedConfigs
@@ -82,6 +98,15 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
         return buildVerifiedConversionsMap(verifiedConversions)
     }, [verifiedConversions])
 
+    const blockedConfigsCount = useMemo(() => {
+        return preview.configs.filter(c => {
+            if (c.isTarget || !c.selected) return false
+            const configUnit = c.config.ucumCode
+            if (!configUnit || configUnit === preview.targetUnit) return false
+            return isConversionBlocked(preview.biomarkerName, configUnit, preview.targetUnit, blockedMergesMap)
+        }).length
+    }, [preview.configs, preview.biomarkerName, preview.targetUnit, blockedMergesMap])
+
     const hasDefaultVerifiedConversions = useMemo(() => {
         if (sourceUnits.length === 0) return false
         return sourceUnits.every(sourceUnit => {
@@ -101,6 +126,56 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
         })
         onMerge()
     }, [posthog, preview, selectedConfigsCount, selectedRecordsCount, onMerge])
+
+    const failedSourceUnits = useMemo(() => {
+        return [...new Set(selectedFailedConversions.map(failed => failed.originalUnit))]
+    }, [selectedFailedConversions])
+
+    const blockedMergesForThisPair = useMemo(() => {
+        if (!blockedMerges) return []
+        return blockedMerges.filter(bm => {
+            if (bm.biomarkerName !== preview.biomarkerName) return false
+            return bm.targetUnits.includes(preview.targetUnit) || bm.sourceUnits.some(su => 
+                preview.configs.some(c => c.config.ucumCode === su)
+            )
+        })
+    }, [blockedMerges, preview.biomarkerName, preview.targetUnit, preview.configs])
+
+    const handleBlockMerge = useCallback(async () => {
+        await addBlockedMergePair(preview.biomarkerName, failedSourceUnits, [preview.targetUnit])
+        captureEvent(posthog, 'biomarker_merge_blocked', {
+            biomarkerName: preview.biomarkerName,
+            sourceUnits: failedSourceUnits,
+            targetUnit: preview.targetUnit,
+        })
+        setShowBlockConfirmation(false)
+        
+        // const remainingConfigs = preview.configs.filter(c => {
+        //     if (c.recordsCount === 0) return false
+        //     if (c.isTarget) return true
+        //     const configUnit = c.config.ucumCode
+        //     if (!configUnit || configUnit === preview.targetUnit) return true
+        //     return !failedSourceUnits.includes(configUnit)
+        // })
+        
+        // if (remainingConfigs.length < 2) {
+        //     onBack()
+        // }
+    }, [posthog, preview.biomarkerName, failedSourceUnits, preview.targetUnit, preview.configs, onBack])
+
+    const handleUnblockMerge = useCallback(async () => {
+        for (const blockedMerge of blockedMergesForThisPair) {
+            await deleteBlockedMerge(blockedMerge.id)
+        }
+        const unblockedUnits = preview.configs
+            .filter(c => !c.isTarget && c.config.ucumCode)
+            .map(c => c.config.ucumCode!)
+        captureEvent(posthog, 'biomarker_merge_unblocked', {
+            biomarkerName: preview.biomarkerName,
+            sourceUnits: unblockedUnits,
+            targetUnit: preview.targetUnit,
+        })
+    }, [posthog, preview.biomarkerName, preview.targetUnit, preview.configs, blockedMergesForThisPair])
 
     const conversionStatusColumns = [
         {
@@ -187,10 +262,17 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
             <div className='mb-4'>
                 <h3 className='text-lg font-semibold mb-2'>Configs to be merged</h3>
                 <List
-                    dataSource={preview.configs.filter(c => c.recordsCount > 0)}
+                    dataSource={preview.configs.filter(c => {
+                        if (c.recordsCount === 0) return false
+                        if (c.isTarget) return true
+                        const configUnit = c.config.ucumCode
+                        if (!configUnit || configUnit === preview.targetUnit) return true
+                        return !isConversionBlocked(preview.biomarkerName, configUnit, preview.targetUnit, blockedMergesMap)
+                    })}
                     renderItem={(configInfo) => {
                         const isTarget = configInfo.isTarget
                         const isSelected = configInfo.selected
+                        
                         return (
                             <List.Item>
                                 <Checkbox
@@ -212,6 +294,69 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
                     }}
                 />
             </div>
+
+            {blockedConfigsCount > 0 && (
+                <Alert
+                    message='Some Configs Excluded'
+                    description={(
+                        <div className='flex justify-between items-center'>
+                            <span>
+                                {blockedConfigsCount} config{blockedConfigsCount > 1 ? 's' : ''} with blocked unit conversions {blockedConfigsCount > 1 ? 'have' : 'has'} been automatically excluded from this merge. You previously chose not to merge these unit combinations.
+                            </span>
+                            <Button
+                                size='small'
+                                onClick={() => { void handleUnblockMerge() }}
+                                disabled={merging}
+                            >
+                                Allow All
+                            </Button>
+                        </div>
+                    )}
+                    type='info'
+                    icon={<StopOutlined/>}
+                    className='mb-4'
+                    showIcon
+                />
+            )}
+
+            <Modal
+                open={showBlockConfirmation}
+                onCancel={() => { setShowBlockConfirmation(false) }}
+                title="Don't Suggest This Merge Again?"
+                width={500}
+                footer={[
+                    <Button key='cancel' onClick={() => { setShowBlockConfirmation(false) }}>
+                        Cancel
+                    </Button>,
+                    <Button
+                        key='confirm'
+                        type='primary'
+                        danger
+                        onClick={() => { void handleBlockMerge() }}
+                    >
+                        Yes, Don't Suggest
+                    </Button>,
+                ]}
+            >
+                <div className='space-y-3'>
+                    <p>
+                        This will prevent the app from suggesting to combine <b>{preview.biomarkerName}</b> measurements in the future.
+                    </p>
+                    <div className='bg-gray-50 p-3 rounded'>
+                        <div className='text-sm text-gray-600 mb-2'>Values that won't be combined:</div>
+                        <div className='space-y-1'>
+                            {failedSourceUnits.map(sourceUnit => (
+                                <div key={sourceUnit} className='text-sm'>
+                                    • {getNameByUcum(units, sourceUnit)} → {getNameByUcum(units, preview.targetUnit)}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <p className='text-sm text-gray-600'>
+                        You can manage blocked merges later in settings if you change your mind.
+                    </p>
+                </div>
+            </Modal>
 
             {hasSelectedErrors && (
                 <>
@@ -302,18 +447,31 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
                 </div>
             )}
 
-            <div className='flex justify-end gap-2'>
-                <Button onClick={onBack} disabled={merging}>
-                    Cancel
-                </Button>
-                <Button
-                    type='primary'
-                    onClick={handleMerge}
-                    disabled={!canMerge || merging}
-                    loading={merging}
-                >
-                    Merge {selectedRecordsCount} Records from {selectedConfigsCount} Configs
-                </Button>
+            <div className='flex justify-between items-center'>
+                <div>
+                    {hasSelectedErrors && failedSourceUnits.length > 0 && (
+                        <Button
+                            danger
+                            onClick={() => { setShowBlockConfirmation(true) }}
+                            disabled={merging}
+                        >
+                            Exclude and don't Suggest Filed
+                        </Button>
+                    )}
+                </div>
+                <div className='flex gap-2'>
+                    <Button onClick={onBack} disabled={merging}>
+                        Cancel
+                    </Button>
+                    <Button
+                        type='primary'
+                        onClick={handleMerge}
+                        disabled={!canMerge || merging}
+                        loading={merging}
+                    >
+                        Merge {selectedRecordsCount} Records from {selectedConfigsCount} Configs
+                    </Button>
+                </div>
             </div>
         </div>
     )
@@ -326,32 +484,39 @@ export const BiomarkerMergeModal = (props: BiomarkerMergeModalProps) => {
     const [preview, setPreview] = useState<MergePreview | null>(null)
     const [merging, setMerging] = useState(false)
     const { data: verifiedConversions } = useVerifiedConversions()
+    const { data: blockedMerges } = useBlockedMerges()
 
     const verifiedConversionsMap = useMemo(() => {
         return buildVerifiedConversionsMap(verifiedConversions)
     }, [verifiedConversions])
 
+    const blockedMergesMap = useMemo(() => {
+        return buildBlockedMergesMap(blockedMerges)
+    }, [blockedMerges])
+
+    const filteredMergeableBiomarkers = useFilteredMergeableBiomarkers(mergeableBiomarkers, records)
+
     const biomarkerVerificationStatus = useMemo(() => {
         const statusMap = new Map<string, boolean>()
-        for (const biomarker of mergeableBiomarkers) {
+        for (const biomarker of filteredMergeableBiomarkers) {
             const isVerified = isBiomarkerFullyVerified(biomarker, records, verifiedConversionsMap)
             statusMap.set(biomarker.name, isVerified)
         }
         return statusMap
-    }, [mergeableBiomarkers, records, verifiedConversionsMap])
+    }, [filteredMergeableBiomarkers, records, verifiedConversionsMap])
 
     const verifiedBiomarkers = useMemo(() => {
-        return mergeableBiomarkers.filter(b => biomarkerVerificationStatus.get(b.name) === true)
-    }, [mergeableBiomarkers, biomarkerVerificationStatus])
+        return filteredMergeableBiomarkers.filter(b => biomarkerVerificationStatus.get(b.name) === true)
+    }, [filteredMergeableBiomarkers, biomarkerVerificationStatus])
 
     const handleBiomarkerSelect = useCallback((name: string) => {
-        const biomarker = mergeableBiomarkers.find(b => b.name === name)
+        const biomarker = filteredMergeableBiomarkers.find(b => b.name === name)
         if (!biomarker) return
 
         const biomarkerRecordsForPreview = records.filter(r =>
             biomarker.configs.some(c => c.id === r.biomarkerId) && r.approved,
         )
-        const targetUnit = getMostPopularUnit(biomarker.configs, biomarkerRecordsForPreview) ?? biomarker.configs[0]?.ucumCode ?? ''
+        const targetUnit = getBestTargetUnit(name, biomarker.configs, biomarkerRecordsForPreview, blockedMergesMap) ?? biomarker.configs[0]?.ucumCode ?? ''
         const newPreview = createMergePreview(name, biomarker.configs, biomarkerRecordsForPreview, targetUnit)
         setPreview(newPreview)
         setSelectedBiomarker(name)
@@ -360,7 +525,7 @@ export const BiomarkerMergeModal = (props: BiomarkerMergeModalProps) => {
             configsCount: biomarker.configs.length,
             recordsCount: biomarker.recordsCount,
         })
-    }, [mergeableBiomarkers, records, posthog])
+    }, [filteredMergeableBiomarkers, records, blockedMergesMap, posthog])
 
     const handleBack = useCallback(() => {
         setSelectedBiomarker(null)
@@ -369,14 +534,14 @@ export const BiomarkerMergeModal = (props: BiomarkerMergeModalProps) => {
 
     const handleTargetUnitChange = useCallback((unit: string) => {
         if (!selectedBiomarker || !preview) return
-        const biomarker = mergeableBiomarkers.find(b => b.name === selectedBiomarker)
+        const biomarker = filteredMergeableBiomarkers.find(b => b.name === selectedBiomarker)
         if (!biomarker) return
         const biomarkerRecordsForPreview = records.filter(r =>
             biomarker.configs.some(c => c.id === r.biomarkerId) && r.approved,
         )
         const newPreview = createMergePreview(selectedBiomarker, biomarker.configs, biomarkerRecordsForPreview, unit)
         setPreview(newPreview)
-    }, [selectedBiomarker, preview, mergeableBiomarkers, records])
+    }, [selectedBiomarker, preview, filteredMergeableBiomarkers, records])
 
     const handleConfigToggle = useCallback((configId: string, selected: boolean) => {
         if (!preview) return
@@ -527,7 +692,7 @@ export const BiomarkerMergeModal = (props: BiomarkerMergeModalProps) => {
                     continue
                 }
 
-                const targetUnit = getMostPopularUnit(biomarker.configs, biomarkerRecords) ?? biomarker.configs[0]?.ucumCode ?? ''
+                const targetUnit = getBestTargetUnit(biomarker.name, biomarker.configs, biomarkerRecords, blockedMergesMap) ?? biomarker.configs[0]?.ucumCode ?? ''
                 if (!targetUnit) {
                     results.push({
                         biomarkerName: biomarker.name,
@@ -587,7 +752,7 @@ export const BiomarkerMergeModal = (props: BiomarkerMergeModalProps) => {
 
         setMerging(false)
         onCancel()
-    }, [verifiedBiomarkers, records, posthog, onCancel, executeMerge])
+    }, [verifiedBiomarkers, records, blockedMergesMap, posthog, onCancel, executeMerge])
 
     const handleCancel = useCallback(() => {
         if (merging) return
@@ -625,7 +790,7 @@ export const BiomarkerMergeModal = (props: BiomarkerMergeModalProps) => {
                         )}
                     </div>
                     <List
-                        dataSource={mergeableBiomarkers}
+                        dataSource={filteredMergeableBiomarkers}
                         renderItem={(biomarker) => {
                             const isVerified = biomarkerVerificationStatus.get(biomarker.name) === true
                             return (

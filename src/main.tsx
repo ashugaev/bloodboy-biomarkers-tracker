@@ -8,6 +8,7 @@ import { createRoot } from 'react-dom/client'
 import { App } from './App'
 import { config } from './config'
 import { preloadBiomarkerConfigs } from './db/models/biomarkerConfig'
+import { preloadBlockedMerges } from './db/models/blockedMerge'
 import { preloadUnits } from './db/models/unit'
 import { getCurrentUserId } from './db/models/user'
 
@@ -61,6 +62,7 @@ if (rootElement) {
     getCurrentUserId()
         .then(() => preloadUnits())
         .then(() => preloadBiomarkerConfigs())
+        .then(() => preloadBlockedMerges())
         .then(() => {
             const posthogKey = config.posthogKey
             if (!posthogKey) {

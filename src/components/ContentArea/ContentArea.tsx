@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import { MergeCellsOutlined } from '@ant-design/icons'
 import { Button, Tabs } from 'antd'
@@ -8,7 +8,7 @@ import { usePostHog } from 'posthog-js/react'
 import { AddNewButton } from '@/components/AddNewButton'
 import { BiomarkerMergeModal } from '@/components/BiomarkerMergeModal'
 import { BiomarkersDataTable } from '@/components/BiomarkersDataTable'
-import { useMergeableBiomarkers } from '@/components/BiomarkersDataTable/BiomarkersDataTable.merger.hooks'
+import { useFilteredMergeableBiomarkers, useMergeableBiomarkers } from '@/components/BiomarkersDataTable/BiomarkersDataTable.merger.hooks'
 import { FilesTable } from '@/components/FilesTable'
 import { PdfViewer } from '@/components/PdfViewer'
 import { createBiomarkerConfigs, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
@@ -28,6 +28,7 @@ export const ContentArea = (props: ContentAreaProps) => {
     const { data: documents } = useDocuments()
     const { data: configs } = useBiomarkerConfigs({ filter: (c) => c.approved })
     const { mergeableBiomarkers, records: allRecords } = useMergeableBiomarkers()
+    const filteredMergeableBiomarkers = useFilteredMergeableBiomarkers(mergeableBiomarkers, allRecords)
 
     const currentDocument = unconfirmedDocuments[0]
 
@@ -65,13 +66,13 @@ export const ContentArea = (props: ContentAreaProps) => {
                 </h3>
                 {activeTab === 'biomarkers' && (
                     <div className='flex gap-2'>
-                        {mergeableBiomarkers.length > 0 && (
+                        {filteredMergeableBiomarkers.length > 0 && (
                             <Button
                                 icon={<MergeCellsOutlined/>}
                                 onClick={() => { setIsMergeModalOpen(true) }}
                                 size='small'
                             >
-                                Merge Suggestions ({mergeableBiomarkers.length})
+                                Merge Suggestions ({filteredMergeableBiomarkers.length})
                             </Button>
                         )}
                         <AddNewButton onClick={() => { void handleAddNew() }}/>
