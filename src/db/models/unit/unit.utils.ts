@@ -41,3 +41,9 @@ export const getUnitTypeForUnit = async (ucumCode?: string): Promise<string | un
     const unit = await db.units.where('ucumCode').equals(ucumCode).first()
     return unit?.unitType ?? getUnitType(ucumCode)
 }
+
+export const getNameByUcum = (units: Unit[], ucumCode?: string): string => {
+    if (!ucumCode) return ''
+    const unit = units.find(u => u.ucumCode === ucumCode)
+    return unit?.title ?? ucumCode
+}

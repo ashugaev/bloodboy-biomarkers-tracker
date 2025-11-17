@@ -17,7 +17,7 @@ import { ValidationWarning } from '@/components/ValidationWarning'
 import { bulkUpdateBiomarkerConfigs, createBiomarkerConfigs, updateBiomarkerConfig, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { bulkDeleteBiomarkerRecords, bulkUpdateBiomarkerRecords, createBiomarkerRecords, deleteBiomarkerRecord, updateBiomarkerRecord, useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { updateDocument, useDocument } from '@/db/models/document'
-import { useUnits } from '@/db/models/unit'
+import { getNameByUcum, useUnits } from '@/db/models/unit'
 import { getCurrentUserId } from '@/db/models/user'
 import { useExtractBiomarkers } from '@/openai'
 import { captureEvent } from '@/utils'
@@ -74,10 +74,10 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
 
     const biomarkerOptions = useMemo(() => {
         return configs.map(config => {
-            const unit = units.find(u => u.ucumCode === config.ucumCode)
+            const unitTitle = getNameByUcum(units, config.ucumCode) || 'N/A'
             return {
                 value: config.id,
-                label: `${config.name} (${unit?.title ?? 'N/A'})`,
+                label: `${config.name} (${unitTitle})`,
             }
         }).sort((a, b) => a.label.localeCompare(b.label))
     }, [configs, units])
@@ -98,8 +98,8 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
             valueGetter: (params) => {
                 const config = configs.find(c => c.id === params.data?.biomarkerId)
                 if (config) {
-                    const unit = units.find(u => u.ucumCode === config.ucumCode)
-                    return `${config.name} (${unit?.title ?? 'N/A'})`
+                    const unitTitle = getNameByUcum(units, config.ucumCode) || 'N/A'
+                    return `${config.name} (${unitTitle})`
                 }
                 return params.data?.name
             },
@@ -515,10 +515,7 @@ export const ExtractionResults = (props: ExtractionResultsProps) => {
                     </Dropdown>
                 </div>
                 <p className='text-sm text-gray-600'>
-                    {pages.length > 1
-                        ? `Verifying ${currentPageData.length} records on this page. Click on any cell to edit values.`
-                        : 'Click on any cell to edit values and correct results'
-                    }
+                    'Click on any cell to edit values and correct results'
                 </p>
             </div>
 

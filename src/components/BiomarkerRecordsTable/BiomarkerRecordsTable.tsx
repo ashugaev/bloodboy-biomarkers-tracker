@@ -11,7 +11,7 @@ import { COLORS } from '@/constants/colors'
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { deleteBiomarkerRecord, updateBiomarkerRecord, useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments, updateDocument } from '@/db/models/document'
-import { useUnits } from '@/db/models/unit'
+import { getNameByUcum, useUnits } from '@/db/models/unit'
 import { getRangeCellStyle } from '@/utils/cellStyle'
 
 import { BiomarkerRecordRowData, BiomarkerRecordsTableProps } from './BiomarkerRecordsTable.types'
@@ -31,10 +31,10 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
 
     const biomarkerOptions = useMemo(() => {
         return configs.map(config => {
-            const unit = units.find(u => u.ucumCode === config.ucumCode)
+            const unitTitle = getNameByUcum(units, config.ucumCode) || 'N/A'
             return {
                 value: config.id,
-                label: `${config.name} (${unit?.title ?? 'N/A'})`,
+                label: `${config.name} (${unitTitle})`,
             }
         }).sort((a, b) => a.label.localeCompare(b.label))
     }, [configs, units])
@@ -42,11 +42,10 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
     const rowData = useMemo(() => {
         return records.map(record => {
             const document = documents.find(d => d.id === record.documentId)
-            const unit = units.find(u => u.ucumCode === record.ucumCode)
             const config = configs.find(c => c.id === record.biomarkerId)
             return {
                 ...record,
-                unitTitle: unit?.title,
+                unitTitle: getNameByUcum(units, record.ucumCode),
                 date: document?.testDate,
                 lab: document?.lab,
                 name: config?.name,
@@ -98,8 +97,8 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
             valueGetter: (params) => {
                 const config = configs.find(c => c.id === params.data?.biomarkerId)
                 if (config) {
-                    const unit = units.find(u => u.ucumCode === config.ucumCode)
-                    return `${config.name} (${unit?.title ?? 'N/A'})`
+                    const unitTitle = getNameByUcum(units, config.ucumCode) || 'N/A'
+                    return `${config.name} (${unitTitle})`
                 }
                 return params.data?.name
             },
@@ -142,8 +141,8 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
                 const row = params.data
                 if (!row) return ''
                 if (row.originalValue === undefined) return ''
-                const unit = row.originalUnit ?? ''
-                return `${row.originalValue} ${unit}`.trim()
+                const unitTitle = getNameByUcum(units, row.originalUnit)
+                return `${row.originalValue} ${unitTitle}`.trim()
             },
         },
         {

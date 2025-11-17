@@ -1449,6 +1449,363 @@ const allVerifiedConversions: VerifiedConversionConfig[] = [
             },
         ],
     },
+    {
+        biomarkerName: 'White Blood Cells',
+        sourceUnits: ['/mm3'],
+        targetUnits: ['10*3/µL', '10*3/uL', '10*3/ul'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 5000.0,
+                expectedValue: 5.0,
+            },
+            {
+                value: 10000.0,
+                expectedValue: 10.0,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'Neutrophils',
+        sourceUnits: ['/mm3'],
+        targetUnits: ['10*3/µL', '10*3/uL', '10*3/ul'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 3000.0,
+                expectedValue: 3.0,
+            },
+            {
+                value: 4500.0,
+                expectedValue: 4.5,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'Eosinophils',
+        sourceUnits: ['/mm3'],
+        targetUnits: ['10*3/µL', '10*3/uL', '10*3/ul'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 100.0,
+                expectedValue: 0.1,
+            },
+            {
+                value: 500.0,
+                expectedValue: 0.5,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'Basophils',
+        sourceUnits: ['/mm3'],
+        targetUnits: ['10*3/µL', '10*3/uL', '10*3/ul'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 50.0,
+                expectedValue: 0.05,
+            },
+            {
+                value: 100.0,
+                expectedValue: 0.1,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'Lymphocytes',
+        sourceUnits: ['/mm3'],
+        targetUnits: ['10*3/µL', '10*3/uL', '10*3/ul'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 1500.0,
+                expectedValue: 1.5,
+            },
+            {
+                value: 2000.0,
+                expectedValue: 2.0,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'Monocytes',
+        sourceUnits: ['/mm3'],
+        targetUnits: ['10*3/µL', '10*3/uL', '10*3/ul'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 250.0,
+                expectedValue: 0.25,
+            },
+            {
+                value: 500.0,
+                expectedValue: 0.5,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'Platelets',
+        sourceUnits: ['/mm3'],
+        targetUnits: ['10*3/µL', '10*3/uL', '10*3/ul'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 250000.0,
+                expectedValue: 250.0,
+            },
+            {
+                value: 150000.0,
+                expectedValue: 150.0,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'White Blood Cells',
+        sourceUnits: ['/mm3'],
+        targetUnits: ['10*9/L', '10*9/l'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 5000.0,
+                expectedValue: 5.0,
+            },
+            {
+                value: 10000.0,
+                expectedValue: 10.0,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'Neutrophils',
+        sourceUnits: ['/mm3'],
+        targetUnits: ['10*9/L', '10*9/l'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 3000.0,
+                expectedValue: 3.0,
+            },
+            {
+                value: 4500.0,
+                expectedValue: 4.5,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'Eosinophils',
+        sourceUnits: ['/mm3'],
+        targetUnits: ['10*9/L', '10*9/l'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 100.0,
+                expectedValue: 0.1,
+            },
+            {
+                value: 500.0,
+                expectedValue: 0.5,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'Basophils',
+        sourceUnits: ['/mm3'],
+        targetUnits: ['10*9/L', '10*9/l'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 50.0,
+                expectedValue: 0.05,
+            },
+            {
+                value: 100.0,
+                expectedValue: 0.1,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'Lymphocytes',
+        sourceUnits: ['/mm3'],
+        targetUnits: ['10*9/L', '10*9/l'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 1500.0,
+                expectedValue: 1.5,
+            },
+            {
+                value: 2000.0,
+                expectedValue: 2.0,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'Monocytes',
+        sourceUnits: ['/mm3'],
+        targetUnits: ['10*9/L', '10*9/l'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 250.0,
+                expectedValue: 0.25,
+            },
+            {
+                value: 500.0,
+                expectedValue: 0.5,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'Platelets',
+        sourceUnits: ['/mm3'],
+        targetUnits: ['10*9/L', '10*9/l'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 250000.0,
+                expectedValue: 250.0,
+            },
+            {
+                value: 150000.0,
+                expectedValue: 150.0,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'Monocytes',
+        sourceUnits: ['10*9/L', '10*9/l'],
+        targetUnits: ['10*3/µL', '10*3/uL', '10*3/ul'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 0.25,
+                expectedValue: 0.25,
+            },
+            {
+                value: 0.5,
+                expectedValue: 0.5,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'Neutrophils',
+        sourceUnits: ['10*9/L', '10*9/l'],
+        targetUnits: ['10*3/µL', '10*3/uL', '10*3/ul'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 3.0,
+                expectedValue: 3.0,
+            },
+            {
+                value: 4.5,
+                expectedValue: 4.5,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'Eosinophils',
+        sourceUnits: ['10*9/L', '10*9/l'],
+        targetUnits: ['10*3/µL', '10*3/uL', '10*3/ul'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 0.1,
+                expectedValue: 0.1,
+            },
+            {
+                value: 0.5,
+                expectedValue: 0.5,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'Basophils',
+        sourceUnits: ['10*9/L', '10*9/l'],
+        targetUnits: ['10*3/µL', '10*3/uL', '10*3/ul'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 0.05,
+                expectedValue: 0.05,
+            },
+            {
+                value: 0.1,
+                expectedValue: 0.1,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'Lymphocytes',
+        sourceUnits: ['10*9/L', '10*9/l'],
+        targetUnits: ['10*3/µL', '10*3/uL', '10*3/ul'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 1.5,
+                expectedValue: 1.5,
+            },
+            {
+                value: 2.0,
+                expectedValue: 2.0,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'White Blood Cells',
+        sourceUnits: ['10*9/L', '10*9/l'],
+        targetUnits: ['10*3/µL', '10*3/uL', '10*3/ul'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 5.0,
+                expectedValue: 5.0,
+            },
+            {
+                value: 10.0,
+                expectedValue: 10.0,
+            },
+        ],
+    },
+    {
+        biomarkerName: 'Platelets',
+        sourceUnits: ['10*9/L', '10*9/l'],
+        targetUnits: ['10*3/µL', '10*3/uL', '10*3/ul'],
+        expectedMethod: 'ucum',
+        manuallyVerified: true,
+        testCases: [
+            {
+                value: 250.0,
+                expectedValue: 250.0,
+            },
+            {
+                value: 150.0,
+                expectedValue: 150.0,
+            },
+        ],
+    },
 ]
 
 export const verifiedConversionsConfig: VerifiedConversionsConfig = {

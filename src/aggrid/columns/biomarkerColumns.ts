@@ -1,7 +1,7 @@
 import { ColDef, ICellRendererParams, ValueFormatterParams, ValueSetterParams } from '@ag-grid-community/core'
 
 import { isRangeInvalid } from '@/aggrid/validators/rangeValidators'
-import { Unit } from '@/db/models/unit'
+import { getNameByUcum, Unit } from '@/db/models/unit'
 import { getInvalidCellStyle } from '@/utils/cellStyle'
 
 interface BiomarkerWithRanges {
@@ -156,8 +156,7 @@ export const createUnitColumn = <T extends { ucumCode?: string, unitTitle?: stri
     },
     cellStyle: (params) => getInvalidCellStyle(params, (data) => !data?.[field]),
     valueFormatter: (params) => {
-        const unit = units.find(u => u.ucumCode === params.value)
-        return unit?.title ?? (params.value as string)
+        return getNameByUcum(units, params.value as string | undefined)
     },
 })
 

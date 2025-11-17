@@ -8,7 +8,7 @@ import { MergePreview } from '@/components/BiomarkersDataTable/BiomarkersDataTab
 import { createMergePreview, getConversionStatus, getMostPopularUnit } from '@/components/BiomarkersDataTable/BiomarkersDataTable.merger.utils'
 import { COLORS } from '@/constants/colors'
 import { BiomarkerRecord } from '@/db/models/biomarkerRecord'
-import { useUnits } from '@/db/models/unit'
+import { getNameByUcum, useUnits } from '@/db/models/unit'
 import { addVerifiedConversion, createVerifiedConversionKey, useVerifiedConversions, VerifiedConversionMethod } from '@/db/models/verifiedConversion'
 import { captureEvent } from '@/utils'
 
@@ -20,14 +20,6 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
     const posthog = usePostHog()
     const { data: units } = useUnits()
     const { data: verifiedConversions } = useVerifiedConversions()
-
-    const unitTitleMap = useMemo(() => {
-        const map = new Map<string, string>()
-        units.forEach(unit => {
-            map.set(unit.ucumCode, unit.title)
-        })
-        return map
-    }, [units])
 
     const targetConfigInfo = useMemo(() => preview.configs.find(c => c.isTarget), [preview.configs])
 
@@ -123,7 +115,7 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
             key: 'originalValue',
             render: (_: unknown, record: MergePreview['records'][0]) => {
                 if (record.originalValue === undefined) return 'N/A'
-                const unitTitle = unitTitleMap.get(record.originalUnit) ?? record.originalUnit
+                const unitTitle = getNameByUcum(units, record.originalUnit)
                 return `${record.originalValue} ${unitTitle}`
             },
         },
@@ -133,7 +125,8 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
             key: 'convertedValue',
             render: (_: unknown, record: MergePreview['records'][0]) => {
                 if (record.convertedValue === undefined) return 'N/A'
-                return `${record.convertedValue.toFixed(2)} ${preview.targetUnit}`
+                const targetUnitTitle = getNameByUcum(units, preview.targetUnit)
+                return `${record.convertedValue.toFixed(2)} ${targetUnitTitle}`
             },
         },
         {
@@ -185,7 +178,7 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
                 >
                     {preview.unitStats.map(stat => (
                         <Select.Option key={stat.unit} value={stat.unit}>
-                            {stat.unit} ({stat.recordsCount} records)
+                            {getNameByUcum(units, stat.unit)} ({stat.recordsCount} records)
                         </Select.Option>
                     ))}
                 </Select>
@@ -210,7 +203,7 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
                                     }}
                                 >
                                     <span className={isTarget ? 'font-semibold' : ''}>
-                                        {configInfo.config.name} [{configInfo.config.ucumCode}] ({configInfo.recordsCount} records)
+                                        {configInfo.config.name} [{getNameByUcum(units, configInfo.config.ucumCode)}] ({configInfo.recordsCount} records)
                                         {isTarget && ' [Target]'}
                                     </span>
                                 </Checkbox>
@@ -224,7 +217,7 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
                 <>
                     <Alert
                         message='Conversion Errors'
-                        description={`Some units cannot be converted to ${preview.targetUnit}. Please review the failed conversions below.`}
+                        description={`Some units cannot be converted to ${getNameByUcum(units, preview.targetUnit)}. Please review the failed conversions below.`}
                         type='error'
                         icon={<ExclamationCircleOutlined/>}
                         className='mb-4'
@@ -252,11 +245,11 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
                             <span>
                                 {hasDefaultVerifiedConversions ? (
                                     <>
-                                        This conversion is verified. Records for "<b>{targetConfigInfo?.config.name}</b>" will be automatically converted from <b>{sourceUnits.join(', ')}</b> to <b>{preview.targetUnit}</b> in future uploads.
+                                        This conversion is verified. Records for "<b>{targetConfigInfo?.config.name}</b>" will be automatically converted from <b>{sourceUnits.map(u => getNameByUcum(units, u)).join(', ')}</b> to <b>{getNameByUcum(units, preview.targetUnit)}</b> in future uploads.
                                     </>
                                 ) : (
                                     <>
-                                        This conversion is not yet verified. Please review the conversion carefully. After confirming the merge, records for "<b>{targetConfigInfo?.config.name}</b>" will be automatically converted from <b>{sourceUnits.join(', ')}</b> to <b>{preview.targetUnit}</b> in future uploads.
+                                        This conversion is not yet verified. Please review the conversion carefully. After confirming the merge, records for "<b>{targetConfigInfo?.config.name}</b>" will be automatically converted from <b>{sourceUnits.map(u => getNameByUcum(units, u)).join(', ')}</b> to <b>{getNameByUcum(units, preview.targetUnit)}</b> in future uploads.
                                     </>
                                 )}
                             </span>
