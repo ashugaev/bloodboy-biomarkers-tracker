@@ -65,35 +65,35 @@ export const getBestTargetUnit = (
     blockedMergesMap: Map<string, boolean>,
 ): string | null => {
     const preferredTarget = getMostPopularUnit(configs, records)
-    
+
     const possibleTargetUnits = [...new Set(
         configs
             .filter(c => records.some(r => r.biomarkerId === c.id))
             .map(c => c.ucumCode)
-            .filter((u): u is string => Boolean(u))
+            .filter((u): u is string => Boolean(u)),
     )]
-    
+
     if (preferredTarget && possibleTargetUnits.includes(preferredTarget)) {
         possibleTargetUnits.splice(possibleTargetUnits.indexOf(preferredTarget), 1)
         possibleTargetUnits.unshift(preferredTarget)
     }
-    
+
     for (const targetUnit of possibleTargetUnits) {
         const availableConfigs = configs.filter(config => {
             const configRecords = records.filter(r => r.biomarkerId === config.id)
             if (configRecords.length === 0) return false
-            
+
             const configUnit = config.ucumCode
             if (!configUnit || configUnit === targetUnit) return true
-            
+
             return !isConversionBlocked(biomarkerName, configUnit, targetUnit, blockedMergesMap)
         })
-        
+
         if (availableConfigs.length >= 2) {
             return targetUnit
         }
     }
-    
+
     return preferredTarget ?? possibleTargetUnits[0] ?? null
 }
 

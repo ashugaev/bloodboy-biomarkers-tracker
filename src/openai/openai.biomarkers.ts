@@ -275,9 +275,6 @@ export const useExtractBiomarkers = () => {
             })
         }
 
-        // eslint-disable-next-line no-console
-        console.log('AI Messages:', messages)
-
         const completion = await client.chat.completions.create({
             model: model ?? 'gpt-5-mini',
             messages: messages as never,
@@ -291,8 +288,6 @@ export const useExtractBiomarkers = () => {
         if (!content) return null
 
         const result = JSON.parse(content) as ExtractionResult
-        // eslint-disable-next-line no-console
-        console.log('AI Result:', result)
         return result
     }, [client, configs, units])
 

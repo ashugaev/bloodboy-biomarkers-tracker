@@ -14,4 +14,3 @@ export const DEFAULT_BLOCKED_MERGES: Array<{
         targetUnits: ['ng/mL', 'ng/dL', 'pmol/L'],
     },
 ]
-

@@ -1,4 +1,5 @@
 import { createModelHooks } from '@/db/hooks/modelHooks.utils'
+// eslint-disable-next-line no-restricted-imports
 import { db } from '@/db/services/db.service'
 
 export const {
@@ -9,4 +10,3 @@ export const {
     removeItem: deleteBlockedMerge,
     modifyItem: modifyBlockedMerge,
 } = createModelHooks(db.blockedMerges)
-

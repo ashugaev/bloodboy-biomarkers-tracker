@@ -5,4 +5,3 @@ export interface BlockedMerge extends BaseEntity {
     sourceUnits: string[]
     targetUnits: string[]
 }
-

@@ -4,18 +4,18 @@ import { ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined, Exclamatio
 import { Alert, Button, Checkbox, List, Modal, Select, Table, Tag } from 'antd'
 import { usePostHog } from 'posthog-js/react'
 
+import { useFilteredMergeableBiomarkers } from '@/components/BiomarkersDataTable/BiomarkersDataTable.merger.hooks'
 import { MergePreview } from '@/components/BiomarkersDataTable/BiomarkersDataTable.merger.types'
 import { createMergePreview, getConversionStatus } from '@/components/BiomarkersDataTable/BiomarkersDataTable.merger.utils'
 import { COLORS } from '@/constants/colors'
 import { BiomarkerRecord } from '@/db/models/biomarkerRecord'
-import { addBlockedMergePair, createBlockedMergeKey, useBlockedMerges, deleteBlockedMerge } from '@/db/models/blockedMerge'
+import { addBlockedMergePair, useBlockedMerges, deleteBlockedMerge } from '@/db/models/blockedMerge'
 import { getNameByUcum, useUnits } from '@/db/models/unit'
 import { addVerifiedConversion, createVerifiedConversionKey, useVerifiedConversions, VerifiedConversionMethod } from '@/db/models/verifiedConversion'
 import { captureEvent } from '@/utils'
 
 import { BiomarkerMergeModalProps, MergePreviewProps } from './BiomarkerMergeModal.types'
 import { buildBlockedMergesMap, buildVerifiedConversionsMap, getBestTargetUnit, isBiomarkerFullyVerified, isConversionBlocked } from './BiomarkerMergeModal.utils'
-import { useFilteredMergeableBiomarkers } from '@/components/BiomarkersDataTable/BiomarkersDataTable.merger.hooks'
 
 const MergePreviewScreen = (props: MergePreviewProps) => {
     const { preview, onBack, onMerge, onTargetUnitChange, onConfigToggle, merging } = props
@@ -34,10 +34,10 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
     const selectedConfigs = preview.configs.filter(c => {
         if (!c.selected) return false
         if (c.isTarget) return true
-        
+
         const configUnit = c.config.ucumCode
         if (!configUnit || configUnit === preview.targetUnit) return true
-        
+
         return !isConversionBlocked(preview.biomarkerName, configUnit, preview.targetUnit, blockedMergesMap)
     })
 
@@ -135,8 +135,8 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
         if (!blockedMerges) return []
         return blockedMerges.filter(bm => {
             if (bm.biomarkerName !== preview.biomarkerName) return false
-            return bm.targetUnits.includes(preview.targetUnit) || bm.sourceUnits.some(su => 
-                preview.configs.some(c => c.config.ucumCode === su)
+            return bm.targetUnits.includes(preview.targetUnit) || bm.sourceUnits.some(su =>
+                preview.configs.some(c => c.config.ucumCode === su),
             )
         })
     }, [blockedMerges, preview.biomarkerName, preview.targetUnit, preview.configs])
@@ -149,7 +149,7 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
             targetUnit: preview.targetUnit,
         })
         setShowBlockConfirmation(false)
-        
+
         // const remainingConfigs = preview.configs.filter(c => {
         //     if (c.recordsCount === 0) return false
         //     if (c.isTarget) return true
@@ -157,7 +157,7 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
         //     if (!configUnit || configUnit === preview.targetUnit) return true
         //     return !failedSourceUnits.includes(configUnit)
         // })
-        
+
         // if (remainingConfigs.length < 2) {
         //     onBack()
         // }
@@ -169,7 +169,8 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
         }
         const unblockedUnits = preview.configs
             .filter(c => !c.isTarget && c.config.ucumCode)
-            .map(c => c.config.ucumCode!)
+            .map(c => c.config.ucumCode)
+            .filter((ucumCode): ucumCode is string => Boolean(ucumCode))
         captureEvent(posthog, 'biomarker_merge_unblocked', {
             biomarkerName: preview.biomarkerName,
             sourceUnits: unblockedUnits,
@@ -272,7 +273,7 @@ const MergePreviewScreen = (props: MergePreviewProps) => {
                     renderItem={(configInfo) => {
                         const isTarget = configInfo.isTarget
                         const isSelected = configInfo.selected
-                        
+
                         return (
                             <List.Item>
                                 <Checkbox

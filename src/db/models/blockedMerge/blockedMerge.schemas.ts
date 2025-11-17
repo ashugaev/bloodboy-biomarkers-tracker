@@ -7,4 +7,3 @@ export const blockedMergeSchema = baseEntitySchema.extend({
     sourceUnits: z.array(z.string()),
     targetUnits: z.array(z.string()),
 })
-
