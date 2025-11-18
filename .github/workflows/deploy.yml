@@ -39,75 +39,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Debug environment variables
-        run: |
-          echo "=== Environment variables sources ==="
-          
-          echo ""
-          echo "BASE_URL:"
-          if [ -n "${{ vars.BASE_URL }}" ]; then
-            echo "  Source: vars.BASE_URL"
-            echo "  Value: ${{ vars.BASE_URL }}"
-          elif [ -n "${{ secrets.BASE_URL }}" ]; then
-            echo "  Source: secrets.BASE_URL"
-            echo "  Value: [hidden]"
-          elif [ -n "${{ env.BASE_URL }}" ]; then
-            echo "  Source: env.BASE_URL"
-            echo "  Value: ${{ env.BASE_URL }}"
-          else
-            echo "  Source: default ('/')"
-            echo "  Value: /"
-          fi
-          
-          echo ""
-          echo "VITE_PUBLIC_POSTHOG_KEY:"
-          if [ -n "${{ secrets.VITE_PUBLIC_POSTHOG_KEY }}" ]; then
-            echo "  Source: secrets.VITE_PUBLIC_POSTHOG_KEY"
-            echo "  Value: [hidden]"
-          elif [ -n "${{ vars.VITE_PUBLIC_POSTHOG_KEY }}" ]; then
-            echo "  Source: vars.VITE_PUBLIC_POSTHOG_KEY"
-            echo "  Value: [hidden]"
-          elif [ -n "${{ env.VITE_PUBLIC_POSTHOG_KEY }}" ]; then
-            echo "  Source: env.VITE_PUBLIC_POSTHOG_KEY"
-            echo "  Value: [hidden]"
-          else
-            echo "  Source: not set"
-            echo "  Value: [empty]"
-          fi
-          
-          echo ""
-          echo "VITE_PUBLIC_POSTHOG_HOST:"
-          if [ -n "${{ vars.VITE_PUBLIC_POSTHOG_HOST }}" ]; then
-            echo "  Source: vars.VITE_PUBLIC_POSTHOG_HOST"
-            echo "  Value: ${{ vars.VITE_PUBLIC_POSTHOG_HOST }}"
-          elif [ -n "${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}" ]; then
-            echo "  Source: secrets.VITE_PUBLIC_POSTHOG_HOST"
-            echo "  Value: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}"
-          elif [ -n "${{ env.VITE_PUBLIC_POSTHOG_HOST }}" ]; then
-            echo "  Source: env.VITE_PUBLIC_POSTHOG_HOST"
-            echo "  Value: ${{ env.VITE_PUBLIC_POSTHOG_HOST }}"
-          else
-            echo "  Source: not set"
-            echo "  Value: [empty]"
-          fi
-          
-          echo ""
-          echo "=== Final values (as used in build) ==="
-
       - name: Build project
         env:
-          BASE_URL: ${{ vars.BASE_URL || secrets.BASE_URL || env.BASE_URL || '/' }}
-          VITE_PUBLIC_POSTHOG_KEY: ${{ secrets.VITE_PUBLIC_POSTHOG_KEY || vars.VITE_PUBLIC_POSTHOG_KEY || env.VITE_PUBLIC_POSTHOG_KEY }}
-          VITE_PUBLIC_POSTHOG_HOST: ${{ vars.VITE_PUBLIC_POSTHOG_HOST || secrets.VITE_PUBLIC_POSTHOG_HOST || env.VITE_PUBLIC_POSTHOG_HOST }}
-        run: |
-          echo "BASE_URL=${BASE_URL}"
-          echo "VITE_PUBLIC_POSTHOG_HOST=${VITE_PUBLIC_POSTHOG_HOST:-not set}"
-          if [ -n "$VITE_PUBLIC_POSTHOG_KEY" ]; then
-            echo "VITE_PUBLIC_POSTHOG_KEY=set (length: ${#VITE_PUBLIC_POSTHOG_KEY})"
-          else
-            echo "VITE_PUBLIC_POSTHOG_KEY=not set"
-          fi
-          npm run build
+          BASE_URL: ${{ vars.BASE_URL || '/' }}
+          VITE_PUBLIC_POSTHOG_KEY: ${{ vars.VITE_PUBLIC_POSTHOG_KEY }}
+          VITE_PUBLIC_POSTHOG_HOST: ${{ vars.VITE_PUBLIC_POSTHOG_HOST }}
+        run: npm run build
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
