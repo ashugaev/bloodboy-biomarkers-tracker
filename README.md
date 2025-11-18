@@ -21,6 +21,7 @@ Track and visualize your blood test results over time with AI-powered data extra
 - **AI-Powered** - OpenAI integration for intelligent biomarker extraction
 - **Unit Converter** - Automatic unit conversion
 - **Data Visualization** - Interactive charts and trend analysis
+- **Anomaly Detection** - Filter biomarkers with strong fluctuations between tests
 - **Local Storage** - All data stored locally using IndexedDB
 - **Professional Tables** - Sorting, filtering, and inline editing with AG-Grid
 - **Saved Filters** - Save and quickly apply custom filter combinations
