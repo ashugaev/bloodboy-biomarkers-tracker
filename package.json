@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "Privacy-first medical records tracking application for managing and visualizing blood test results and lab data",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "AGPL-3.0",
   "type": "module",
   "author": "Aleksei Shugaev <yashugaev@gmail.com>",
   "homepage": "https://github.com/alek/blood_test_tracker#readme",

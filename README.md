@@ -2,15 +2,17 @@
 
 Track and visualize your blood test results over time with AI-powered data extraction
 
-[![License: MIT + CC](https://img.shields.io/badge/License-MIT%20%2B%20CC-yellow.svg)](./LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://reactjs.org/)
+[![Open Source](https://img.shields.io/badge/Open%20Source-❤️-green.svg)](https://opensource.org/)
 
 ## 💎 Core Values
 
+- **Open Source** - Free and open source software under AGPL-3.0
 - **Privacy First** - Everything stays on your device
 - **No Subscriptions** - Free for personal use, forever
-- **You Own Your Data**  - Export and backup anytime
+- **You Own Your Data** - Export and backup anytime
 - **Any Biomarkers** - Supports extracting and tracking any biomarkers with any units
 
 ## ✨ Features
@@ -111,7 +113,7 @@ See `.env.example` for optional environment variables. The app works fully offli
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please feel free to submit a Pull Request or open an issue.
 
 ## 📧 Contact
 
@@ -119,7 +121,7 @@ For questions or feedback, reach out at [yashugaev@gmail.com](mailto:yashugaev@g
 
 ## 📄 License
 
-MIT License with Commons Clause - see the [LICENSE](LICENSE) file for details.
+Licensed under [AGPL-3.0](LICENSE) - free and open source software.
 
 ---
 
