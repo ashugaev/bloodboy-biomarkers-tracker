@@ -11,7 +11,7 @@ import { addSavedFilter, deleteSavedFilter, getRandomTagColor, useSavedFilters }
 import { BiomarkersDataTableFiltersProps, RangeType } from './BiomarkersDataTableFilters.types'
 
 export const BiomarkersDataTableFilters = (props: BiomarkersDataTableFiltersProps) => {
-    const { documentId, biomarkerIds, outOfRange, onDocumentChange, onBiomarkerChange, onOutOfRangeChange } = props
+    const { documentId, biomarkerIds, outOfRange, outOfRangeHistory, hasAnomaly, onDocumentChange, onBiomarkerChange, onOutOfRangeChange, onOutOfRangeHistoryChange, onHasAnomalyChange } = props
     const { data: records } = useBiomarkerRecords({ filter: (r) => r.approved })
     const { data: documents } = useDocuments()
     const { data: configs } = useBiomarkerConfigs({ filter: (c) => c.approved })
@@ -63,14 +63,49 @@ export const BiomarkersDataTableFilters = (props: BiomarkersDataTableFiltersProp
 
     const outOfRangeOptions = [
         {
-            value: RangeType.NORMAL,
-            label: 'Out of normal',
+            value: `${RangeType.NORMAL}:last`,
+            label: 'Out of normal (Last)',
         },
         {
-            value: RangeType.TARGET,
-            label: 'Out of target',
+            value: `${RangeType.TARGET}:last`,
+            label: 'Out of target (Last)',
+        },
+        {
+            value: `${RangeType.NORMAL}:history`,
+            label: 'Out of normal (History)',
+        },
+        {
+            value: `${RangeType.TARGET}:history`,
+            label: 'Out of target (History)',
         },
     ]
+
+    const outOfRangeValue = useMemo(() => {
+        if (outOfRange) {
+            return `${outOfRange}:last`
+        }
+        if (outOfRangeHistory) {
+            return `${outOfRangeHistory}:history`
+        }
+        return undefined
+    }, [outOfRange, outOfRangeHistory])
+
+    const handleOutOfRangeChange = useCallback((value: string | undefined) => {
+        if (!value) {
+            onOutOfRangeChange?.(undefined)
+            onOutOfRangeHistoryChange?.(undefined)
+            return
+        }
+
+        const [rangeType, scope] = value.split(':')
+        if (scope === 'last') {
+            onOutOfRangeChange?.(rangeType as RangeType)
+            onOutOfRangeHistoryChange?.(undefined)
+        } else if (scope === 'history') {
+            onOutOfRangeChange?.(undefined)
+            onOutOfRangeHistoryChange?.(rangeType as RangeType)
+        }
+    }, [onOutOfRangeChange, onOutOfRangeHistoryChange])
 
     const handleSaveFilter = useCallback(async () => {
         try {
@@ -81,6 +116,8 @@ export const BiomarkersDataTableFilters = (props: BiomarkersDataTableFiltersProp
                 documentId: documentId && documentId.length > 0 ? documentId : undefined,
                 biomarkerIds: biomarkerIds && biomarkerIds.length > 0 ? biomarkerIds : undefined,
                 outOfRange,
+                outOfRangeHistory,
+                hasAnomaly,
             })
             void message.success('Filter saved successfully')
             setIsModalOpen(false)
@@ -92,13 +129,15 @@ export const BiomarkersDataTableFilters = (props: BiomarkersDataTableFiltersProp
             void message.error('Failed to save filter')
             console.error('Failed to save filter:', error)
         }
-    }, [form, documentId, biomarkerIds, outOfRange])
+    }, [form, documentId, biomarkerIds, outOfRange, outOfRangeHistory, hasAnomaly])
 
-    const handleApplyFilter = useCallback((filter: { documentId?: string[], biomarkerIds?: string[], outOfRange?: RangeType }) => {
+    const handleApplyFilter = useCallback((filter: { documentId?: string[], biomarkerIds?: string[], outOfRange?: RangeType, outOfRangeHistory?: RangeType, hasAnomaly?: number }) => {
         onDocumentChange?.(filter.documentId)
         onBiomarkerChange?.(filter.biomarkerIds)
         onOutOfRangeChange?.(filter.outOfRange)
-    }, [onDocumentChange, onBiomarkerChange, onOutOfRangeChange])
+        onOutOfRangeHistoryChange?.(filter.outOfRangeHistory)
+        onHasAnomalyChange?.(filter.hasAnomaly)
+    }, [onDocumentChange, onBiomarkerChange, onOutOfRangeChange, onOutOfRangeHistoryChange, onHasAnomalyChange])
 
     const handleDeleteFilter = useCallback((id: string, filterName: string, e: React.MouseEvent) => {
         e.stopPropagation()
@@ -128,10 +167,12 @@ export const BiomarkersDataTableFilters = (props: BiomarkersDataTableFiltersProp
     }, [form])
 
     const hasActiveFilters = useMemo(() => {
-        return (documentId && documentId.length > 0) ??
-            (biomarkerIds && biomarkerIds.length > 0) ??
-            outOfRange !== undefined
-    }, [documentId, biomarkerIds, outOfRange])
+        return (documentId?.length ?? 0) > 0 ||
+            (biomarkerIds?.length ?? 0) > 0 ||
+            outOfRange !== undefined ||
+            outOfRangeHistory !== undefined ||
+            hasAnomaly !== undefined
+    }, [documentId, biomarkerIds, outOfRange, outOfRangeHistory, hasAnomaly])
 
     return (
         <div className='flex flex-col gap-2'>
@@ -164,11 +205,37 @@ export const BiomarkersDataTableFilters = (props: BiomarkersDataTableFiltersProp
                     maxTagCount='responsive'
                 />
                 <Select
-                    style={{ width: 200 }}
+                    style={{ width: 220 }}
                     placeholder='Filter by range'
-                    value={outOfRange ?? undefined}
-                    onChange={(value) => onOutOfRangeChange?.(value ?? undefined)}
+                    value={outOfRangeValue}
+                    onChange={handleOutOfRangeChange}
                     options={outOfRangeOptions}
+                    allowClear
+                    size='small'
+                />
+                <Select
+                    style={{ width: 300 }}
+                    placeholder='Filter by anomaly threshold'
+                    value={hasAnomaly !== undefined ? hasAnomaly.toString() : undefined}
+                    onChange={(value) => onHasAnomalyChange?.(value ? Number(value) : undefined)}
+                    options={[
+                        {
+                            value: '50',
+                            label: '≥50% change (Moderate fluctuations)',
+                        },
+                        {
+                            value: '70',
+                            label: '≥70% change (Strong fluctuations)',
+                        },
+                        {
+                            value: '100',
+                            label: '≥100% change (Very strong fluctuations)',
+                        },
+                        {
+                            value: '150',
+                            label: '≥150% change (Extreme fluctuations)',
+                        },
+                    ]}
                     allowClear
                     size='small'
                 />

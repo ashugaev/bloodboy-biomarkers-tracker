@@ -9,4 +9,6 @@ export interface SavedFilter extends BaseEntity {
     documentId?: string[]
     biomarkerIds?: string[]
     outOfRange?: RangeType
+    outOfRangeHistory?: RangeType
+    hasAnomaly?: number
 }

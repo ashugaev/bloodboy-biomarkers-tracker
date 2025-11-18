@@ -18,7 +18,7 @@ import { useUnits } from '@/db/models/unit'
 import { ViewMode } from '@/types/viewMode.types'
 import { getRangeCellStyle } from '@/utils/cellStyle'
 
-import { matchesFilter, matchesOutOfRangeFilter } from './BiomarkersDataTable.filter.utils'
+import { matchesFilter, matchesOutOfRangeFilter, matchesOutOfRangeHistoryFilter, matchesHasAnomalyFilter } from './BiomarkersDataTable.filter.utils'
 import { BiomarkerRowData, BiomarkersDataTableProps } from './BiomarkersDataTable.types'
 
 export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
@@ -33,6 +33,8 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
     const [documentId, setDocumentId] = useState<string[] | undefined>()
     const [biomarkerIds, setBiomarkerIds] = useState<string[] | undefined>()
     const [outOfRange, setOutOfRange] = useState<RangeType | undefined>()
+    const [outOfRangeHistory, setOutOfRangeHistory] = useState<RangeType | undefined>()
+    const [hasAnomaly, setHasAnomaly] = useState<number | undefined>()
 
     const handleDelete = useCallback(async (id: string) => {
         await deleteBiomarkerConfig(id)
@@ -119,7 +121,10 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
             .filter(row => {
                 const hasDocumentFilter = (documentId?.length ?? 0) > 0
                 const hasBiomarkerFilter = (biomarkerIds?.length ?? 0) > 0
-                const hasFilters = hasDocumentFilter || hasBiomarkerFilter
+                const hasRangeFilter = outOfRange !== undefined
+                const hasRangeHistoryFilter = outOfRangeHistory !== undefined
+                const hasAnomalyFilter = hasAnomaly !== undefined
+                const hasFilters = hasDocumentFilter || hasBiomarkerFilter || hasRangeFilter || hasRangeHistoryFilter || hasAnomalyFilter
 
                 // For the new records
                 const isDefault = row.isDefault ?? false
@@ -131,13 +136,43 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
 
                 if (row.stats.lastValue === undefined || row.stats.lastValue === '') return false
 
+                if (biomarkerIds && biomarkerIds.length > 0) {
+                    if (!biomarkerIds.includes(row.id)) {
+                        return false
+                    }
+                }
+
+                if (documentId && documentId.length > 0) {
+                    const biomarkerRecords = records.filter(r => r.biomarkerId === row.id)
+                    const hasMatchingDocuments = biomarkerRecords.some(r =>
+                        r.documentId && documentId.includes(r.documentId),
+                    )
+                    if (!hasMatchingDocuments) {
+                        return false
+                    }
+                }
+
                 if (outOfRange) {
-                    return matchesOutOfRangeFilter(row, outOfRange)
+                    if (!matchesOutOfRangeFilter(row, outOfRange)) {
+                        return false
+                    }
+                }
+
+                if (outOfRangeHistory) {
+                    if (!matchesOutOfRangeHistoryFilter(row, outOfRangeHistory, records)) {
+                        return false
+                    }
+                }
+
+                if (hasAnomaly !== undefined) {
+                    if (!matchesHasAnomalyFilter(row, hasAnomaly, records, documents)) {
+                        return false
+                    }
                 }
 
                 return true
             })
-    }, [configs, records, documents, units, documentId, biomarkerIds, outOfRange])
+    }, [configs, records, documents, units, documentId, biomarkerIds, outOfRange, outOfRangeHistory, hasAnomaly])
 
     const ViewButtonCellRenderer = useMemo(() => {
         return memo((cellProps: ICellRendererParams<BiomarkerRowData>) => (
@@ -193,10 +228,12 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
         })
     }, [handleViewRecords])
 
-    const handleApplyFilter = useCallback((filter: { documentId?: string[], biomarkerIds?: string[], outOfRange?: RangeType }) => {
+    const handleApplyFilter = useCallback((filter: { documentId?: string[], biomarkerIds?: string[], outOfRange?: RangeType, outOfRangeHistory?: RangeType, hasAnomaly?: number }) => {
         setDocumentId(filter.documentId)
         setBiomarkerIds(filter.biomarkerIds)
         setOutOfRange(filter.outOfRange)
+        setOutOfRangeHistory(filter.outOfRangeHistory)
+        setHasAnomaly(filter.hasAnomaly)
     }, [])
 
     const FiltersCellRenderer = useMemo(() => {
@@ -205,7 +242,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
             if (!row) return null
 
             const matchingFilters = savedFilters.filter(filter =>
-                matchesFilter(row, filter, records),
+                matchesFilter(row, filter, records, documents),
             )
 
             if (matchingFilters.length === 0) return null
@@ -232,7 +269,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
                 </div>
             )
         })
-    }, [savedFilters, records, handleApplyFilter])
+    }, [savedFilters, records, documents, handleApplyFilter])
 
     // eslint-disable-next-line react-hooks/preserve-manual-memoization
     const columnDefs = useMemo<Array<ColDef<BiomarkerRowData>>>(() => [
@@ -383,9 +420,13 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
                     documentId={documentId}
                     biomarkerIds={biomarkerIds}
                     outOfRange={outOfRange}
+                    outOfRangeHistory={outOfRangeHistory}
+                    hasAnomaly={hasAnomaly}
                     onDocumentChange={setDocumentId}
                     onBiomarkerChange={setBiomarkerIds}
                     onOutOfRangeChange={setOutOfRange}
+                    onOutOfRangeHistoryChange={setOutOfRangeHistory}
+                    onHasAnomalyChange={setHasAnomaly}
                 />
             </div>
             <div className='ag-theme-material flex-1 min-h-0'>

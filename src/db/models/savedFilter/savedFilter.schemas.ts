@@ -8,4 +8,6 @@ export const savedFilterSchema = baseEntitySchema.extend({
     documentId: z.array(z.string().uuid()).optional(),
     biomarkerIds: z.array(z.string().uuid()).optional(),
     outOfRange: z.enum(['normal', 'target']).optional(),
+    outOfRangeHistory: z.enum(['normal', 'target']).optional(),
+    hasAnomaly: z.number().min(0).max(100).optional(),
 })

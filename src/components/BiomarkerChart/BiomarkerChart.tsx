@@ -48,6 +48,7 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
     const { data: records } = useBiomarkerRecords({
         filter: (item) => item.biomarkerId === biomarkerId,
     })
+
     const { data: documents } = useDocuments()
 
     const chartData = useMemo(() => {
