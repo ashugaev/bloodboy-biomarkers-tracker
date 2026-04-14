@@ -276,7 +276,7 @@ export const useExtractBiomarkers = () => {
         }
 
         const completion = await client.chat.completions.create({
-            model: model ?? 'gpt-5-mini',
+            model: model ?? 'gpt-5.4',
             messages: messages as never,
             reasoning_effort: 'low',
             temperature: 1,
