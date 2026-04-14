@@ -692,7 +692,7 @@ export const HomePage = (props: HomePageProps) => {
                     <div className='flex flex-wrap justify-between items-center gap-2'>
                         <div>
                             <p className='text-xs text-gray-600'>
-                                © 2025 Bloodboy
+                                © {new Date().getFullYear()} Bloodboy
                             </p>
                         </div>
 
