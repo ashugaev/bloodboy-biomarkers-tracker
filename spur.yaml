@@ -9,10 +9,10 @@ projects:
         - "run /manager"
     sidecars:
       dev:
-        command: 'bash -lc "if [ ! -d node_modules ]; then npm install; fi; npm run dev -- --host 0.0.0.0 --port $SPUR_RESERVED_PORT_FRONTEND"'
+        # Set SPUR_SIDECAR_PUBLIC_HOST in the Spur service environment when
+        # this sidecar should accept requests via a public hostname.
+        command: 'bash -lc "if [ ! -d node_modules ]; then npm install; fi; if [ -n \"$SPUR_SIDECAR_PUBLIC_HOST\" ]; then export __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=\"$SPUR_SIDECAR_PUBLIC_HOST\"; fi; npm run dev -- --host 0.0.0.0 --port $SPUR_RESERVED_PORT_FRONTEND"'
         autoStart: true
-        env:
-          __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: openclaw-dev.tail90e846.ts.net
         ports:
           frontend:
             env: SPUR_RESERVED_PORT_FRONTEND
