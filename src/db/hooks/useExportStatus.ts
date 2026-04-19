@@ -1,9 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 
 import { UNIT_CONFIGS } from '@/constants/units'
+import { AppSettings } from '@/db/models/appSettings'
 import { BiomarkerConfig } from '@/db/models/biomarkerConfig'
 import { BlockedMerge, DEFAULT_BLOCKED_MERGES } from '@/db/models/blockedMerge'
-import { AppSettings } from '@/db/models/appSettings'
 import { Unit } from '@/db/models/unit'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/db/services/db.service'
