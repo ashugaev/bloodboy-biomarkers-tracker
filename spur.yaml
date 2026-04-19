@@ -1,0 +1,20 @@
+projects:
+  bloodboy:
+    path: .
+    defaultBranch: main
+    sessionPrefix: bb
+    worktree: true
+    spawn:
+      steps:
+        - "run /manager"
+    sidecars:
+      dev:
+        command: 'bash -lc "if [ ! -d node_modules ]; then npm install; fi; npm run dev -- --host 0.0.0.0 --port $SPUR_RESERVED_PORT_FRONTEND"'
+        autoStart: true
+        env:
+          __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: openclaw-dev.tail90e846.ts.net
+        ports:
+          frontend:
+            env: SPUR_RESERVED_PORT_FRONTEND
+            start: 4500
+            end: 4550
