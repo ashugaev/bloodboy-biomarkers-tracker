@@ -1,0 +1,20 @@
+projects:
+  bloodboy:
+    path: .
+    defaultBranch: main
+    sessionPrefix: bb
+    worktree: true
+    spawn:
+      steps:
+        - "run /manager"
+    sidecars:
+      dev:
+        # Set SPUR_SIDECAR_PUBLIC_HOST in the Spur service environment when
+        # this sidecar should accept requests via a public hostname.
+        command: 'bash -lc "if [ ! -d node_modules ]; then npm install; fi; if [ -n \"$SPUR_SIDECAR_PUBLIC_HOST\" ]; then export __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=\"$SPUR_SIDECAR_PUBLIC_HOST\"; fi; npm run dev -- --host 0.0.0.0 --port $SPUR_RESERVED_PORT_FRONTEND"'
+        autoStart: true
+        ports:
+          frontend:
+            env: SPUR_RESERVED_PORT_FRONTEND
+            start: 4500
+            end: 4550

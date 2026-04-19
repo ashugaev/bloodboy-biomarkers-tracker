@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
 
-import { DeleteOutlined, DownloadOutlined, MenuOutlined, UploadOutlined } from '@ant-design/icons'
-import { Button, Checkbox, Dropdown, Modal, MenuProps, message } from 'antd'
+import { DeleteOutlined, DownloadOutlined, MenuOutlined, UploadOutlined, WarningFilled } from '@ant-design/icons'
+import { Button, Checkbox, Dropdown, Modal, MenuProps, Tooltip, message } from 'antd'
 import { usePostHog } from 'posthog-js/react'
 
 import { COLORS, DB_NAME, PRESERVED_OPENAI_TOKEN_KEY } from '@/constants'
+import { useExportStatus } from '@/db'
 import { useAppSettings } from '@/db/models/appSettings'
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
@@ -36,6 +37,7 @@ export const ImportButton = (props: ImportButtonProps) => {
         filter: onlyApproved ? (d) => d.approved : undefined,
     })
     const { data: settings } = useAppSettings()
+    const { hasUnexportedChanges } = useExportStatus()
 
     const handleImportClick = () => {
         fileInputRef.current?.click()
@@ -172,13 +174,22 @@ export const ImportButton = (props: ImportButtonProps) => {
                 style={{ display: 'none' }}
                 onChange={handleFileChange}
             />
-            <Dropdown menu={{ items }} trigger={['click']}>
-                <Button
-                    size='small'
-                    icon={<MenuOutlined/>}
-                    className={className}
-                />
-            </Dropdown>
+            <div className='inline-flex items-center gap-2'>
+                {hasUnexportedChanges && (
+                    <Tooltip title="Don't forget to export: you have local changes that are not included in the latest backup yet.">
+                        <span className='inline-flex items-center text-base leading-none cursor-help'>
+                            <WarningFilled style={{ color: COLORS.WARNING }}/>
+                        </span>
+                    </Tooltip>
+                )}
+                <Dropdown menu={{ items }} trigger={['click']}>
+                    <Button
+                        size='small'
+                        icon={<MenuOutlined/>}
+                        className={className}
+                    />
+                </Dropdown>
+            </div>
             <Modal
                 title='Clear All Data'
                 open={isModalVisible}

@@ -1,6 +1,7 @@
 import { message } from 'antd'
 import { exportDB } from 'dexie-export-import'
 
+import { MAIN_SETTINGS_ID } from '@/constants'
 import { BiomarkerConfig } from '@/db/models/biomarkerConfig'
 import { BiomarkerRecord } from '@/db/models/biomarkerRecord'
 import { UploadedDocument } from '@/db/models/document'
@@ -59,9 +60,37 @@ const exportToCSV = (data: ExportDataParams) => {
     downloadBlob(blob, `bloodboy_results_${date}.csv`)
 }
 
+const ensureAppSettingsForExport = async (exportedAt: Date) => {
+    const settings = await db.appSettings.limit(1).first()
+
+    if (settings) {
+        return {
+            settingsId: settings.id,
+            isTemporary: false,
+        }
+    }
+
+    await db.appSettings.add({
+        id: MAIN_SETTINGS_ID,
+        openaiApiKey: '',
+        lastExportedAt: exportedAt,
+        createdAt: exportedAt,
+        updatedAt: exportedAt,
+    })
+
+    return {
+        settingsId: MAIN_SETTINGS_ID,
+        isTemporary: true,
+    }
+}
+
 export const exportData = async (data: ExportDataParams) => {
+    const exportedAt = new Date()
+    const date = exportedAt.toISOString().split('T')[0]
+    let exportSettings: Awaited<ReturnType<typeof ensureAppSettingsForExport>> | null = null
+
     try {
-        const date = new Date().toISOString().split('T')[0]
+        exportSettings = await ensureAppSettingsForExport(exportedAt)
 
         const jsonBlob = await exportDB(db, {
             transform: (table: string, value: unknown) => {
@@ -70,6 +99,7 @@ export const exportData = async (data: ExportDataParams) => {
                         value: {
                             ...value as Record<string, unknown>,
                             openaiApiKey: '',
+                            lastExportedAt: exportedAt,
                         },
                     }
                 }
@@ -80,8 +110,18 @@ export const exportData = async (data: ExportDataParams) => {
 
         exportToCSV(data)
 
+        if (!exportSettings.isTemporary) {
+            await db.appSettings.update(exportSettings.settingsId, {
+                lastExportedAt: exportedAt,
+                updatedAt: exportedAt,
+            })
+        }
+
         void message.success('Data exported successfully: JSON backup and CSV file created')
     } catch (error) {
+        if (exportSettings?.isTemporary) {
+            await db.appSettings.delete(exportSettings.settingsId)
+        }
         console.error('Export error:', error)
         void message.error('Failed to export data')
     }
