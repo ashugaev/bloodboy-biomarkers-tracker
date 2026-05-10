@@ -25,6 +25,7 @@ Track and visualize your blood test results over time with AI-powered data extra
 - **Data Visualization** - Interactive charts and trend analysis
 - **Anomaly Detection** - Filter biomarkers with strong fluctuations between tests
 - **Local Storage** - All data stored locally using IndexedDB
+- **Google Drive Backups** - Optional browser-based two-way backup sync with a latest file and dated history
 - **Professional Tables** - Sorting, filtering, and inline editing with AG-Grid
 - **Saved Filters** - Save and quickly apply custom filter combinations
 - **Modern UI** - Clean interface built with AntDesign and Tailwind CSS
@@ -110,6 +111,21 @@ src/
 ## 🔧 Configuration
 
 See `.env.example` for optional environment variables. The app works fully offline without any configuration.
+
+To enable Google Drive backups, create a Google OAuth web client and set `VITE_PUBLIC_GOOGLE_CLIENT_ID`.
+Google Drive sync is two-way: newer Drive backups are restored into the browser, and newer local data is uploaded back to Drive.
+Backups are stored in Google Drive as:
+
+```text
+Bloodboy Backups/
+├── latest/
+│   └── bloodboy_db_backup_latest.json
+├── history/
+│   └── YYYY/
+│       └── MM/
+│           └── bloodboy_db_backup_<timestamp>.json
+└── bloodboy_backup_manifest.json
+```
 
 ## 🤝 Contributing
 

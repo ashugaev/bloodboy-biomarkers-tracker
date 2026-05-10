@@ -9,6 +9,7 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { config } from '@/config'
 import { themeConfig } from '@/constants'
 import { useCurrentUser } from '@/db'
+import { useGoogleDriveAutoBackup } from '@/googleDrive'
 import { HomePage, DataPage, BiomarkerRecordsPage } from '@/pages'
 
 ModuleRegistry.registerModules([
@@ -30,6 +31,12 @@ const PageViewTracker = () => {
     return null
 }
 
+const GoogleDriveAutoBackup = () => {
+    useGoogleDriveAutoBackup()
+
+    return null
+}
+
 export const App = () => {
     useCurrentUser()
 
@@ -38,6 +45,7 @@ export const App = () => {
             <AntApp>
                 <BrowserRouter basename={config.baseUrl}>
                     <PageViewTracker/>
+                    <GoogleDriveAutoBackup/>
                     <Routes>
                         <Route path='/' element={<HomePage/>}/>
                         <Route path='/data' element={<DataPage/>}/>

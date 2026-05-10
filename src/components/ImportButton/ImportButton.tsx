@@ -1,15 +1,31 @@
 import { useRef, useState } from 'react'
 
-import { DeleteOutlined, DownloadOutlined, MenuOutlined, UploadOutlined, WarningFilled } from '@ant-design/icons'
+import {
+    CloudUploadOutlined,
+    DeleteOutlined,
+    DisconnectOutlined,
+    DownloadOutlined,
+    MenuOutlined,
+    SyncOutlined,
+    UploadOutlined,
+    WarningFilled,
+} from '@ant-design/icons'
 import { Button, Checkbox, Dropdown, Modal, MenuProps, Tooltip, message } from 'antd'
 import { usePostHog } from 'posthog-js/react'
 
+import { config } from '@/config'
 import { COLORS, DB_NAME, PRESERVED_OPENAI_TOKEN_KEY } from '@/constants'
 import { useExportStatus } from '@/db'
 import { useAppSettings } from '@/db/models/appSettings'
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments } from '@/db/models/document'
+import {
+    disconnectGoogleDriveBackup,
+    getGoogleDriveBackupErrorMessage,
+    setGoogleDriveAutoSync,
+    syncDatabaseWithGoogleDrive,
+} from '@/googleDrive'
 import { captureEvent } from '@/utils'
 import { exportData } from '@/utils/exportData'
 import { importData } from '@/utils/importData'
@@ -24,6 +40,7 @@ export const ImportButton = (props: ImportButtonProps) => {
     const [isModalVisible, setIsModalVisible] = useState(false)
     const [isImportModalVisible, setIsImportModalVisible] = useState(false)
     const [isResetting, setIsResetting] = useState(false)
+    const [isDriveSyncing, setIsDriveSyncing] = useState(false)
     const [preserveToken, setPreserveToken] = useState(true)
     const [pendingFile, setPendingFile] = useState<File | null>(null)
 
@@ -38,6 +55,15 @@ export const ImportButton = (props: ImportButtonProps) => {
     })
     const { data: settings } = useAppSettings()
     const { hasUnexportedChanges } = useExportStatus()
+    const driveSettings = settings[0]?.googleDriveBackup
+    const isDriveConnected = driveSettings?.enabled ?? false
+    const isGoogleDriveConfigured = !!config.googleClientId
+    const driveBackupLabel = !isGoogleDriveConfigured
+        ? 'Set Google Client ID'
+        : isDriveConnected ? 'Sync Google Drive' : 'Connect Google Drive'
+    const unexportedChangesTooltip = isDriveConnected && driveSettings?.autoSync
+        ? 'Local changes are waiting for Google Drive auto sync.'
+        : 'Don\'t forget to export: you have local changes that are not included in the latest backup yet.'
 
     const handleImportClick = () => {
         fileInputRef.current?.click()
@@ -90,6 +116,61 @@ export const ImportButton = (props: ImportButtonProps) => {
             records,
             documents,
         })
+    }
+
+    const handleDriveSync = async () => {
+        setIsDriveSyncing(true)
+        captureEvent(posthog, 'google_drive_sync_started', {
+            connected: isDriveConnected,
+            autoSync: driveSettings?.autoSync ?? false,
+        })
+
+        try {
+            const result = await syncDatabaseWithGoogleDrive({
+                prompt: isDriveConnected ? '' : 'consent',
+                forceEnable: true,
+            })
+
+            if (result.action === 'uploaded' && result.backup) {
+                void message.success(`Backup saved to Google Drive: ${result.backup.historyFileName}`)
+            } else if (result.action === 'downloaded') {
+                void message.success('Newer Google Drive backup restored')
+            } else {
+                void message.success('Google Drive backup is up to date')
+            }
+
+            captureEvent(posthog, 'google_drive_sync_completed', {
+                action: result.action,
+            })
+        } catch (error) {
+            const errorMessage = getGoogleDriveBackupErrorMessage(error)
+            void message.error(errorMessage)
+            captureEvent(posthog, 'google_drive_sync_failed', {
+                error: error instanceof Error ? error.constructor.name : 'UnknownError',
+            })
+        } finally {
+            setIsDriveSyncing(false)
+        }
+    }
+
+    const handleDriveAutoSyncToggle = async () => {
+        if (!isDriveConnected) {
+            await handleDriveSync()
+            return
+        }
+
+        const nextAutoSync = !(driveSettings?.autoSync ?? false)
+        await setGoogleDriveAutoSync(nextAutoSync)
+        void message.success(nextAutoSync ? 'Google Drive auto sync enabled' : 'Google Drive auto sync paused')
+        captureEvent(posthog, 'google_drive_auto_sync_toggled', {
+            enabled: nextAutoSync,
+        })
+    }
+
+    const handleDriveDisconnect = async () => {
+        await disconnectGoogleDriveBackup()
+        void message.success('Google Drive backup disconnected')
+        captureEvent(posthog, 'google_drive_backup_disconnected')
     }
 
     const handleReset = () => {
@@ -154,6 +235,27 @@ export const ImportButton = (props: ImportButtonProps) => {
             onClick: handleExport,
         },
         {
+            key: 'drive-backup',
+            label: driveBackupLabel,
+            icon: <CloudUploadOutlined/>,
+            disabled: isDriveSyncing || !isGoogleDriveConfigured,
+            onClick: () => { void handleDriveSync() },
+        },
+        {
+            key: 'drive-auto-sync',
+            label: driveSettings?.autoSync ? 'Pause Drive auto sync' : 'Enable Drive auto sync',
+            icon: <SyncOutlined/>,
+            disabled: isDriveSyncing || !isGoogleDriveConfigured,
+            onClick: () => { void handleDriveAutoSyncToggle() },
+        },
+        {
+            key: 'drive-disconnect',
+            label: 'Disconnect Google Drive',
+            icon: <DisconnectOutlined/>,
+            disabled: !isDriveConnected || isDriveSyncing,
+            onClick: () => { void handleDriveDisconnect() },
+        },
+        {
             type: 'divider',
         },
         {
@@ -176,9 +278,16 @@ export const ImportButton = (props: ImportButtonProps) => {
             />
             <div className='inline-flex items-center gap-2'>
                 {hasUnexportedChanges && (
-                    <Tooltip title="Don't forget to export: you have local changes that are not included in the latest backup yet.">
+                    <Tooltip title={unexportedChangesTooltip}>
                         <span className='inline-flex items-center text-base leading-none cursor-help'>
                             <WarningFilled style={{ color: COLORS.WARNING }}/>
+                        </span>
+                    </Tooltip>
+                )}
+                {driveSettings?.lastError && (
+                    <Tooltip title={driveSettings.lastError}>
+                        <span className='inline-flex items-center text-base leading-none cursor-help'>
+                            <WarningFilled style={{ color: COLORS.ERROR }}/>
                         </span>
                     </Tooltip>
                 )}
@@ -186,6 +295,7 @@ export const ImportButton = (props: ImportButtonProps) => {
                     <Button
                         size='small'
                         icon={<MenuOutlined/>}
+                        loading={isDriveSyncing}
                         className={className}
                     />
                 </Dropdown>

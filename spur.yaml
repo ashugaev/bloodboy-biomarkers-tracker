@@ -18,3 +18,4 @@ projects:
             env: SPUR_RESERVED_PORT_FRONTEND
             start: 4500
             end: 4550
+            url: http://100.80.107.19

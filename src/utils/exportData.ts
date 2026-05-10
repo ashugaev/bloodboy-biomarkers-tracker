@@ -2,13 +2,14 @@ import { message } from 'antd'
 import { exportDB } from 'dexie-export-import'
 
 import { MAIN_SETTINGS_ID } from '@/constants'
+import { AppSettings } from '@/db/models/appSettings'
 import { BiomarkerConfig } from '@/db/models/biomarkerConfig'
 import { BiomarkerRecord } from '@/db/models/biomarkerRecord'
 import { UploadedDocument } from '@/db/models/document'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/db/services/db.service'
 
-interface ExportDataParams {
+export interface ExportDataParams {
     configs: BiomarkerConfig[]
     records: BiomarkerRecord[]
     documents: UploadedDocument[]
@@ -84,6 +85,37 @@ const ensureAppSettingsForExport = async (exportedAt: Date) => {
     }
 }
 
+const sanitizeAppSettingsForBackup = (settings: Record<string, unknown>, exportedAt: Date): AppSettings => {
+    const googleDriveBackup = settings.googleDriveBackup && typeof settings.googleDriveBackup === 'object'
+        ? {
+            ...settings.googleDriveBackup as Record<string, unknown>,
+            enabled: false,
+            autoSync: false,
+            lastError: undefined,
+        }
+        : undefined
+
+    return {
+        ...settings,
+        openaiApiKey: '',
+        lastExportedAt: exportedAt,
+        googleDriveBackup,
+    } as AppSettings
+}
+
+export const createDatabaseBackupBlob = async (exportedAt: Date): Promise<Blob> => {
+    return await exportDB(db, {
+        transform: (table: string, value: unknown) => {
+            if (table === 'appSettings' && value && typeof value === 'object' && 'openaiApiKey' in value) {
+                return {
+                    value: sanitizeAppSettingsForBackup(value as Record<string, unknown>, exportedAt),
+                }
+            }
+            return { value }
+        },
+    })
+}
+
 export const exportData = async (data: ExportDataParams) => {
     const exportedAt = new Date()
     const date = exportedAt.toISOString().split('T')[0]
@@ -92,20 +124,7 @@ export const exportData = async (data: ExportDataParams) => {
     try {
         exportSettings = await ensureAppSettingsForExport(exportedAt)
 
-        const jsonBlob = await exportDB(db, {
-            transform: (table: string, value: unknown) => {
-                if (table === 'appSettings' && value && typeof value === 'object' && 'openaiApiKey' in value) {
-                    return {
-                        value: {
-                            ...value as Record<string, unknown>,
-                            openaiApiKey: '',
-                            lastExportedAt: exportedAt,
-                        },
-                    }
-                }
-                return { value }
-            },
-        })
+        const jsonBlob = await createDatabaseBackupBlob(exportedAt)
         downloadBlob(jsonBlob, `bloodboy_db_backup_${date}.json`)
 
         exportToCSV(data)
