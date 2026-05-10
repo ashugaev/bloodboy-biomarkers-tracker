@@ -1,12 +1,10 @@
 import { useRef, useState } from 'react'
 
 import {
-    CloudUploadOutlined,
     DeleteOutlined,
     DisconnectOutlined,
     DownloadOutlined,
     MenuOutlined,
-    SyncOutlined,
     UploadOutlined,
     WarningFilled,
 } from '@ant-design/icons'
@@ -23,7 +21,7 @@ import { useDocuments } from '@/db/models/document'
 import {
     disconnectGoogleDriveBackup,
     getGoogleDriveBackupErrorMessage,
-    setGoogleDriveAutoSync,
+    markGoogleDriveBackupError,
     syncDatabaseWithGoogleDrive,
 } from '@/googleDrive'
 import { captureEvent } from '@/utils'
@@ -33,12 +31,17 @@ import { reloadApp } from '@/utils/reloadApp'
 
 import { ImportButtonProps } from './ImportButton.types'
 
+interface GoogleDriveIconProps {
+    menuItem?: boolean
+}
+
 export const ImportButton = (props: ImportButtonProps) => {
     const { className, onlyApproved = true } = props
     const posthog = usePostHog()
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [isModalVisible, setIsModalVisible] = useState(false)
     const [isImportModalVisible, setIsImportModalVisible] = useState(false)
+    const [isDriveModalVisible, setIsDriveModalVisible] = useState(false)
     const [isResetting, setIsResetting] = useState(false)
     const [isDriveSyncing, setIsDriveSyncing] = useState(false)
     const [preserveToken, setPreserveToken] = useState(true)
@@ -59,11 +62,37 @@ export const ImportButton = (props: ImportButtonProps) => {
     const isDriveConnected = driveSettings?.enabled ?? false
     const isGoogleDriveConfigured = !!config.googleClientId
     const driveBackupLabel = !isGoogleDriveConfigured
-        ? 'Set Google Client ID'
-        : isDriveConnected ? 'Sync Google Drive' : 'Connect Google Drive'
-    const unexportedChangesTooltip = isDriveConnected && driveSettings?.autoSync
+        ? 'Google Drive unavailable'
+        : isDriveConnected ? 'Google Drive' : 'Connect Google Drive'
+    const shouldOpenDriveModal = isDriveConnected || !!driveSettings?.lastError
+    const unexportedChangesTooltip = isDriveConnected
         ? 'Local changes are waiting for Google Drive auto sync.'
         : 'Don\'t forget to export: you have local changes that are not included in the latest backup yet.'
+    const lastBackupAt = driveSettings?.lastBackupAt
+        ? new Date(driveSettings.lastBackupAt).toLocaleString()
+        : null
+
+    const GoogleDriveIcon = ({ menuItem }: GoogleDriveIconProps) => (
+        <span
+            className={`anticon${menuItem ? ' ant-dropdown-menu-item-icon' : ''}`}
+            role='img'
+            aria-hidden='true'
+        >
+            <svg
+                focusable='false'
+                width='1em'
+                height='1em'
+                viewBox='0 0 87.3 78'
+            >
+                <path fill='#0066da' d='m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z'/>
+                <path fill='#00ac47' d='m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z'/>
+                <path fill='#ea4335' d='m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z'/>
+                <path fill='#00832d' d='m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z'/>
+                <path fill='#2684fc' d='m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z'/>
+                <path fill='#ffba00' d='m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z'/>
+            </svg>
+        </span>
+    )
 
     const handleImportClick = () => {
         fileInputRef.current?.click()
@@ -118,11 +147,10 @@ export const ImportButton = (props: ImportButtonProps) => {
         })
     }
 
-    const handleDriveSync = async () => {
+    const handleDriveConnect = async () => {
         setIsDriveSyncing(true)
         captureEvent(posthog, 'google_drive_sync_started', {
             connected: isDriveConnected,
-            autoSync: driveSettings?.autoSync ?? false,
         })
 
         try {
@@ -142,8 +170,10 @@ export const ImportButton = (props: ImportButtonProps) => {
             captureEvent(posthog, 'google_drive_sync_completed', {
                 action: result.action,
             })
+            setIsDriveModalVisible(false)
         } catch (error) {
             const errorMessage = getGoogleDriveBackupErrorMessage(error)
+            void markGoogleDriveBackupError(error)
             void message.error(errorMessage)
             captureEvent(posthog, 'google_drive_sync_failed', {
                 error: error instanceof Error ? error.constructor.name : 'UnknownError',
@@ -153,24 +183,20 @@ export const ImportButton = (props: ImportButtonProps) => {
         }
     }
 
-    const handleDriveAutoSyncToggle = async () => {
-        if (!isDriveConnected) {
-            await handleDriveSync()
+    const handleDriveDisconnect = async () => {
+        await disconnectGoogleDriveBackup()
+        setIsDriveModalVisible(false)
+        void message.success('Google Drive backup disconnected')
+        captureEvent(posthog, 'google_drive_backup_disconnected')
+    }
+
+    const handleDriveMenuClick = () => {
+        if (shouldOpenDriveModal) {
+            setIsDriveModalVisible(true)
             return
         }
 
-        const nextAutoSync = !(driveSettings?.autoSync ?? false)
-        await setGoogleDriveAutoSync(nextAutoSync)
-        void message.success(nextAutoSync ? 'Google Drive auto sync enabled' : 'Google Drive auto sync paused')
-        captureEvent(posthog, 'google_drive_auto_sync_toggled', {
-            enabled: nextAutoSync,
-        })
-    }
-
-    const handleDriveDisconnect = async () => {
-        await disconnectGoogleDriveBackup()
-        void message.success('Google Drive backup disconnected')
-        captureEvent(posthog, 'google_drive_backup_disconnected')
+        void handleDriveConnect()
     }
 
     const handleReset = () => {
@@ -237,23 +263,9 @@ export const ImportButton = (props: ImportButtonProps) => {
         {
             key: 'drive-backup',
             label: driveBackupLabel,
-            icon: <CloudUploadOutlined/>,
+            icon: <GoogleDriveIcon menuItem/>,
             disabled: isDriveSyncing || !isGoogleDriveConfigured,
-            onClick: () => { void handleDriveSync() },
-        },
-        {
-            key: 'drive-auto-sync',
-            label: driveSettings?.autoSync ? 'Pause Drive auto sync' : 'Enable Drive auto sync',
-            icon: <SyncOutlined/>,
-            disabled: isDriveSyncing || !isGoogleDriveConfigured,
-            onClick: () => { void handleDriveAutoSyncToggle() },
-        },
-        {
-            key: 'drive-disconnect',
-            label: 'Disconnect Google Drive',
-            icon: <DisconnectOutlined/>,
-            disabled: !isDriveConnected || isDriveSyncing,
-            onClick: () => { void handleDriveDisconnect() },
+            onClick: handleDriveMenuClick,
         },
         {
             type: 'divider',
@@ -300,6 +312,63 @@ export const ImportButton = (props: ImportButtonProps) => {
                     />
                 </Dropdown>
             </div>
+            <Modal
+                title='Google Drive'
+                open={isDriveModalVisible}
+                onCancel={() => { setIsDriveModalVisible(false) }}
+                footer={null}
+            >
+                {driveSettings?.lastError && (
+                    <div
+                        style={{
+                            marginBottom: 16,
+                            color: COLORS.ERROR,
+                        }}
+                    >
+                        {driveSettings.lastError}
+                    </div>
+                )}
+                {isDriveConnected ? (
+                    <>
+                        <p>Google Drive is connected. Automatic backup sync is enabled.</p>
+                        {lastBackupAt && (
+                            <p>Latest sync: {lastBackupAt}</p>
+                        )}
+                        {driveSettings?.lastBackupWebViewLink && driveSettings.lastBackupFileName && (
+                            <p>
+                                Latest backup:{' '}
+                                <a
+                                    href={driveSettings.lastBackupWebViewLink}
+                                    target='_blank'
+                                    rel='noreferrer'
+                                >
+                                    {driveSettings.lastBackupFileName}
+                                </a>
+                            </p>
+                        )}
+                        <Button
+                            danger
+                            icon={<DisconnectOutlined/>}
+                            loading={isDriveSyncing}
+                            onClick={() => { void handleDriveDisconnect() }}
+                        >
+                            Disconnect Google Drive
+                        </Button>
+                    </>
+                ) : (
+                    <>
+                        <p>Connect Google Drive to keep database backups synced automatically.</p>
+                        <Button
+                            type='primary'
+                            icon={<GoogleDriveIcon/>}
+                            loading={isDriveSyncing}
+                            onClick={() => { void handleDriveConnect() }}
+                        >
+                            Connect Google Drive
+                        </Button>
+                    </>
+                )}
+            </Modal>
             <Modal
                 title='Clear All Data'
                 open={isModalVisible}

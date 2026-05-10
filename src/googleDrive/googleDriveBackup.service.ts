@@ -556,7 +556,6 @@ const mergeDriveSettings = (
     return {
         ...currentSettings,
         enabled: forceEnable || currentSettings?.enabled !== false,
-        autoSync: currentSettings?.autoSync ?? true,
         rootFolderId: result.rootFolderId,
         latestFolderId: result.latestFolderId,
         historyFolderId: result.historyFolderId,
@@ -577,11 +576,11 @@ const mergeImportedDriveSettings = (
     manifest: GoogleDriveBackupManifest,
     structure: GoogleDriveBackupStructure,
     remoteVersionAt: Date,
+    forceEnable = false,
 ): GoogleDriveBackupSettings => {
     return {
         ...currentSettings,
-        enabled: currentSettings?.enabled ?? true,
-        autoSync: currentSettings?.autoSync ?? true,
+        enabled: forceEnable || (currentSettings?.enabled ?? true),
         rootFolderId: structure.rootFolderId,
         latestFolderId: structure.latestFolderId,
         historyFolderId: structure.historyFolderId,
@@ -634,7 +633,6 @@ const markGoogleDriveSyncNoop = async (
         googleDriveBackup: {
             ...settings.googleDriveBackup,
             enabled: forceEnable || settings.googleDriveBackup?.enabled === true,
-            autoSync: settings.googleDriveBackup?.autoSync ?? true,
             ...(structure
                 ? {
                     rootFolderId: structure.rootFolderId,
@@ -676,6 +674,7 @@ export const syncDatabaseWithGoogleDrive = async (
             remoteBackup.manifest,
             remoteBackup.structure,
             remoteVersionAt,
+            options.forceEnable ?? false,
         )
 
         await importDatabaseBackup(backupBlob, {
@@ -718,20 +717,6 @@ export const syncDatabaseWithGoogleDrive = async (
     }
 }
 
-export const setGoogleDriveAutoSync = async (autoSync: boolean) => {
-    const settings = await ensureAppSettings()
-
-    await db.appSettings.update(settings.id, {
-        googleDriveBackup: {
-            ...settings.googleDriveBackup,
-            enabled: settings.googleDriveBackup?.enabled ?? autoSync,
-            autoSync,
-            lastError: undefined,
-        },
-        updatedAt: new Date(),
-    })
-}
-
 export const disconnectGoogleDriveBackup = async () => {
     const settings = await ensureAppSettings()
     clearGoogleDriveAccessToken()
@@ -740,7 +725,6 @@ export const disconnectGoogleDriveBackup = async () => {
         googleDriveBackup: {
             ...settings.googleDriveBackup,
             enabled: false,
-            autoSync: false,
             lastError: undefined,
         },
         updatedAt: new Date(),
@@ -755,7 +739,6 @@ export const markGoogleDriveBackupError = async (error: unknown) => {
         googleDriveBackup: {
             ...settings.googleDriveBackup,
             enabled: settings.googleDriveBackup?.enabled ?? false,
-            autoSync: settings.googleDriveBackup?.autoSync ?? false,
             lastError: message,
         },
         updatedAt: new Date(),

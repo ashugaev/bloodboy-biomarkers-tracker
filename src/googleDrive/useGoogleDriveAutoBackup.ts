@@ -52,7 +52,6 @@ export const useGoogleDriveAutoBackup = () => {
         if (
             loading ||
             !driveSettings?.enabled ||
-            !driveSettings.autoSync ||
             syncInFlightRef.current
         ) {
             return
@@ -82,7 +81,7 @@ export const useGoogleDriveAutoBackup = () => {
     useEffect(() => {
         const driveSettings = settings[0]?.googleDriveBackup
 
-        if (!driveSettings?.enabled || !driveSettings.autoSync) {
+        if (!driveSettings?.enabled) {
             return
         }
 

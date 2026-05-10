@@ -1,6 +1,5 @@
 export interface GoogleDriveBackupSettings {
     enabled: boolean
-    autoSync: boolean
     rootFolderId?: string
     latestFolderId?: string
     historyFolderId?: string

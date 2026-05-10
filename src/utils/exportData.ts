@@ -90,7 +90,6 @@ const sanitizeAppSettingsForBackup = (settings: Record<string, unknown>, exporte
         ? {
             ...settings.googleDriveBackup as Record<string, unknown>,
             enabled: false,
-            autoSync: false,
             lastError: undefined,
         }
         : undefined
