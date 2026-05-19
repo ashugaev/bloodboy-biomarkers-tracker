@@ -309,7 +309,24 @@ export const HomePage = (props: HomePageProps) => {
                                             You Control Your Data
                                         </h3>
                                         <p className='mt-1 text-gray-600'>
-                                            Your health data is yours, stored locally, and never sent to servers. You control storage and can easily export everything to Excel.
+                                            Your health data is yours, stored locally, and never sent to our servers. You control storage, exports, and optional backups.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className='flex gap-x-5 sm:gap-x-8'>
+                                    <svg className='shrink-0 mt-2 size-8 text-gray-800' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
+                                        <path d='M16 16l-4-4-4 4'/>
+                                        <path d='M12 12v9'/>
+                                        <path d='M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3'/>
+                                        <polyline points='16 16 12 12 8 16'/>
+                                    </svg>
+                                    <div className='grow'>
+                                        <h3 className='text-base sm:text-lg font-semibold text-gray-800'>
+                                            Google Drive Backups
+                                        </h3>
+                                        <p className='mt-1 text-gray-600'>
+                                            Connect Google Drive to sync the newest database version back to the browser or up to Drive, while preserving dated backup history.
                                         </p>
                                     </div>
                                 </div>
@@ -499,6 +516,15 @@ export const HomePage = (props: HomePageProps) => {
                                         <polyline points='20 6 9 17 4 12'/>
                                     </svg>
                                     <span className='text-gray-800'>
+                                        Optional Google Drive backup history
+                                    </span>
+                                </li>
+
+                                <li className='flex gap-x-2'>
+                                    <svg className='shrink-0 mt-0.5 size-4 text-indigo-600' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
+                                        <polyline points='20 6 9 17 4 12'/>
+                                    </svg>
+                                    <span className='text-gray-800'>
                                         Complete privacy
                                     </span>
                                 </li>
@@ -651,7 +677,7 @@ export const HomePage = (props: HomePageProps) => {
                                     {openFaq === '4' && (
                                         <div className='w-full overflow-hidden transition-all duration-300'>
                                             <p className='text-gray-600'>
-                                                Yes, you can export your data at any time. Since all data is stored locally in your browser, you have complete control over your information.
+                                                Yes, you can export your data at any time. Since all data is stored locally in your browser, you have complete control over your information. You can also connect Google Drive to sync the newest version across browsers, keep one latest backup file, and preserve a dated history of previous database backups.
                                             </p>
                                         </div>
                                     )}

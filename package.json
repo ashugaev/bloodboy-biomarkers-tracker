@@ -6,13 +6,13 @@
   "license": "AGPL-3.0",
   "type": "module",
   "author": "Aleksei Shugaev <yashugaev@gmail.com>",
-  "homepage": "https://github.com/alek/blood_test_tracker#readme",
+  "homepage": "https://github.com/ashugaev/bloodboy-biomarkers-tracker#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/alek/blood_test_tracker.git"
+    "url": "git+https://github.com/ashugaev/bloodboy-biomarkers-tracker.git"
   },
   "bugs": {
-    "url": "https://github.com/alek/blood_test_tracker/issues"
+    "url": "https://github.com/ashugaev/bloodboy-biomarkers-tracker/issues"
   },
   "keywords": [
     "blood-test",
