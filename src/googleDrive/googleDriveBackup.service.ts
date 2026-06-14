@@ -71,8 +71,64 @@ declare global {
     }
 }
 
+const ACCESS_TOKEN_STORAGE_KEY = 'bloodboy.googleDrive.accessToken'
+
 let cachedAccessToken: string | null = null
 let cachedAccessTokenExpiresAt = 0
+
+interface PersistedAccessToken {
+    accessToken: string
+    expiresAt: number
+}
+
+const readPersistedAccessToken = (): PersistedAccessToken | null => {
+    try {
+        const raw = window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY)
+        if (!raw) return null
+
+        const parsed = JSON.parse(raw) as Partial<PersistedAccessToken>
+        if (typeof parsed.accessToken !== 'string' || typeof parsed.expiresAt !== 'number') {
+            return null
+        }
+
+        return {
+            accessToken: parsed.accessToken,
+            expiresAt: parsed.expiresAt,
+        }
+    } catch {
+        return null
+    }
+}
+
+const persistAccessToken = (accessToken: string, expiresAt: number) => {
+    try {
+        window.localStorage.setItem(
+            ACCESS_TOKEN_STORAGE_KEY,
+            JSON.stringify({
+                accessToken,
+                expiresAt,
+            } satisfies PersistedAccessToken),
+        )
+    } catch {
+        // Ignore storage failures (e.g. private mode); the token stays in memory only.
+    }
+}
+
+const clearPersistedAccessToken = () => {
+    try {
+        window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
+    } catch {
+        // Ignore storage failures.
+    }
+}
+
+// Restore a still-valid token across page reloads so an active connection
+// survives a refresh without another round-trip to Google.
+const persistedAccessToken = readPersistedAccessToken()
+if (persistedAccessToken) {
+    cachedAccessToken = persistedAccessToken.accessToken
+    cachedAccessTokenExpiresAt = persistedAccessToken.expiresAt
+}
 
 export class GoogleDriveBackupError extends Error {
     status?: number
@@ -146,6 +202,7 @@ const requestGoogleDriveAccessToken = async (prompt = ''): Promise<string> => {
 
                 cachedAccessToken = response.access_token
                 cachedAccessTokenExpiresAt = Date.now() + (response.expires_in ?? 3600) * 1000
+                persistAccessToken(cachedAccessToken, cachedAccessTokenExpiresAt)
                 resolve(response.access_token)
             },
         })
@@ -157,6 +214,7 @@ const requestGoogleDriveAccessToken = async (prompt = ''): Promise<string> => {
 export const clearGoogleDriveAccessToken = () => {
     cachedAccessToken = null
     cachedAccessTokenExpiresAt = 0
+    clearPersistedAccessToken()
 }
 
 const getErrorMessage = async (response: Response): Promise<string> => {
