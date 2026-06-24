@@ -2,8 +2,8 @@ import { memo, useCallback, useMemo } from 'react'
 
 import { CellValueChangedEvent, ColDef, ICellRendererParams } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
-import { DeleteOutlined } from '@ant-design/icons'
-import { Button } from 'antd'
+import { DeleteOutlined, FileTextOutlined } from '@ant-design/icons'
+import { Button, Tooltip } from 'antd'
 
 import { createUnitColumn, createValueColumn } from '@/aggrid/columns/biomarkerColumns'
 import { dateComparator } from '@/aggrid/comparators/dateComprator'
@@ -17,7 +17,7 @@ import { getRangeCellStyle } from '@/utils/cellStyle'
 import { BiomarkerRecordRowData, BiomarkerRecordsTableProps } from './BiomarkerRecordsTable.types'
 
 export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
-    const { biomarkerId, normalRange, targetRange, className } = props
+    const { biomarkerId, normalRange, targetRange, className, onViewDocument } = props
     const { data: records } = useBiomarkerRecords({
         filter: (item) => item.biomarkerId === biomarkerId && item.approved,
     })
@@ -49,6 +49,7 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
                 date: document?.testDate,
                 lab: document?.lab,
                 name: config?.name,
+                hasFile: !!document?.fileData,
             }
         })
     }, [records, documents, units, configs])
@@ -67,6 +68,22 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
             />
         ))
     }, [handleDelete])
+
+    const SourceFileCellRenderer = useMemo(() => {
+        return memo((cellProps: ICellRendererParams<BiomarkerRecordRowData>) => {
+            if (!cellProps.data?.hasFile) return null
+            return (
+                <Tooltip title='Open source file'>
+                    <Button
+                        type='link'
+                        size='small'
+                        icon={<FileTextOutlined/>}
+                        onClick={() => { onViewDocument?.(cellProps.data?.documentId) }}
+                    />
+                </Tooltip>
+            )
+        })
+    }, [onViewDocument])
 
     const columnDefs = useMemo<Array<ColDef<BiomarkerRecordRowData>>>(() => [
         {
@@ -146,6 +163,17 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
             },
         },
         {
+            colId: 'sourceFile',
+            headerName: '',
+            minWidth: 60,
+            flex: 0.2,
+            suppressHeaderMenuButton: true,
+            sortable: false,
+            filter: false,
+            editable: false,
+            cellRenderer: SourceFileCellRenderer,
+        },
+        {
             colId: 'delete',
             headerName: '',
             minWidth: 90,
@@ -156,7 +184,7 @@ export const BiomarkerRecordsTable = (props: BiomarkerRecordsTableProps) => {
             editable: false,
             cellRenderer: DeleteButtonCellRenderer,
         },
-    ], [normalRange, targetRange, DeleteButtonCellRenderer, units, biomarkerOptions, configs])
+    ], [normalRange, targetRange, DeleteButtonCellRenderer, SourceFileCellRenderer, units, biomarkerOptions, configs])
 
     const onCellValueChanged = useCallback(async (event: CellValueChangedEvent<BiomarkerRecordRowData>) => {
         const row = event.data
