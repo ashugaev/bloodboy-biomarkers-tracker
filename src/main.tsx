@@ -11,6 +11,7 @@ import { preloadBiomarkerConfigs } from './db/models/biomarkerConfig'
 import { preloadBlockedMerges } from './db/models/blockedMerge'
 import { preloadUnits } from './db/models/unit'
 import { getCurrentUserId } from './db/models/user'
+import { registerE2EHelpers } from './testing/e2e'
 
 import './index.css'
 
@@ -64,6 +65,8 @@ if (rootElement) {
         .then(() => preloadBiomarkerConfigs())
         .then(() => preloadBlockedMerges())
         .then(() => {
+            registerE2EHelpers()
+
             const posthogKey = config.posthogKey
             if (!posthogKey) {
                 console.warn('PostHog API key is not set')

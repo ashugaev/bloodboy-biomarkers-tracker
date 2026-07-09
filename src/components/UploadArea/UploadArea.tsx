@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 
-import { message } from 'antd'
+import { message, notification } from 'antd'
 import { RcFile } from 'antd/es/upload/interface'
 import { usePostHog } from 'posthog-js/react'
 import { UploadRequestOption } from 'rc-upload/lib/interface'
@@ -11,7 +11,17 @@ import { UploadDropZone } from '@/components/UploadDropZone'
 import { UploadStatus, UploadStage } from '@/components/UploadStatus'
 import { BiomarkerConfig, bulkUpdateBiomarkerConfigs, createBiomarkerConfigs, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { createBiomarkerRecords, useBiomarkerRecords } from '@/db/models/biomarkerRecord'
-import { addDocument, useDocuments, DocumentType } from '@/db/models/document'
+import {
+    addDocument,
+    buildBiomarkerNameMap,
+    createAnalysisSignatureFromRecords,
+    DocumentType,
+    DuplicateReason,
+    getDocumentFileHash,
+    getDuplicateReasons,
+    sha256Hex,
+    useDocuments,
+} from '@/db/models/document'
 import { createUnits, useUnits } from '@/db/models/unit'
 import { getCurrentUserId } from '@/db/models/user'
 import { useVerifiedConversions } from '@/db/models/verifiedConversion'
@@ -21,7 +31,7 @@ import { captureEvent } from '@/utils'
 import { getUnitType } from '@/utils/ucum/unitType'
 
 import { usePdfExtraction } from './UploadArea.hooks'
-import { createDocumentKey, createRecordKey, createRecordsFromExtractedBiomarkers } from './UploadArea.utils'
+import { createRecordsFromExtractedBiomarkers } from './UploadArea.utils'
 
 export const UploadArea = () => {
     const posthog = usePostHog()
@@ -47,6 +57,15 @@ export const UploadArea = () => {
     const currentFileRef = useRef<RcFile | null>(null)
     const currentArrayBufferRef = useRef<ArrayBuffer | null>(null)
     const savedPageResultsRef = useRef<Map<number, ExtractionResult | null>>(new Map())
+
+    const notifyDuplicateSkipped = (fileName: string, reason: DuplicateReason) => {
+        notification.warning({
+            message: 'File excluded as duplicate',
+            description: reason === 'exact-file'
+                ? `"${fileName}" is identical to a file you already uploaded, so it was not added.`
+                : `"${fileName}" has the same test date and biomarker results as an existing report, so it was not added.`,
+        })
+    }
 
     const { extractFromPdf } = usePdfExtraction({
         extractBiomarkers,
@@ -77,11 +96,28 @@ export const UploadArea = () => {
             try {
                 setUploadStage(UploadStage.UPLOADING)
                 const arrayBuffer = await file.arrayBuffer()
+                const fileHash = await sha256Hex(arrayBuffer)
+
+                const existingHashes = await Promise.all(documents.map(getDocumentFileHash))
+                const isExactDuplicate = existingHashes.some(hash => hash && hash === fileHash)
+
+                if (isExactDuplicate) {
+                    notifyDuplicateSkipped(file.name, 'exact-file')
+                    captureEvent(posthog, 'document_upload_duplicate_skipped', {
+                        fileSize: file.size,
+                        reason: 'exact-file',
+                    })
+                    data.onSuccess?.({
+                        success: true,
+                        skipped: true,
+                    })
+                    return
+                }
 
                 setUploadStage(UploadStage.PARSING)
 
                 if (hasApiKey) {
-                    await performExtraction(file, arrayBuffer)
+                    await performExtraction(file, arrayBuffer, fileHash)
                 }
 
                 data.onSuccess?.({ success: true })
@@ -117,7 +153,7 @@ export const UploadArea = () => {
         void processQueue()
     }, [queueTrigger, hasApiKey, documents, configs, records, extractFromPdf])
 
-    const performExtraction = async (file: RcFile, arrayBuffer: ArrayBuffer, retryFailedPages?: number[], model?: string) => {
+    const performExtraction = async (file: RcFile, arrayBuffer: ArrayBuffer, fileHash: string, retryFailedPages?: number[], model?: string) => {
         setUploadStage(UploadStage.EXTRACTING)
 
         const extractionResult = await extractFromPdf(
@@ -153,7 +189,7 @@ export const UploadArea = () => {
             return
         }
 
-        await saveToDatabase(file, extractionResult.result, extractionResult.totalPages)
+        await saveToDatabase(file, fileHash, extractionResult.result, extractionResult.totalPages)
 
         setUploadStage(null)
         setCurrentPage(0)
@@ -171,7 +207,8 @@ export const UploadArea = () => {
             failedPagesCount: failedPageIndices.length,
         })
 
-        await performExtraction(currentFileRef.current, currentArrayBufferRef.current, failedPageIndices)
+        const fileHash = await sha256Hex(currentArrayBufferRef.current)
+        await performExtraction(currentFileRef.current, currentArrayBufferRef.current, fileHash, failedPageIndices)
 
         setRetrying(false)
     }
@@ -186,6 +223,7 @@ export const UploadArea = () => {
 
     const saveToDatabase = async (
         file: RcFile,
+        fileHash: string,
         extractionResult: ExtractionResult,
         totalPages: number,
     ) => {
@@ -306,40 +344,47 @@ export const UploadArea = () => {
             verifiedConversions: verifiedConversions || [],
         })
 
-        const existingKeys = new Set(
-            records
-                .map(r => {
-                    const doc = documents.find(d => d.id === r.documentId)
-                    const date = doc?.testDate
-                    return date ? createRecordKey(r, date) : null
-                })
-                .filter((key): key is string => key !== null),
-        )
+        const biomarkerNamesById = buildBiomarkerNameMap([
+            ...configs,
+            ...newConfigs,
+        ])
+        const existingBiomarkerNamesById = buildBiomarkerNameMap(configs)
+        const recordsByDocumentId = records.reduce<Record<string, typeof records>>((acc, record) => {
+            if (!record.documentId) {
+                return acc
+            }
 
-        const newRecords = candidateRecords.filter(c => !existingKeys.has(createRecordKey(c, testDate)))
+            acc[record.documentId] = [...(acc[record.documentId] ?? []), record]
+            return acc
+        }, {})
 
-        const duplicatesCount = candidateRecords.length - newRecords.length
-        if (duplicatesCount > 0) {
-            void message.warning(`${duplicatesCount} duplicate record${duplicatesCount > 1 ? 's' : ''} excluded`)
-        }
+        const uploadAnalysisSignature = createAnalysisSignatureFromRecords(candidateRecords, biomarkerNamesById)
 
-        if (newRecords.length === 0 && newConfigs.length === 0 && newUnits.length === 0 && configsToUpdate.length === 0) {
-            void message.info('No new data to save')
+        const isSameAnalysisDuplicate = documents.some(document => getDuplicateReasons(
+            {
+                testDate,
+                analysisSignature: uploadAnalysisSignature,
+            },
+            {
+                testDate: document.testDate,
+                analysisSignature: createAnalysisSignatureFromRecords(
+                    recordsByDocumentId[document.id] ?? [],
+                    existingBiomarkerNamesById,
+                ),
+            },
+        ).includes('same-analysis'))
+
+        if (isSameAnalysisDuplicate) {
+            notifyDuplicateSkipped(file.name, 'same-analysis')
+            captureEvent(posthog, 'document_upload_duplicate_skipped', {
+                fileSize: file.size,
+                reason: 'same-analysis',
+            })
             return
         }
 
-        const existingDocumentKeys = new Set(documents.map(createDocumentKey))
-        const currentDocKey = createDocumentKey({
-            fileName: file.name,
-            fileSize: file.size,
-        })
-        const isDuplicate = existingDocumentKeys.has(currentDocKey)
-
-        if (isDuplicate) {
-            void message.warning(`File "${file.name}" was already uploaded before`)
-            captureEvent(posthog, 'document_upload_duplicate', {
-
-            })
+        if (candidateRecords.length === 0 && newConfigs.length === 0 && newUnits.length === 0 && configsToUpdate.length === 0) {
+            void message.info('No new data to save')
             return
         }
 
@@ -353,6 +398,7 @@ export const UploadArea = () => {
             originalName: file.name,
             fileSize: file.size,
             mimeType: file.type,
+            fileHash,
             fileData,
             lab: extractionResult.labName ?? undefined,
             testDate,
@@ -376,8 +422,8 @@ export const UploadArea = () => {
             bulkOperations.push(createBiomarkerConfigs(newConfigs))
         }
 
-        if (newRecords.length > 0) {
-            bulkOperations.push(createBiomarkerRecords(newRecords))
+        if (candidateRecords.length > 0) {
+            bulkOperations.push(createBiomarkerRecords(candidateRecords))
         }
 
         await Promise.all(bulkOperations)
@@ -385,11 +431,10 @@ export const UploadArea = () => {
         captureEvent(posthog, 'document_uploaded', {
             fileSize: file.size,
             biomarkersCount: biomarkers.length,
-            newRecordsCount: newRecords.length,
+            newRecordsCount: candidateRecords.length,
             newConfigsCount: newConfigs.length,
             updatedConfigsCount: configsToUpdate.length,
             newUnitsCount: newUnits.length,
-            duplicatesCount,
             hasLab: !!extractionResult.labName,
             hasTestDate: !!testDate,
         })
