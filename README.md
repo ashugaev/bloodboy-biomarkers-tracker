@@ -2,6 +2,13 @@
 
 Track and visualize your blood test results over time with AI-powered data extraction
 
+<h2 align="center">
+  👉 <a href="https://bloodboy.report">Try it live at bloodboy.report</a> 👈
+</h2>
+<p align="center">
+  Upload your reports, extract biomarkers, and track changes over time — right in your browser.
+</p>
+
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://reactjs.org/)
