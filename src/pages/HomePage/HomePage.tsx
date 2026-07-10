@@ -214,6 +214,10 @@ export const HomePage = (props: HomePageProps) => {
                             Monitor trends, track changes, and make informed decisions about your wellness.
                         </p>
 
+                        <span className='mt-4 inline-flex items-center gap-1.5 py-1 px-3 rounded-full border border-indigo-200 bg-indigo-50 text-xs font-medium text-indigo-700'>
+                            🤖 AI-friendly: export structured data you can hand to any AI agent
+                        </span>
+
                         <div className='mt-4 flex justify-center gap-4 sm:mt-6'>
                             <Link
                                 className='inline-block rounded border border-indigo-600 bg-indigo-600 py-3 px-4 font-medium text-white shadow-sm transition-all hover:bg-indigo-700 hover:text-white hover:scale-105 active:scale-95'
@@ -247,6 +251,26 @@ export const HomePage = (props: HomePageProps) => {
                     <div className='max-w-4xl mx-auto'>
                         <div className='grid md:grid-cols-2 gap-6 lg:gap-12'>
                             <div className='space-y-6 lg:space-y-10'>
+                                <div className='flex gap-x-5 sm:gap-x-8'>
+                                    <svg className='shrink-0 mt-2 size-8 text-gray-800' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
+                                        <path d='M12 8V4H8'/>
+                                        <rect width='16' height='12' x='4' y='8' rx='2'/>
+                                        <path d='M2 14h2'/>
+                                        <path d='M20 14h2'/>
+                                        <path d='M15 13v2'/>
+                                        <path d='M9 13v2'/>
+                                    </svg>
+                                    <div className='grow'>
+                                        <h3 className='text-base sm:text-lg font-semibold text-gray-800'>
+                                            AI-Friendly Export
+                                        </h3>
+                                        <p className='mt-1 text-gray-600'>
+                                            Export your full biomarker history with values, units, and reference ranges intact.
+                                            Hand the file to ChatGPT, Claude, or any AI agent — no manual retyping.
+                                        </p>
+                                    </div>
+                                </div>
+
                                 <div className='flex gap-x-5 sm:gap-x-8'>
                                     <svg className='shrink-0 mt-2 size-8 text-gray-800' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
                                         <path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/>
@@ -678,6 +702,33 @@ export const HomePage = (props: HomePageProps) => {
                                         <div className='w-full overflow-hidden transition-all duration-300'>
                                             <p className='text-gray-600'>
                                                 Yes, you can export your data at any time. Since all data is stored locally in your browser, you have complete control over your information. You can also connect Google Drive to sync the newest version across browsers, keep one latest backup file, and preserve a dated history of previous database backups.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className='pt-6 pb-3'>
+                                    <button
+                                        className='group pb-3 inline-flex items-center justify-between gap-x-3 w-full md:text-lg font-semibold text-start text-gray-800 rounded-lg transition hover:text-gray-500 focus:outline-none focus:text-gray-500'
+                                        onClick={() => {
+                                            captureEvent(posthog, 'homepage_faq_toggled', {
+                                                faqId: '6',
+                                                isOpen: openFaq !== '6',
+                                            })
+                                            setOpenFaq(openFaq === '6' ? null : '6')
+                                        }}
+                                    >
+                                        Can I use my data with ChatGPT, Claude, or other AI tools?
+                                        <svg className={`shrink-0 size-5 text-gray-600 ${openFaq === '6' ? 'rotate-180' : ''} transition-transform`} xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
+                                            <path d='m6 9 6 6 6-6'/>
+                                        </svg>
+                                    </button>
+                                    {openFaq === '6' && (
+                                        <div className='w-full overflow-hidden transition-all duration-300'>
+                                            <p className='text-gray-600'>
+                                                Yes. Exporting your data gives you every biomarker with its values, units, and reference
+                                                ranges in a clean, structured format — no proprietary lock-in, so you can hand it to
+                                                ChatGPT, Claude, or any AI agent.
                                             </p>
                                         </div>
                                     )}
