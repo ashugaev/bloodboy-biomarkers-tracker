@@ -10,6 +10,7 @@ import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments } from '@/db/models/document'
 import { computeFormulaSeries, deleteFormula, Formula, FormulaSeriesPoint, renderReadableExpression, useFormulas } from '@/db/models/formula'
+import { getNameByUcum, useUnits } from '@/db/models/unit'
 
 import { FormulasTableProps } from './FormulasTable.types'
 
@@ -37,6 +38,7 @@ export const FormulasTable = (props: FormulasTableProps) => {
     const { data: records } = useBiomarkerRecords({ filter: (r) => r.approved })
     const { data: documents } = useDocuments()
     const { data: configs } = useBiomarkerConfigs()
+    const { data: units } = useUnits()
 
     const nameByBiomarkerId = useMemo(() => {
         const map = new Map<string, string>()
@@ -90,7 +92,10 @@ export const FormulasTable = (props: FormulasTableProps) => {
             title: 'Unit',
             key: 'unit',
             width: 90,
-            render: (_value, row) => row.formula.unitLabel ?? '—',
+            render: (_value, row) => {
+                const unitTitle = getNameByUcum(units, row.formula.ucumCode)
+                return unitTitle.length > 0 ? unitTitle : '—'
+            },
         },
         {
             title: 'Last',

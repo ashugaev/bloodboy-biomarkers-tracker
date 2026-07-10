@@ -21,7 +21,7 @@ export interface Formula extends BaseEntity {
     description?: string
     expression: string
     variables: FormulaVariable[]
-    unitLabel?: string
+    ucumCode?: string
     normalRange?: Range
     targetRange?: Range
     order?: number

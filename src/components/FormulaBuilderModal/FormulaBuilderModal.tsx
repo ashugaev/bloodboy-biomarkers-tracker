@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { CloseOutlined, FunctionOutlined, PlusOutlined } from '@ant-design/icons'
-import { Alert, Button, Collapse, Divider, Input, InputNumber, message, Modal, Select, Tag, Tooltip, Typography } from 'antd'
+import { Alert, Button, Collapse, Divider, Input, InputNumber, message, Modal, Select, Tag, Typography } from 'antd'
 
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
@@ -40,7 +40,7 @@ export const FormulaBuilderModal = (props: FormulaBuilderModalProps) => {
     const { data: units } = useUnits()
 
     const [name, setName] = useState('')
-    const [unitLabel, setUnitLabel] = useState('')
+    const [ucumCode, setUcumCode] = useState<string | undefined>(undefined)
     const [description, setDescription] = useState('')
     const [expression, setExpression] = useState('')
     const [variables, setVariables] = useState<FormulaVariable[]>([])
@@ -56,7 +56,7 @@ export const FormulaBuilderModal = (props: FormulaBuilderModalProps) => {
     useEffect(() => {
         if (!open) return
         setName(formula?.name ?? '')
-        setUnitLabel(formula?.unitLabel ?? '')
+        setUcumCode(formula?.ucumCode ?? undefined)
         setDescription(formula?.description ?? '')
         setExpression(formula?.expression ?? '')
         setVariables(formula?.variables ?? [])
@@ -84,6 +84,17 @@ export const FormulaBuilderModal = (props: FormulaBuilderModalProps) => {
             }))
             .sort((a, b) => a.label.localeCompare(b.label))
     }, [configs, configById])
+
+    const unitOptions = useMemo(() => {
+        return units
+            .map(unit => ({
+                value: unit.ucumCode,
+                label: unit.title,
+            }))
+            .sort((a, b) => a.label.localeCompare(b.label))
+    }, [units])
+
+    const unitTitle = useMemo(() => getNameByUcum(units, ucumCode), [units, ucumCode])
 
     const insertAtCaret = (text: string) => {
         const el = textareaRef.current
@@ -191,7 +202,7 @@ export const FormulaBuilderModal = (props: FormulaBuilderModalProps) => {
             description: description.trim().length > 0 ? description.trim() : undefined,
             expression: expression.trim(),
             variables: usedVariables,
-            unitLabel: unitLabel.trim().length > 0 ? unitLabel.trim() : undefined,
+            ucumCode: ucumCode != null && ucumCode.length > 0 ? ucumCode : undefined,
             normalRange,
             targetRange,
         }
@@ -245,7 +256,7 @@ export const FormulaBuilderModal = (props: FormulaBuilderModalProps) => {
             <div>
                 <div className='text-2xl font-semibold text-indigo-600'>
                     {preview.value != null ? formatNumber(preview.value) : '—'}
-                    {unitLabel.trim().length > 0 && <span className='text-base text-gray-400 ml-1'>{unitLabel.trim()}</span>}
+                    {unitTitle.length > 0 && <span className='text-base text-gray-400 ml-1'>{unitTitle}</span>}
                 </div>
                 <Text type='secondary' className='text-xs'>
                     Using latest values — {latestInputs.map(i => `${i.label.split(' (')[0]}=${i.value != null ? formatNumber(i.value) : '—'}`).join(', ')}
@@ -275,13 +286,19 @@ export const FormulaBuilderModal = (props: FormulaBuilderModalProps) => {
                             maxLength={100}
                         />
                     </div>
-                    <div style={{ width: 160 }}>
-                        <label className='block text-sm font-medium text-gray-700 mb-1'>Unit label</label>
-                        <Input
-                            value={unitLabel}
-                            onChange={(e) => { setUnitLabel(e.target.value) }}
-                            placeholder='ratio, mg/dL…'
-                            maxLength={50}
+                    <div style={{ width: 200 }}>
+                        <label className='block text-sm font-medium text-gray-700 mb-1'>Unit</label>
+                        <Select
+                            value={ucumCode ?? undefined}
+                            onChange={(value?: string) => { setUcumCode(value) }}
+                            options={unitOptions}
+                            placeholder='Select unit'
+                            allowClear
+                            showSearch
+                            className='w-full'
+                            filterOption={(input, option) =>
+                                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                            }
                         />
                     </div>
                 </div>
@@ -338,18 +355,17 @@ export const FormulaBuilderModal = (props: FormulaBuilderModalProps) => {
                         <div className='flex flex-wrap gap-1 mt-2'>
                             {variables.map(variable => {
                                 const used = referencedKeys.includes(variable.key)
+                                const label = (configById.get(variable.biomarkerId) ?? '').split(' (')[0]
                                 return (
-                                    <Tooltip key={variable.key} title={configById.get(variable.biomarkerId)}>
-                                        <Tag
-                                            color={used ? 'geekblue' : 'default'}
-                                            closable
-                                            closeIcon={<CloseOutlined/>}
-                                            onClose={() => { handleRemoveVariable(variable.key) }}
-                                        >
-                                            <span className='font-mono'>{`{${variable.key}}`}</span>
-                                            <span className='text-gray-500'> = {(configById.get(variable.biomarkerId) ?? '').split(' (')[0]}</span>
-                                        </Tag>
-                                    </Tooltip>
+                                    <Tag
+                                        key={variable.key}
+                                        color={used ? 'geekblue' : 'default'}
+                                        closable
+                                        closeIcon={<CloseOutlined/>}
+                                        onClose={() => { handleRemoveVariable(variable.key) }}
+                                    >
+                                        {label}
+                                    </Tag>
                                 )
                             })}
                         </div>

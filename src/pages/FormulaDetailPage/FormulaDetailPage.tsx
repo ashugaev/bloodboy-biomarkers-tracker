@@ -12,6 +12,7 @@ import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments } from '@/db/models/document'
 import { computeFormulaSeries, FormulaSeriesPoint, renderReadableExpression, useFormula } from '@/db/models/formula'
+import { getNameByUcum, useUnits } from '@/db/models/unit'
 import { ViewMode } from '@/types/viewMode.types'
 
 import { FormulaDetailPageProps } from './FormulaDetailPage.types'
@@ -33,6 +34,7 @@ export const FormulaDetailPage = (props: FormulaDetailPageProps) => {
     const { data: records } = useBiomarkerRecords({ filter: (r) => r.approved })
     const { data: documents } = useDocuments()
     const { data: configs } = useBiomarkerConfigs()
+    const { data: units } = useUnits()
     const [viewMode, setViewMode] = useState<ViewMode>(
         (location.state as { viewMode?: ViewMode })?.viewMode ?? 'table',
     )
@@ -56,6 +58,7 @@ export const FormulaDetailPage = (props: FormulaDetailPageProps) => {
             key: variable.key,
             render: (_value, point) => formatNumber(point.inputs[variable.biomarkerId]),
         }))
+        const unitTitle = getNameByUcum(units, formula.ucumCode)
         return [
             {
                 title: 'Test Date',
@@ -64,12 +67,12 @@ export const FormulaDetailPage = (props: FormulaDetailPageProps) => {
             },
             ...variableColumns,
             {
-                title: `Result${formula.unitLabel != null ? ` (${formula.unitLabel})` : ''}`,
+                title: `Result${unitTitle.length > 0 ? ` (${unitTitle})` : ''}`,
                 key: 'value',
                 render: (_value, point) => <span className='font-semibold'>{formatNumber(point.value)}</span>,
             },
         ]
-    }, [formula, nameByBiomarkerId])
+    }, [formula, nameByBiomarkerId, units])
 
     if (formula == null) {
         return (

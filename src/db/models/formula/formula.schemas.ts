@@ -24,7 +24,7 @@ export const formulaSchema = baseEntitySchema.extend({
     description: z.string().max(500).optional(),
     expression: z.string().min(1).max(1000),
     variables: z.array(formulaVariableSchema),
-    unitLabel: z.string().max(50).optional(),
+    ucumCode: z.string().optional(),
     normalRange: rangeSchema.optional(),
     targetRange: rangeSchema.optional(),
     order: z.number().optional(),
