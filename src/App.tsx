@@ -10,7 +10,7 @@ import { config } from '@/config'
 import { themeConfig } from '@/constants'
 import { useCurrentUser } from '@/db'
 import { useGoogleDriveAutoBackup } from '@/googleDrive'
-import { HomePage, DataPage, BiomarkerRecordsPage } from '@/pages'
+import { HomePage, DataPage, BiomarkerRecordsPage, FormulaDetailPage } from '@/pages'
 
 ModuleRegistry.registerModules([
     ClientSideRowModelModule,
@@ -50,6 +50,7 @@ export const App = () => {
                         <Route path='/' element={<HomePage/>}/>
                         <Route path='/data' element={<DataPage/>}/>
                         <Route path='/biomarker/:id' element={<BiomarkerRecordsPage/>}/>
+                        <Route path='/formula/:id' element={<FormulaDetailPage/>}/>
                     </Routes>
                 </BrowserRouter>
             </AntApp>

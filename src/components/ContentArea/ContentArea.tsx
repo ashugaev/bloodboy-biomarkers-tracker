@@ -10,23 +10,31 @@ import { BiomarkerMergeModal } from '@/components/BiomarkerMergeModal'
 import { BiomarkersDataTable } from '@/components/BiomarkersDataTable'
 import { useFilteredMergeableBiomarkers, useMergeableBiomarkers } from '@/components/BiomarkersDataTable/BiomarkersDataTable.merger.hooks'
 import { FilesTable } from '@/components/FilesTable'
+import { FormulaBuilderModal } from '@/components/FormulaBuilderModal'
+import { FormulasTable } from '@/components/FormulasTable'
 import { PdfViewer } from '@/components/PdfViewer'
 import { createBiomarkerConfigs, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments } from '@/db/models/document'
+import { Formula, useFormulas } from '@/db/models/formula'
 import { captureEvent } from '@/utils'
 
 import { ContentAreaProps } from './ContentArea.types'
 
+type ContentTab = 'biomarkers' | 'files' | 'formulas'
+
 export const ContentArea = (props: ContentAreaProps) => {
     const { className, currentPage } = props
     const posthog = usePostHog()
-    const [activeTab, setActiveTab] = useState<'biomarkers' | 'files'>('biomarkers')
+    const [activeTab, setActiveTab] = useState<ContentTab>('biomarkers')
     const [isMergeModalOpen, setIsMergeModalOpen] = useState(false)
+    const [isFormulaModalOpen, setIsFormulaModalOpen] = useState(false)
+    const [editingFormula, setEditingFormula] = useState<Formula | null>(null)
     const { data: unconfirmedDocuments } = useDocuments({ filter: (item) => !item.approved })
     const { data: records } = useBiomarkerRecords({ filter: (r) => r.approved })
     const { data: documents } = useDocuments()
     const { data: configs } = useBiomarkerConfigs({ filter: (c) => c.approved })
+    const { data: formulas } = useFormulas()
     const { mergeableBiomarkers, records: allRecords } = useMergeableBiomarkers()
     const filteredMergeableBiomarkers = useFilteredMergeableBiomarkers(mergeableBiomarkers, allRecords)
 
@@ -39,10 +47,28 @@ export const ContentArea = (props: ContentAreaProps) => {
         }])
     }
 
+    const handleCreateFormula = () => {
+        setEditingFormula(null)
+        setIsFormulaModalOpen(true)
+    }
+
+    const handleEditFormula = (formula: Formula) => {
+        setEditingFormula(formula)
+        setIsFormulaModalOpen(true)
+    }
+
     const configsWithRecordsCount = configs.filter(config =>
         records.some(record => record.biomarkerId === config.id),
     ).length
     const filesCount = documents.length
+    const formulasCount = formulas.length
+
+    const headingText =
+        activeTab === 'biomarkers'
+            ? `Biomarkers (${configsWithRecordsCount})`
+            : activeTab === 'files'
+                ? `Files (${filesCount})`
+                : `Formulas (${formulasCount})`
 
     if (currentDocument?.fileData) {
         return (
@@ -62,7 +88,7 @@ export const ContentArea = (props: ContentAreaProps) => {
         <div className={cn('flex flex-col h-full min-h-0', className)}>
             <div className='flex justify-between items-center mb-4 flex-shrink-0' style={{ minHeight: 40 }}>
                 <h3 className='text-lg font-medium'>
-                    {activeTab === 'biomarkers' ? `Biomarkers (${configsWithRecordsCount})` : `Files (${filesCount})`}
+                    {headingText}
                 </h3>
                 {activeTab === 'biomarkers' && (
                     <div className='flex gap-2'>
@@ -78,6 +104,9 @@ export const ContentArea = (props: ContentAreaProps) => {
                         <AddNewButton onClick={() => { void handleAddNew() }}/>
                     </div>
                 )}
+                {activeTab === 'formulas' && (
+                    <AddNewButton onClick={handleCreateFormula} label='New Formula'/>
+                )}
             </div>
             <div className='bg-white px-6 pb-6 rounded border border-gray-100 flex flex-col flex-1 min-h-0'>
                 <Tabs
@@ -86,13 +115,17 @@ export const ContentArea = (props: ContentAreaProps) => {
                         captureEvent(posthog, 'content_area_tab_changed', {
                             tab: key,
                         })
-                        setActiveTab(key as 'biomarkers' | 'files')
+                        setActiveTab(key as ContentTab)
                     }}
                     centered
                     items={[
                         {
                             key: 'biomarkers',
                             label: 'Biomarkers',
+                        },
+                        {
+                            key: 'formulas',
+                            label: 'Formulas',
                         },
                         {
                             key: 'files',
@@ -102,11 +135,11 @@ export const ContentArea = (props: ContentAreaProps) => {
                     className='flex-shrink-0'
                 />
                 <div className='flex-1 min-h-0 mt-1'>
-                    {activeTab === 'biomarkers' ? (
-                        <BiomarkersDataTable className='h-full'/>
-                    ) : (
-                        <FilesTable className='h-full'/>
+                    {activeTab === 'biomarkers' && <BiomarkersDataTable className='h-full'/>}
+                    {activeTab === 'formulas' && (
+                        <FormulasTable className='h-full' onEdit={handleEditFormula} onCreate={handleCreateFormula}/>
                     )}
+                    {activeTab === 'files' && <FilesTable className='h-full'/>}
                 </div>
             </div>
             {activeTab === 'biomarkers' && (
@@ -117,6 +150,11 @@ export const ContentArea = (props: ContentAreaProps) => {
                     onCancel={() => { setIsMergeModalOpen(false) }}
                 />
             )}
+            <FormulaBuilderModal
+                open={isFormulaModalOpen}
+                formula={editingFormula}
+                onClose={() => { setIsFormulaModalOpen(false) }}
+            />
         </div>
     )
 }

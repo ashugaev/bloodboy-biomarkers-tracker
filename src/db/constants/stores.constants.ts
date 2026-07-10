@@ -4,4 +4,5 @@ export enum DBStore {
     UPLOADED_FILES = 'uploaded_files',
     APP_SETTINGS = 'app_settings',
     UNITS = 'units',
+    FORMULAS = 'formulas',
 }
