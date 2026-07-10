@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 
-import { DeleteOutlined, EditOutlined, FunctionOutlined, RightOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, FunctionOutlined } from '@ant-design/icons'
 import { Button, Empty, message, Popconfirm, Table, Tooltip, Typography } from 'antd'
 import { ColumnsType } from 'antd/es/table'
 import { useNavigate } from 'react-router-dom'
@@ -136,12 +136,9 @@ export const FormulasTable = (props: FormulasTableProps) => {
         {
             title: '',
             key: 'actions',
-            width: 130,
+            width: 90,
             render: (_value, row) => (
                 <div className='flex items-center gap-1' onClick={(e) => { e.stopPropagation() }}>
-                    <Tooltip title='View'>
-                        <Button size='small' type='text' icon={<RightOutlined/>} onClick={() => { void navigate(`/formula/${row.formula.id}`) }}/>
-                    </Tooltip>
                     <Tooltip title='Edit'>
                         <Button size='small' type='text' icon={<EditOutlined/>} onClick={() => { onEdit(row.formula) }}/>
                     </Tooltip>

@@ -310,13 +310,12 @@ export const FormulaBuilderModal = (props: FormulaBuilderModalProps) => {
 
                 <div>
                     <label className='block text-sm font-medium text-gray-700 mb-1'>Expression</label>
-                    <div className='flex flex-wrap gap-2 mb-2'>
+                    <div className='flex flex-wrap items-center gap-2 mb-2'>
                         <Select
                             showSearch
                             value={null}
                             placeholder='+ Insert biomarker'
                             style={{ minWidth: 200 }}
-                            size='small'
                             suffixIcon={<PlusOutlined/>}
                             options={biomarkerOptions}
                             filterOption={(input, option) =>
@@ -327,7 +326,7 @@ export const FormulaBuilderModal = (props: FormulaBuilderModalProps) => {
                         />
                         <div className='flex gap-1'>
                             {OPERATOR_BUTTONS.map(op => (
-                                <Button key={op} size='small' onClick={() => { handleInsertOperator(op) }}>
+                                <Button key={op} onClick={() => { handleInsertOperator(op) }}>
                                     {op}
                                 </Button>
                             ))}
@@ -335,7 +334,6 @@ export const FormulaBuilderModal = (props: FormulaBuilderModalProps) => {
                         <Select
                             value={null}
                             placeholder='ƒ'
-                            size='small'
                             style={{ width: 90 }}
                             suffixIcon={<FunctionOutlined/>}
                             options={FORMULA_FUNCTION_NAMES.map(fn => ({
