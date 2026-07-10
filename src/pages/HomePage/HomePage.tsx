@@ -214,13 +214,9 @@ export const HomePage = (props: HomePageProps) => {
                             Monitor trends, track changes, and make informed decisions about your wellness.
                         </p>
 
-                        <button
-                            type='button'
-                            className='mt-4 inline-flex items-center gap-1.5 py-1 px-3 rounded-full border border-indigo-200 bg-indigo-50 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-colors'
-                            onClick={() => { scrollToSection('features') }}
-                        >
+                        <span className='mt-4 inline-flex items-center gap-1.5 py-1 px-3 rounded-full border border-indigo-200 bg-indigo-50 text-xs font-medium text-indigo-700'>
                             🤖 AI-friendly: export structured data you can hand to any AI agent
-                        </button>
+                        </span>
 
                         <div className='mt-4 flex justify-center gap-4 sm:mt-6'>
                             <Link
