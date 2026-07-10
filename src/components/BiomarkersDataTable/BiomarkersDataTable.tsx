@@ -180,40 +180,46 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
                 return true
             })
 
-        const hasActiveFilter =
+        // Formulas behave like virtual biomarkers: shown by default and
+        // respected by the biomarker filter. Record-based filters
+        // (document / range / anomaly) don't apply to formulas, so we hide
+        // them while one of those is active.
+        const hasBiomarkerFilter = (biomarkerIds?.length ?? 0) > 0
+        const hasRecordBasedFilter =
             (documentId?.length ?? 0) > 0 ||
-            (biomarkerIds?.length ?? 0) > 0 ||
             outOfRange !== undefined ||
             outOfRangeHistory !== undefined ||
             hasAnomaly !== undefined
 
-        // Formulas are always shown (like a virtual biomarker) unless the user
-        // has narrowed the table with a biomarker/document/range filter.
-        const formulaRows: BiomarkerRowData[] = hasActiveFilter
+        const visibleFormulas = hasRecordBasedFilter
             ? []
-            : formulas.map(formula => {
-                const series = computeFormulaSeries(formula, records, documents)
-                const values = series.map(p => p.value)
-                const lastFive = series.slice(-5).map(p => ({
-                    value: p.value,
-                    date: p.date,
-                }))
-                const lastValue = values.length > 0 ? values[values.length - 1] : undefined
-                return {
-                    ...formula,
-                    approved: true,
-                    isFormula: true,
-                    unitTitle: getNameByUcum(units, formula.ucumCode),
-                    history: lastFive,
-                    stats: {
-                        lastMeasurement: lastValue,
-                        lastValue,
-                        maxResult: values.length > 0 ? Math.max(...values) : undefined,
-                        minResult: values.length > 0 ? Math.min(...values) : undefined,
-                    },
-                    hasRecords: series.length > 0,
-                } as BiomarkerRowData
-            })
+            : hasBiomarkerFilter
+                ? formulas.filter(formula => biomarkerIds?.includes(formula.id) ?? false)
+                : formulas
+
+        const formulaRows: BiomarkerRowData[] = visibleFormulas.map(formula => {
+            const series = computeFormulaSeries(formula, records, documents)
+            const values = series.map(p => p.value)
+            const lastFive = series.slice(-5).map(p => ({
+                value: p.value,
+                date: p.date,
+            }))
+            const lastValue = values.length > 0 ? values[values.length - 1] : undefined
+            return {
+                ...formula,
+                approved: true,
+                isFormula: true,
+                unitTitle: getNameByUcum(units, formula.ucumCode),
+                history: lastFive,
+                stats: {
+                    lastMeasurement: lastValue,
+                    lastValue,
+                    maxResult: values.length > 0 ? Math.max(...values) : undefined,
+                    minResult: values.length > 0 ? Math.min(...values) : undefined,
+                },
+                hasRecords: series.length > 0,
+            } as BiomarkerRowData
+        })
 
         return [...configRows, ...formulaRows]
     }, [configs, records, documents, units, documentId, biomarkerIds, outOfRange, outOfRangeHistory, hasAnomaly, formulas])
