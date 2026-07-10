@@ -6,6 +6,7 @@ import { Button, Form, Input, message, Modal, Select, Space, Tag } from 'antd'
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments } from '@/db/models/document'
+import { useFormulas } from '@/db/models/formula'
 import { addSavedFilter, deleteSavedFilter, getRandomTagColor, useSavedFilters } from '@/db/models/savedFilter'
 
 import { BiomarkersDataTableFiltersProps, RangeType } from './BiomarkersDataTableFilters.types'
@@ -15,6 +16,7 @@ export const BiomarkersDataTableFilters = (props: BiomarkersDataTableFiltersProp
     const { data: records } = useBiomarkerRecords({ filter: (r) => r.approved })
     const { data: documents } = useDocuments()
     const { data: configs } = useBiomarkerConfigs({ filter: (c) => c.approved })
+    const { data: formulas } = useFormulas()
     const { data: savedFilters } = useSavedFilters()
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [form] = Form.useForm<{ name: string }>()
@@ -51,15 +53,25 @@ export const BiomarkersDataTableFilters = (props: BiomarkersDataTableFiltersProp
     }, [records, documents])
 
     const biomarkerOptions = useMemo(() => {
-        if (!configs || configs.length === 0) return []
+        const configItems = configs.map(config => ({
+            value: config.id,
+            label: config.name,
+            sortKey: config.name.toLowerCase(),
+        }))
+        // Formulas behave like biomarkers here too, marked with a ƒ prefix.
+        const formulaItems = formulas.map(formula => ({
+            value: formula.id,
+            label: `ƒ ${formula.name}`,
+            sortKey: formula.name.toLowerCase(),
+        }))
 
-        return configs
-            .map(config => ({
-                value: config.id,
-                label: config.name,
+        return [...configItems, ...formulaItems]
+            .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+            .map(({ value, label }) => ({
+                value,
+                label,
             }))
-            .sort((a, b) => a.label.localeCompare(b.label))
-    }, [configs])
+    }, [configs, formulas])
 
     const outOfRangeOptions = [
         {

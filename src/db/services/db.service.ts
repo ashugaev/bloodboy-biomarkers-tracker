@@ -6,6 +6,7 @@ import { BiomarkerConfig } from '@/db/models/biomarkerConfig'
 import { BiomarkerRecord } from '@/db/models/biomarkerRecord'
 import { BlockedMerge } from '@/db/models/blockedMerge'
 import { UploadedDocument } from '@/db/models/document'
+import { Formula } from '@/db/models/formula'
 import { SavedFilter } from '@/db/models/savedFilter'
 import { Unit } from '@/db/models/unit'
 import { User } from '@/db/models/user'
@@ -40,6 +41,7 @@ class BloodTestDatabase extends Dexie {
     savedFilters!: EntityTable<SavedFilter, 'id'>
     verifiedConversions!: EntityTable<VerifiedConversion, 'id'>
     blockedMerges!: EntityTable<BlockedMerge, 'id'>
+    formulas!: EntityTable<Formula, 'id'>
 
     constructor () {
         super(DB_NAME)
@@ -110,6 +112,19 @@ class BloodTestDatabase extends Dexie {
             savedFilters: 'id, userId, createdAt, updatedAt',
             verifiedConversions: 'id, userId, biomarkerName, sourceUnit, targetUnit, createdAt, updatedAt',
             blockedMerges: 'id, userId, biomarkerName, sourceUnit, targetUnit, createdAt, updatedAt',
+        })
+
+        this.version(8).stores({
+            biomarkerConfigs: 'id, userId, approved, createdAt, updatedAt',
+            biomarkerRecords: 'id, userId, biomarkerId, documentId, approved, latest, createdAt, updatedAt',
+            uploadedFiles: 'id, userId, type, approved, uploadDate, createdAt, updatedAt',
+            appSettings: 'id, createdAt, updatedAt',
+            users: 'id, createdAt, updatedAt',
+            units: 'id, ucumCode, approved, createdAt, updatedAt',
+            savedFilters: 'id, userId, createdAt, updatedAt',
+            verifiedConversions: 'id, userId, biomarkerName, sourceUnit, targetUnit, createdAt, updatedAt',
+            blockedMerges: 'id, userId, biomarkerName, sourceUnit, targetUnit, createdAt, updatedAt',
+            formulas: 'id, userId, createdAt, updatedAt',
         })
 
         // Disabled until user switch is implemented

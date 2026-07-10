@@ -17,6 +17,7 @@ export interface BiomarkerRowData extends BiomarkerConfig {
     history: HistoryDataPoint[]
     stats: BiomarkerStats
     hasRecords: boolean
+    isFormula?: boolean
 }
 
 export interface BiomarkersDataTableProps {

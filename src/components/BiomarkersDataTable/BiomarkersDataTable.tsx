@@ -2,7 +2,7 @@ import { memo, useCallback, useMemo, useRef, useState } from 'react'
 
 import { CellValueChangedEvent, ColDef, ICellRendererParams, GridApi } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
-import { DeleteOutlined, RightOutlined } from '@ant-design/icons'
+import { DeleteOutlined, FunctionOutlined, RightOutlined } from '@ant-design/icons'
 import { Button, message, Tag, Tooltip } from 'antd'
 import { useNavigate } from 'react-router-dom'
 
@@ -13,8 +13,9 @@ import { MiniBarChart } from '@/components/MiniBarChart'
 import { deleteBiomarkerConfig, updateBiomarkerConfig, useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments } from '@/db/models/document'
+import { computeFormulaSeries, deleteFormula, updateFormula, useFormulas } from '@/db/models/formula'
 import { useSavedFilters } from '@/db/models/savedFilter'
-import { useUnits } from '@/db/models/unit'
+import { getNameByUcum, useUnits } from '@/db/models/unit'
 import { ViewMode } from '@/types/viewMode.types'
 import { getRangeCellStyle } from '@/utils/cellStyle'
 
@@ -29,6 +30,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
     const { data: documents } = useDocuments()
     const { data: units } = useUnits()
     const { data: savedFilters } = useSavedFilters()
+    const { data: formulas } = useFormulas()
     const navigate = useNavigate()
     const [documentId, setDocumentId] = useState<string[] | undefined>()
     const [biomarkerIds, setBiomarkerIds] = useState<string[] | undefined>()
@@ -36,12 +38,17 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
     const [outOfRangeHistory, setOutOfRangeHistory] = useState<RangeType | undefined>()
     const [hasAnomaly, setHasAnomaly] = useState<number | undefined>()
 
-    const handleDelete = useCallback(async (id: string) => {
-        await deleteBiomarkerConfig(id)
+    const handleDelete = useCallback(async (row: BiomarkerRowData) => {
+        if (row.isFormula) {
+            await deleteFormula(row.id)
+            return
+        }
+        await deleteBiomarkerConfig(row.id)
     }, [])
 
-    const handleViewRecords = useCallback((id: string, mode: ViewMode = 'table') => {
-        void navigate(`/biomarker/${id}`, { state: { viewMode: mode } })
+    const handleViewRecords = useCallback((row: BiomarkerRowData, mode: ViewMode = 'table') => {
+        const path = row.isFormula ? `/formula/${row.id}` : `/biomarker/${row.id}`
+        void navigate(path, { state: { viewMode: mode } })
     }, [navigate])
 
     const rowData = useMemo(() => {
@@ -55,7 +62,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
             filteredConfigs = filteredConfigs.filter(c => biomarkerIds.includes(c.id))
         }
 
-        return filteredConfigs
+        const configRows = filteredConfigs
             .map(config => {
                 const configRecords = filteredRecords.filter(r => r.biomarkerId === config.id)
                 const allConfigRecords = records.filter(r => r.biomarkerId === config.id)
@@ -172,7 +179,50 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
 
                 return true
             })
-    }, [configs, records, documents, units, documentId, biomarkerIds, outOfRange, outOfRangeHistory, hasAnomaly])
+
+        // Formulas behave like virtual biomarkers: shown by default and
+        // respected by the biomarker filter. Record-based filters
+        // (document / range / anomaly) don't apply to formulas, so we hide
+        // them while one of those is active.
+        const hasBiomarkerFilter = (biomarkerIds?.length ?? 0) > 0
+        const hasRecordBasedFilter =
+            (documentId?.length ?? 0) > 0 ||
+            outOfRange !== undefined ||
+            outOfRangeHistory !== undefined ||
+            hasAnomaly !== undefined
+
+        const visibleFormulas = hasRecordBasedFilter
+            ? []
+            : hasBiomarkerFilter
+                ? formulas.filter(formula => biomarkerIds?.includes(formula.id) ?? false)
+                : formulas
+
+        const formulaRows: BiomarkerRowData[] = visibleFormulas.map(formula => {
+            const series = computeFormulaSeries(formula, records, documents)
+            const values = series.map(p => p.value)
+            const lastFive = series.slice(-5).map(p => ({
+                value: p.value,
+                date: p.date,
+            }))
+            const lastValue = values.length > 0 ? values[values.length - 1] : undefined
+            return {
+                ...formula,
+                approved: true,
+                isFormula: true,
+                unitTitle: getNameByUcum(units, formula.ucumCode),
+                history: lastFive,
+                stats: {
+                    lastMeasurement: lastValue,
+                    lastValue,
+                    maxResult: values.length > 0 ? Math.max(...values) : undefined,
+                    minResult: values.length > 0 ? Math.min(...values) : undefined,
+                },
+                hasRecords: series.length > 0,
+            } as BiomarkerRowData
+        })
+
+        return [...configRows, ...formulaRows]
+    }, [configs, records, documents, units, documentId, biomarkerIds, outOfRange, outOfRangeHistory, hasAnomaly, formulas])
 
     const ViewButtonCellRenderer = useMemo(() => {
         return memo((cellProps: ICellRendererParams<BiomarkerRowData>) => (
@@ -182,15 +232,31 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
                 iconPosition='end'
                 type='link'
                 onClick={() => {
-                    if (cellProps.data?.id) {
-                        handleViewRecords(cellProps.data.id)
+                    if (cellProps.data) {
+                        handleViewRecords(cellProps.data)
                     }
                 }}
             >
-                View All Records
+                {cellProps.data?.isFormula ? 'View Formula' : 'View All Records'}
             </Button>
         ))
     }, [handleViewRecords])
+
+    const NameCellRenderer = useMemo(() => {
+        return memo((cellProps: ICellRendererParams<BiomarkerRowData>) => {
+            const isFormula = cellProps.data?.isFormula ?? false
+            return (
+                <span className='flex items-center gap-1'>
+                    {isFormula && (
+                        <Tooltip title='Formula'>
+                            <FunctionOutlined className='text-indigo-400'/>
+                        </Tooltip>
+                    )}
+                    <span>{cellProps.value}</span>
+                </span>
+            )
+        })
+    }, [])
 
     const DeleteButtonCellRenderer = useMemo(() => {
         return memo((cellProps: ICellRendererParams<BiomarkerRowData>) => (
@@ -199,8 +265,8 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
                 danger
                 icon={<DeleteOutlined/>}
                 onClick={() => {
-                    if (cellProps.data?.id) {
-                        void handleDelete(cellProps.data.id)
+                    if (cellProps.data) {
+                        void handleDelete(cellProps.data)
                     }
                 }}
             />
@@ -219,8 +285,8 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
                     normalRange={normalRange}
                     targetRange={targetRange}
                     onClick={() => {
-                        if (cellProps.data?.id) {
-                            handleViewRecords(cellProps.data.id, 'chart')
+                        if (cellProps.data) {
+                            handleViewRecords(cellProps.data, 'chart')
                         }
                     }}
                 />
@@ -287,6 +353,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
         {
             ...createNameColumn<BiomarkerRowData>(),
             sort: 'asc',
+            cellRenderer: NameCellRenderer,
         },
         {
             ...createUnitColumn<BiomarkerRowData>(units),
@@ -370,7 +437,7 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
             editable: false,
             cellRenderer: DeleteButtonCellRenderer,
         },
-    ], [ViewButtonCellRenderer, DeleteButtonCellRenderer, HistoryCellRenderer, FiltersCellRenderer, units])
+    ], [ViewButtonCellRenderer, NameCellRenderer, DeleteButtonCellRenderer, HistoryCellRenderer, FiltersCellRenderer, units])
 
     const onCellValueChanged = useCallback(async (event: CellValueChangedEvent<BiomarkerRowData>) => {
         const row = event.data
@@ -402,6 +469,16 @@ export const BiomarkersDataTable = (props: BiomarkersDataTableProps) => {
                         }
                     }
                 })
+            }
+
+            if (row.isFormula) {
+                await updateFormula(row.id, {
+                    name: row.name,
+                    ucumCode: row.ucumCode,
+                    normalRange: row.normalRange,
+                    targetRange: row.targetRange,
+                })
+                return
             }
 
             await updateBiomarkerConfig(row.id, {
