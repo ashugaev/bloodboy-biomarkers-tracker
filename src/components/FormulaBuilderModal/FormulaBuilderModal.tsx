@@ -134,6 +134,11 @@ export const FormulaBuilderModal = (props: FormulaBuilderModalProps) => {
 
     const handleRemoveVariable = (key: string) => {
         setVariables(prev => prev.filter(v => v.key !== key))
+        setExpression(prev => {
+            const next = prev.split(`{${key}}`).join('')
+            caretRef.current = Math.min(caretRef.current, next.length)
+            return next
+        })
     }
 
     const referencedKeys = useMemo(() => extractVariableKeys(expression), [expression])
