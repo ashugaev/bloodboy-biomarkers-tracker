@@ -6,4 +6,5 @@ export interface BiomarkerChartProps {
     normalRange?: Range
     targetRange?: Range
     className?: string
+    onViewDocument?: (documentId?: string) => void
 }

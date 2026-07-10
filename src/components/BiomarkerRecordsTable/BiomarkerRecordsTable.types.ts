@@ -6,6 +6,7 @@ export interface BiomarkerRecordRowData extends BiomarkerRecord {
     date?: Date
     lab?: string
     name?: string
+    hasFile?: boolean
 }
 
 export interface BiomarkerRecordsTableProps {
@@ -14,4 +15,5 @@ export interface BiomarkerRecordsTableProps {
     normalRange?: Range
     targetRange?: Range
     className?: string
+    onViewDocument?: (documentId?: string) => void
 }

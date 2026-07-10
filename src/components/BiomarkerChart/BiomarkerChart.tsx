@@ -13,6 +13,8 @@ interface ChartDataPoint {
     date: string
     value: number
     timestamp: number
+    documentId?: string
+    hasFile: boolean
 }
 
 interface RoundedBarProps {
@@ -21,11 +23,13 @@ interface RoundedBarProps {
     y: number
     width: number
     height: number
+    payload?: ChartDataPoint
 }
 
 const RoundedBar = (props: RoundedBarProps) => {
-    const { fill, x, y, width, height } = props
+    const { fill, x, y, width, height, payload } = props
     const radius = 8
+    const clickable = !!payload?.hasFile
 
     return (
         <path
@@ -39,12 +43,13 @@ const RoundedBar = (props: RoundedBarProps) => {
                 Z
             `}
             fill={fill}
+            style={clickable ? { cursor: 'pointer' } : undefined}
         />
     )
 }
 
 export const BiomarkerChart = (props: BiomarkerChartProps) => {
-    const { biomarkerId, normalRange, targetRange, className } = props
+    const { biomarkerId, normalRange, targetRange, className, onViewDocument } = props
     const { data: records } = useBiomarkerRecords({
         filter: (item) => item.biomarkerId === biomarkerId,
     })
@@ -62,6 +67,8 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
                 date: date ? new Date(date).toLocaleDateString() : '',
                 value: record.value,
                 timestamp: date?.getTime() ?? 0,
+                documentId: record.documentId,
+                hasFile: !!document?.fileData,
             }
         })
 
@@ -130,6 +137,11 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
                         </span>
                     </div>
                 )}
+                {onViewDocument && chartData.some(d => d.hasFile) && (
+                    <span className='text-xs text-gray-400 self-center'>
+                        Click a bar to open its source file
+                    </span>
+                )}
             </div>
 
             <div className='flex-1 min-h-[400px]'>
@@ -168,7 +180,17 @@ export const BiomarkerChart = (props: BiomarkerChartProps) => {
                             />
                         )}
 
-                        <Bar dataKey='value' fill={COLORS.CHART_BAR} maxBarSize={40} shape={RoundedBar as never}/>
+                        <Bar
+                            dataKey='value'
+                            fill={COLORS.CHART_BAR}
+                            maxBarSize={40}
+                            shape={RoundedBar as never}
+                            onClick={(data: { payload?: ChartDataPoint }) => {
+                                if (data?.payload?.hasFile) {
+                                    onViewDocument?.(data.payload.documentId)
+                                }
+                            }}
+                        />
                     </BarChart>
                 </ResponsiveContainer>
             </div>

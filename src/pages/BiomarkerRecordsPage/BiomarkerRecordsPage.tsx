@@ -7,9 +7,11 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { AddNewButton } from '@/components/AddNewButton'
 import { BiomarkerChart } from '@/components/BiomarkerChart'
 import { BiomarkerRecordsTable } from '@/components/BiomarkerRecordsTable'
+import { DocumentViewerModal } from '@/components/DocumentViewerModal'
 import { Header } from '@/components/Header'
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { createBiomarkerRecords, useBiomarkerRecords } from '@/db/models/biomarkerRecord'
+import { UploadedDocument, useDocuments } from '@/db/models/document'
 import { ViewMode } from '@/types/viewMode.types'
 
 import { BiomarkerRecordsPageProps } from './BiomarkerRecordsPage.types'
@@ -23,11 +25,21 @@ export const BiomarkerRecordsPage = (props: BiomarkerRecordsPageProps) => {
     const { data: records } = useBiomarkerRecords({
         filter: (item) => item.biomarkerId === id && item.approved && (item.value !== undefined || item.textValue !== undefined),
     })
+    const { data: documents } = useDocuments()
     const [viewMode, setViewMode] = useState<ViewMode>(
         (location.state as { viewMode?: ViewMode })?.viewMode ?? 'table',
     )
+    const [viewerDocument, setViewerDocument] = useState<UploadedDocument | null>(null)
 
     const biomarkerConfig = configs.find(c => c.id === id)
+
+    const handleViewDocument = useCallback((documentId?: string) => {
+        if (!documentId) return
+        const document = documents.find(d => d.id === documentId)
+        if (document?.fileData) {
+            setViewerDocument(document)
+        }
+    }, [documents])
 
     const handleAddNew = useCallback(async () => {
         if (!id) return
@@ -102,6 +114,7 @@ export const BiomarkerRecordsPage = (props: BiomarkerRecordsPageProps) => {
                                     normalRange={biomarkerConfig.normalRange}
                                     targetRange={biomarkerConfig.targetRange}
                                     className='h-full'
+                                    onViewDocument={handleViewDocument}
                                 />
                             )}
 
@@ -112,12 +125,17 @@ export const BiomarkerRecordsPage = (props: BiomarkerRecordsPageProps) => {
                                     normalRange={biomarkerConfig.normalRange}
                                     targetRange={biomarkerConfig.targetRange}
                                     className='h-full'
+                                    onViewDocument={handleViewDocument}
                                 />
                             )}
                         </div>
                     </div>
                 </div>
             </div>
+            <DocumentViewerModal
+                document={viewerDocument}
+                onClose={() => { setViewerDocument(null) }}
+            />
         </div>
     )
 }
