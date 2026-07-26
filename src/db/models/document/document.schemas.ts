@@ -9,6 +9,7 @@ export const uploadedDocumentSchema = baseEntitySchema.extend({
     originalName: z.string().min(1),
     fileSize: z.number().positive(),
     mimeType: z.string().min(1),
+    fileHash: z.string().optional(),
     lab: z.string().optional(),
     testDate: z.coerce.date().optional(),
     doctorName: z.string().optional(),

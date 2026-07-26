@@ -50,7 +50,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@ag-grid-community/client-side-row-model": "32.3.9",
@@ -85,6 +87,7 @@
     "zod-error": "2.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.59.1",
     "@svgr/plugin-jsx": "8.1.0",
     "@svgr/plugin-svgo": "8.1.0",
     "@tanstack/eslint-plugin-query": "5.91.2",
@@ -113,8 +116,8 @@
     "tailwindcss": "3.4.17",
     "typescript": "5.9.3",
     "vite": "6.4.0",
-    "vitest": "2.1.8",
     "vite-plugin-svgr": "4.5.0",
-    "vite-tsconfig-paths": "5.1.4"
+    "vite-tsconfig-paths": "5.1.4",
+    "vitest": "2.1.8"
   }
 }

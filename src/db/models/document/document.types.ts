@@ -9,6 +9,7 @@ export interface UploadedDocument extends BaseEntity {
     originalName: string
     fileSize: number
     mimeType: string
+    fileHash?: string
     lab?: string
     testDate?: Date
     doctorName?: string
