@@ -19,11 +19,10 @@ PIPELINE
                     Enforces build_type=workflow, builds, uploads, deploys, verifies.
   audit.yml         npm audit. Separate from CI so registry flakiness cannot block deploy.
                     Retries transport errors, fails only on real critical findings.
-  site-health.yml   daily curl of bloodboy.report. Fails if raw source is served.
 
   scripts/verify-site.sh <url> [attempts] [delay]
     Fails on unreplaced %BASE_URL%, on /src/main.tsx reference, on missing or
-    non-JavaScript entry bundle. Used by deploy.yml and site-health.yml.
+    non-JavaScript entry bundle. Used by the deploy verify job.
 
 
 CHECK LIVE SITE BY HAND
