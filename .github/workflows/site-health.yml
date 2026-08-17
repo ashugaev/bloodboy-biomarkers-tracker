@@ -1,0 +1,24 @@
+name: Site Health
+
+# Standing safety net. Catches the live site regressing to raw repo source
+# (Pages source flipped back to a branch) even when no deploy has run.
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check live site
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check live site serves the build
+        run: bash scripts/verify-site.sh "https://$(tr -d '[:space:]' < CNAME)/" 3 10
