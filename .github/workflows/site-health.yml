@@ -2,6 +2,7 @@ name: Site Health
 
 # Standing safety net. Catches the live site regressing to raw repo source
 # (Pages source flipped back to a branch) even when no deploy has run.
+# A red run alone notifies nobody, so failure opens an issue and recovery closes it.
 
 on:
   schedule:
@@ -10,6 +11,10 @@ on:
 
 permissions:
   contents: read
+  issues: write
+
+env:
+  ISSUE_TITLE: 'Live site is not serving the built bundle'
 
 jobs:
   check:
@@ -21,4 +26,47 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Check live site serves the build
-        run: bash scripts/verify-site.sh "https://$(tr -d '[:space:]' < CNAME)/" 3 10
+        id: check
+        run: |
+          url="https://$(tr -d '[:space:]' < CNAME)/"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          if out=$(bash scripts/verify-site.sh "$url" 3 10 2>&1); then
+            echo "$out"
+            echo "healthy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "$out"
+            echo "healthy=false" >> "$GITHUB_OUTPUT"
+            {
+              echo 'detail<<REPORT'
+              echo "$out"
+              echo REPORT
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open issue when broken
+        if: steps.check.outputs.healthy == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          URL: ${{ steps.check.outputs.url }}
+          DETAIL: ${{ steps.check.outputs.detail }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          existing=$(gh issue list --state open --search "\"$ISSUE_TITLE\" in:title" --json number --jq '.[0].number // empty')
+          body=$(printf '%s\n\n```\n%s\n```\n\nRun: %s\n\nCheck Settings > Pages > Source. It must be GitHub Actions, not a branch.\n' "$URL is not serving a built bundle." "$DETAIL" "$RUN_URL")
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$ISSUE_TITLE" --body "$body"
+          fi
+          exit 1
+
+      - name: Close issue when recovered
+        if: steps.check.outputs.healthy == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          URL: ${{ steps.check.outputs.url }}
+        run: |
+          existing=$(gh issue list --state open --search "\"$ISSUE_TITLE\" in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue close "$existing" --comment "$URL serves the built bundle again."
+          fi
