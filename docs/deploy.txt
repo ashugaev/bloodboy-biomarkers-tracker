@@ -1,0 +1,36 @@
+DEPLOY, GITHUB PAGES
+
+
+INVARIANT
+
+  Pages source must be GitHub Actions.
+    gh api repos/ashugaev/bloodboy-biomarkers-tracker/pages --jq .build_type
+    workflow  correct
+    legacy    broken, branch build publishes repo root verbatim, so the live
+              site serves index.html with %BASE_URL% and /src/main.tsx. Blank page.
+
+  UI path: Settings, Pages, Build and deployment, Source, GitHub Actions.
+
+
+PIPELINE
+
+  ci.yml            lint, typecheck, tests, secret scan, e2e. Runs on every push and PR.
+  deploy.yml        runs after CI succeeds on main, or workflow_dispatch.
+                    Enforces build_type=workflow, builds, uploads, deploys, verifies.
+  audit.yml         npm audit. Separate from CI so registry flakiness cannot block deploy.
+                    Retries transport errors, fails only on real critical findings.
+
+  scripts/verify-site.sh <url> [attempts] [delay]
+    Fails on unreplaced %BASE_URL%, on /src/main.tsx reference, on missing or
+    non-JavaScript entry bundle. Used by the deploy verify job.
+
+
+CHECK LIVE SITE BY HAND
+
+  bash scripts/verify-site.sh https://bloodboy.report/ 1 1
+
+
+TRIGGER A DEPLOY BY HAND
+
+  gh workflow run "Deploy to GitHub Pages" --ref main
+  Needs admin on the repo.

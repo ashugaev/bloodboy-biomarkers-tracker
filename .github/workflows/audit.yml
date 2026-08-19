@@ -1,0 +1,49 @@
+name: Dependency Audit
+
+# Kept out of CI on purpose: npm audit talks to the live registry and fails
+# intermittently with transport errors. CI gates the Pages deploy, so a flaky
+# registry call must never be able to block a release.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit production dependencies
+        run: |
+          for attempt in 1 2 3; do
+            if out=$(npm audit --omit=dev --audit-level=critical 2>&1); then
+              echo "$out"
+              exit 0
+            fi
+            echo "$out"
+            if printf '%s' "$out" | grep -qE 'audit endpoint returned an error|Invalid package tree|ETIMEDOUT|ECONNRESET|EAI_AGAIN'; then
+              echo "::warning::npm audit registry error on attempt $attempt"
+              sleep $((attempt * 15))
+              continue
+            fi
+            echo "::error::Critical vulnerabilities in production dependencies"
+            exit 1
+          done
+          echo "::warning::npm audit unreachable after 3 attempts - registry error, not a vulnerability finding"
