@@ -15,6 +15,7 @@ declare global {
         __bloodboyE2E?: {
             reset: () => Promise<void>
             seedExactFileDuplicateScenario: (fileHash: string) => Promise<void>
+            seedGoogleDriveAutoSyncScenario: () => Promise<void>
         }
     }
 }
@@ -89,6 +90,24 @@ const seedExactFileDuplicateScenario = async (fileHash: string) => {
     })
 }
 
+const seedGoogleDriveAutoSyncScenario = async () => {
+    await clearDatabase()
+    await ensureBaseData()
+
+    const now = new Date('2026-04-26T12:00:00.000Z')
+
+    await db.appSettings.update(MAIN_SETTINGS_ID, {
+        googleDriveBackup: {
+            enabled: true,
+            lastBackupAt: now,
+            connectedAt: now,
+        },
+        updatedAt: now,
+    })
+
+    window.localStorage.removeItem('bloodboy.googleDrive.accessToken')
+}
+
 export const registerE2EHelpers = () => {
     if (!import.meta.env.DEV || typeof window === 'undefined') {
         return
@@ -100,5 +119,6 @@ export const registerE2EHelpers = () => {
             await ensureBaseData()
         },
         seedExactFileDuplicateScenario,
+        seedGoogleDriveAutoSyncScenario,
     }
 }

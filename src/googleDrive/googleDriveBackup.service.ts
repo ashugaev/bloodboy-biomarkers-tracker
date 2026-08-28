@@ -168,9 +168,13 @@ const loadGoogleIdentityScript = async () => {
     })
 }
 
-const requestGoogleDriveAccessToken = async (prompt = ''): Promise<string> => {
+const requestGoogleDriveAccessToken = async (prompt = '', interactive = true): Promise<string> => {
     if (isFreshAccessToken() && cachedAccessToken) {
         return cachedAccessToken
+    }
+
+    if (!interactive) {
+        throw new GoogleDriveBackupError('Google Drive sync needs reconnection')
     }
 
     if (!config.googleClientId) {
@@ -667,7 +671,7 @@ export const backupDatabaseToGoogleDrive = async (
 ): Promise<GoogleDriveBackupResult> => {
     const exportedAt = new Date()
     const settings = await ensureAppSettings()
-    const accessToken = await requestGoogleDriveAccessToken(options.prompt)
+    const accessToken = await requestGoogleDriveAccessToken(options.prompt, options.interactive)
     const dataVersionAt = await getLatestUserDataUpdatedAt() ?? exportedAt
     const backupBlob = await createDatabaseBackupBlob(exportedAt)
     const result = await uploadBackupFiles(accessToken, backupBlob, exportedAt, dataVersionAt)
@@ -713,7 +717,7 @@ export const syncDatabaseWithGoogleDrive = async (
     options: BackupDatabaseToGoogleDriveOptions = {},
 ): Promise<GoogleDriveSyncResult> => {
     const settings = await ensureAppSettings()
-    const accessToken = await requestGoogleDriveAccessToken(options.prompt)
+    const accessToken = await requestGoogleDriveAccessToken(options.prompt, options.interactive)
     const localVersionAt = await getLatestUserDataUpdatedAt()
     const remoteBackup = await getRemoteBackupManifest(accessToken)
     const remoteVersionAt = remoteBackup ? getRemoteManifestVersionAt(remoteBackup.manifest) : null
