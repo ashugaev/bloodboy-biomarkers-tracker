@@ -25,7 +25,10 @@ export const useGoogleDriveAutoBackup = () => {
 
         syncInFlightRef.current = true
 
-        syncDatabaseWithGoogleDrive({ prompt: '' })
+        syncDatabaseWithGoogleDrive({
+            prompt: '',
+            interactive: false,
+        })
             .then((result) => {
                 lastFailureRef.current = null
                 if (result.action === 'downloaded') {

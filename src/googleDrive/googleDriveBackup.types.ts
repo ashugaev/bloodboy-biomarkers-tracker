@@ -44,6 +44,7 @@ export interface GoogleDriveBackupManifest {
 export interface BackupDatabaseToGoogleDriveOptions {
     prompt?: string
     forceEnable?: boolean
+    interactive?: boolean
 }
 
 export interface GoogleDriveBackupState {
