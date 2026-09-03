@@ -101,6 +101,7 @@ const seedGoogleDriveAutoSyncScenario = async () => {
             enabled: true,
             lastBackupAt: now,
             connectedAt: now,
+            lastError: 'Google Drive sync needs reconnection',
         },
         updatedAt: now,
     })
