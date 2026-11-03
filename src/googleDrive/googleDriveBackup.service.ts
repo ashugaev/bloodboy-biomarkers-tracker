@@ -1,9 +1,10 @@
 import { config } from '@/config'
-import { MAIN_SETTINGS_ID } from '@/constants'
+import { DEFAULT_PROFILE_ID, MAIN_SETTINGS_ID } from '@/constants'
 import { AppSettings, GoogleDriveBackupSettings } from '@/db/models/appSettings'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/db/services/db.service'
 import { getLatestUserDataUpdatedAt } from '@/db/utils/exportStatus.utils'
+import { getLoadedProfile } from '@/profiles/profiles.service'
 import { createDatabaseBackupBlob } from '@/utils/exportData'
 import { importDatabaseBackup } from '@/utils/importData'
 
@@ -25,6 +26,7 @@ const DRIVE_UPLOAD_BASE_URL = 'https://www.googleapis.com/upload/drive/v3'
 const BACKUP_ROOT_FOLDER_NAME = 'Bloodboy Backups'
 const LATEST_FOLDER_NAME = 'latest'
 const HISTORY_FOLDER_NAME = 'history'
+const PROFILES_FOLDER_NAME = 'profiles'
 const MANIFEST_FILE_NAME = 'bloodboy_backup_manifest.json'
 const LATEST_BACKUP_FILE_NAME = 'bloodboy_db_backup_latest.json'
 
@@ -396,10 +398,32 @@ const getMonthFolderName = (date: Date): string => {
     return String(date.getUTCMonth() + 1).padStart(2, '0')
 }
 
+// Main profile keeps the original Drive layout; other profiles live in
+// profiles/<profileId> under the same root folder.
+const getProfileBackupPath = (): string => {
+    const profile = getLoadedProfile()
+
+    return profile.id === DEFAULT_PROFILE_ID
+        ? `/${BACKUP_ROOT_FOLDER_NAME}`
+        : `/${BACKUP_ROOT_FOLDER_NAME}/${PROFILES_FOLDER_NAME}/${profile.id}`
+}
+
+const getProfileBackupFolder = async (accessToken: string): Promise<GoogleDriveFile> => {
+    const rootFolder = await getOrCreateFolder(accessToken, BACKUP_ROOT_FOLDER_NAME, null)
+    const profile = getLoadedProfile()
+
+    if (profile.id === DEFAULT_PROFILE_ID) {
+        return rootFolder
+    }
+
+    const profilesFolder = await getOrCreateFolder(accessToken, PROFILES_FOLDER_NAME, rootFolder.id)
+    return await getOrCreateFolder(accessToken, profile.id, profilesFolder.id)
+}
+
 const ensureBaseBackupStructure = async (
     accessToken: string,
 ): Promise<GoogleDriveBackupStructure> => {
-    const rootFolder = await getOrCreateFolder(accessToken, BACKUP_ROOT_FOLDER_NAME, null)
+    const rootFolder = await getProfileBackupFolder(accessToken)
     const latestFolder = await getOrCreateFolder(accessToken, LATEST_FOLDER_NAME, rootFolder.id)
     const historyFolder = await getOrCreateFolder(accessToken, HISTORY_FOLDER_NAME, rootFolder.id)
     const latestFile = await findDriveFile(accessToken, LATEST_BACKUP_FILE_NAME, latestFolder.id, 'application/json')
@@ -477,11 +501,17 @@ const uploadBackupFiles = async (
         latestFile = await uploadMultipartFile(accessToken, 'POST', '/files', latestMetadata, backupBlob)
     }
 
+    const profile = getLoadedProfile()
+    const backupPath = getProfileBackupPath()
     const manifest = {
         app: 'Bloodboy',
         format: 'dexie-export-import',
         generatedAt: exportedAt.toISOString(),
         dataVersionAt: dataVersionAt.toISOString(),
+        profile: {
+            id: profile.id,
+            name: profile.name,
+        },
         latest: {
             fileName: LATEST_BACKUP_FILE_NAME,
             fileId: latestFile.id,
@@ -491,8 +521,8 @@ const uploadBackupFiles = async (
             fileId: historyFile.id,
         },
         structure: {
-            latest: `/${BACKUP_ROOT_FOLDER_NAME}/${LATEST_FOLDER_NAME}/${LATEST_BACKUP_FILE_NAME}`,
-            history: `/${BACKUP_ROOT_FOLDER_NAME}/${HISTORY_FOLDER_NAME}/${exportedAt.getUTCFullYear()}/${getMonthFolderName(exportedAt)}/${historyFileName}`,
+            latest: `${backupPath}/${LATEST_FOLDER_NAME}/${LATEST_BACKUP_FILE_NAME}`,
+            history: `${backupPath}/${HISTORY_FOLDER_NAME}/${exportedAt.getUTCFullYear()}/${getMonthFolderName(exportedAt)}/${historyFileName}`,
         },
     }
     const manifestBlob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' })

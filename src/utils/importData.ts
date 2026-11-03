@@ -38,7 +38,7 @@ export const importDatabaseBackup = async (
             await Promise.all(db.tables.map(table => table.clear()))
         })
 
-        await importDB(file)
+        await importDB(file, { name: db.name })
 
         if (tokenToPreserve != null || googleDriveBackupToPreserve != null) {
             const preservedToken = sessionStorage.getItem(PRESERVED_OPENAI_TOKEN_KEY)

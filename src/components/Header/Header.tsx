@@ -2,6 +2,7 @@ import { usePostHog } from 'posthog-js/react'
 import { Link } from 'react-router-dom'
 
 import { ImportButton } from '@/components/ImportButton'
+import { ProfileSwitcher } from '@/components/ProfileSwitcher'
 import { getPublicPath, captureEvent } from '@/utils'
 
 import { HeaderProps } from './Header.types'
@@ -24,7 +25,10 @@ export const Header = (props: HeaderProps) => {
                         <img src={getPublicPath('favicon.svg')} alt='Bloodboy' className='w-5 h-5'/>
                         <span className='text-lg font-semibold text-gray-800'>Bloodboy</span>
                     </Link>
-                    <ImportButton/>
+                    <div className='flex items-center gap-2'>
+                        <ProfileSwitcher/>
+                        <ImportButton/>
+                    </div>
                 </div>
             </div>
         </header>

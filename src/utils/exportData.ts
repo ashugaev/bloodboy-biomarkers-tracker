@@ -7,7 +7,8 @@ import { BiomarkerConfig } from '@/db/models/biomarkerConfig'
 import { BiomarkerRecord } from '@/db/models/biomarkerRecord'
 import { UploadedDocument } from '@/db/models/document'
 // eslint-disable-next-line no-restricted-imports
-import { db } from '@/db/services/db.service'
+import { BloodTestDatabase, db } from '@/db/services/db.service'
+import { getLoadedProfile, getProfileFileTag } from '@/profiles/profiles.service'
 
 export interface ExportDataParams {
     configs: BiomarkerConfig[]
@@ -15,7 +16,7 @@ export interface ExportDataParams {
     documents: UploadedDocument[]
 }
 
-const downloadBlob = (blob: Blob, filename: string) => {
+export const downloadBlob = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -58,7 +59,7 @@ const exportToCSV = (data: ExportDataParams) => {
     const csvContent = csvRows.join('\n')
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const date = new Date().toISOString().split('T')[0]
-    downloadBlob(blob, `bloodboy_results_${date}.csv`)
+    downloadBlob(blob, `bloodboy_results${getProfileFileTag(getLoadedProfile())}_${date}.csv`)
 }
 
 const ensureAppSettingsForExport = async (exportedAt: Date) => {
@@ -102,8 +103,11 @@ const sanitizeAppSettingsForBackup = (settings: Record<string, unknown>, exporte
     } as AppSettings
 }
 
-export const createDatabaseBackupBlob = async (exportedAt: Date): Promise<Blob> => {
-    return await exportDB(db, {
+export const createDatabaseBackupBlob = async (
+    exportedAt: Date,
+    database: BloodTestDatabase = db,
+): Promise<Blob> => {
+    return await exportDB(database, {
         transform: (table: string, value: unknown) => {
             if (table === 'appSettings' && value && typeof value === 'object' && 'openaiApiKey' in value) {
                 return {
@@ -124,7 +128,7 @@ export const exportData = async (data: ExportDataParams) => {
         exportSettings = await ensureAppSettingsForExport(exportedAt)
 
         const jsonBlob = await createDatabaseBackupBlob(exportedAt)
-        downloadBlob(jsonBlob, `bloodboy_db_backup_${date}.json`)
+        downloadBlob(jsonBlob, `bloodboy_db_backup${getProfileFileTag(getLoadedProfile())}_${date}.json`)
 
         exportToCSV(data)
 

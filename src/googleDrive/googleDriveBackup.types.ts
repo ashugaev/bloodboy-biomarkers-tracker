@@ -31,6 +31,10 @@ export interface GoogleDriveBackupManifest {
     format: 'dexie-export-import'
     generatedAt: string
     dataVersionAt?: string
+    profile?: {
+        id: string
+        name: string
+    }
     latest: {
         fileName: string
         fileId: string

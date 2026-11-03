@@ -1,3 +1,8 @@
 export const MAIN_SETTINGS_ID = 'main'
 export const DB_NAME = 'bloodboy-db'
 export const PRESERVED_OPENAI_TOKEN_KEY = 'preservedOpenAIToken'
+export const DEFAULT_PROFILE_ID = 'default'
+export const DEFAULT_PROFILE_NAME = 'Main'
+export const PROFILE_DB_NAME_SEPARATOR = '--'
+export const PROFILES_STORAGE_KEY = 'bloodboy.profiles'
+export const PROFILE_SEED_STORAGE_KEY = 'bloodboy.profileSeed'

@@ -13,7 +13,7 @@ import { Button, Checkbox, Dropdown, Modal, MenuProps, Tooltip, message } from '
 import { usePostHog } from 'posthog-js/react'
 
 import { config } from '@/config'
-import { COLORS, DB_NAME, PRESERVED_OPENAI_TOKEN_KEY } from '@/constants'
+import { COLORS, PRESERVED_OPENAI_TOKEN_KEY } from '@/constants'
 import { useExportStatus } from '@/db'
 import { useAppSettings } from '@/db/models/appSettings'
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
@@ -26,6 +26,7 @@ import {
     markGoogleDriveBackupError,
     syncDatabaseWithGoogleDrive,
 } from '@/googleDrive'
+import { clearLocalStorageExceptProfiles, getLoadedProfileDbName } from '@/profiles'
 import { captureEvent } from '@/utils'
 import { exportData } from '@/utils/exportData'
 import { importData } from '@/utils/importData'
@@ -224,10 +225,10 @@ export const ImportButton = (props: ImportButtonProps) => {
         }
 
         setIsResetting(true)
-        const deleteRequest = indexedDB.deleteDatabase(DB_NAME)
+        const deleteRequest = indexedDB.deleteDatabase(getLoadedProfileDbName())
 
         deleteRequest.onsuccess = () => {
-            localStorage.clear()
+            clearLocalStorageExceptProfiles()
             if (!tokenToPreserve) {
                 sessionStorage.clear()
             } else {

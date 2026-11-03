@@ -4,7 +4,8 @@ import { DeleteOutlined } from '@ant-design/icons'
 import { Button, Modal } from 'antd'
 import { usePostHog } from 'posthog-js/react'
 
-import { COLORS, DB_NAME } from '@/constants'
+import { COLORS } from '@/constants'
+import { clearLocalStorageExceptProfiles, getLoadedProfileDbName } from '@/profiles'
 import { captureEvent } from '@/utils'
 import { reloadApp } from '@/utils/reloadApp'
 
@@ -19,10 +20,10 @@ export const ResetDbButton = (props: ResetDbButtonProps) => {
     const handleReset = () => {
         captureEvent(posthog, 'database_reset')
         setIsResetting(true)
-        const deleteRequest = indexedDB.deleteDatabase(DB_NAME)
+        const deleteRequest = indexedDB.deleteDatabase(getLoadedProfileDbName())
 
         deleteRequest.onsuccess = () => {
-            localStorage.clear()
+            clearLocalStorageExceptProfiles()
             sessionStorage.clear()
             reloadApp()
         }
