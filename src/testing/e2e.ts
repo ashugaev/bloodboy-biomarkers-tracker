@@ -16,6 +16,7 @@ declare global {
             reset: () => Promise<void>
             seedExactFileDuplicateScenario: (fileHash: string) => Promise<void>
             seedGoogleDriveAutoSyncScenario: () => Promise<void>
+            seedNoApiKeyScenario: () => Promise<void>
         }
     }
 }
@@ -50,7 +51,7 @@ const clearDatabase = async () => {
     )
 }
 
-const ensureBaseData = async () => {
+const ensureBaseData = async (openaiApiKey = 'e2e-test-key') => {
     await getCurrentUserId()
     await preloadUnits()
     await preloadBiomarkerConfigs()
@@ -60,7 +61,7 @@ const ensureBaseData = async () => {
 
     await db.appSettings.put({
         id: MAIN_SETTINGS_ID,
-        openaiApiKey: 'e2e-test-key',
+        openaiApiKey,
         createdAt: now,
         updatedAt: now,
     })
@@ -109,6 +110,11 @@ const seedGoogleDriveAutoSyncScenario = async () => {
     window.localStorage.removeItem('bloodboy.googleDrive.accessToken')
 }
 
+const seedNoApiKeyScenario = async () => {
+    await clearDatabase()
+    await ensureBaseData('')
+}
+
 export const registerE2EHelpers = () => {
     if (!import.meta.env.DEV || typeof window === 'undefined') {
         return
@@ -121,5 +127,6 @@ export const registerE2EHelpers = () => {
         },
         seedExactFileDuplicateScenario,
         seedGoogleDriveAutoSyncScenario,
+        seedNoApiKeyScenario,
     }
 }

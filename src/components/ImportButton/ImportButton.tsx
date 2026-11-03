@@ -4,6 +4,7 @@ import {
     DeleteOutlined,
     DisconnectOutlined,
     DownloadOutlined,
+    KeyOutlined,
     MenuOutlined,
     ReloadOutlined,
     UploadOutlined,
@@ -12,8 +13,9 @@ import {
 import { Button, Checkbox, Dropdown, Modal, MenuProps, Tooltip, message } from 'antd'
 import { usePostHog } from 'posthog-js/react'
 
+import { ApiKeyInput } from '@/components/ApiKeyInput'
 import { config } from '@/config'
-import { COLORS, DB_NAME, PRESERVED_OPENAI_TOKEN_KEY } from '@/constants'
+import { COLORS, DB_NAME } from '@/constants'
 import { useExportStatus } from '@/db'
 import { useAppSettings } from '@/db/models/appSettings'
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
@@ -26,7 +28,7 @@ import {
     markGoogleDriveBackupError,
     syncDatabaseWithGoogleDrive,
 } from '@/googleDrive'
-import { captureEvent } from '@/utils'
+import { captureEvent, clearPreservedAiKeys, getAiKeysToPreserve, savePreservedAiKeys } from '@/utils'
 import { exportData } from '@/utils/exportData'
 import { importData } from '@/utils/importData'
 import { reloadApp } from '@/utils/reloadApp'
@@ -44,6 +46,7 @@ export const ImportButton = (props: ImportButtonProps) => {
     const [isModalVisible, setIsModalVisible] = useState(false)
     const [isImportModalVisible, setIsImportModalVisible] = useState(false)
     const [isDriveModalVisible, setIsDriveModalVisible] = useState(false)
+    const [isAiModalVisible, setIsAiModalVisible] = useState(false)
     const [isResetting, setIsResetting] = useState(false)
     const [isDriveSyncing, setIsDriveSyncing] = useState(false)
     const [preserveToken, setPreserveToken] = useState(true)
@@ -214,13 +217,10 @@ export const ImportButton = (props: ImportButtonProps) => {
             preserveToken,
         })
 
-        const currentSettings = settings[0]
-        const tokenToPreserve = preserveToken && currentSettings?.openaiApiKey
-            ? currentSettings.openaiApiKey
-            : null
+        const keysToPreserve = preserveToken ? getAiKeysToPreserve(settings[0]) : null
 
-        if (tokenToPreserve) {
-            sessionStorage.setItem(PRESERVED_OPENAI_TOKEN_KEY, tokenToPreserve)
+        if (keysToPreserve) {
+            savePreservedAiKeys(keysToPreserve)
         }
 
         setIsResetting(true)
@@ -228,14 +228,9 @@ export const ImportButton = (props: ImportButtonProps) => {
 
         deleteRequest.onsuccess = () => {
             localStorage.clear()
-            if (!tokenToPreserve) {
-                sessionStorage.clear()
-            } else {
-                const preservedToken = sessionStorage.getItem(PRESERVED_OPENAI_TOKEN_KEY)
-                sessionStorage.clear()
-                if (preservedToken) {
-                    sessionStorage.setItem(PRESERVED_OPENAI_TOKEN_KEY, preservedToken)
-                }
+            sessionStorage.clear()
+            if (keysToPreserve) {
+                savePreservedAiKeys(keysToPreserve)
             }
             reloadApp()
         }
@@ -243,9 +238,7 @@ export const ImportButton = (props: ImportButtonProps) => {
         deleteRequest.onerror = (error) => {
             console.error('Failed to reset database:', error)
             setIsResetting(false)
-            if (tokenToPreserve) {
-                sessionStorage.removeItem(PRESERVED_OPENAI_TOKEN_KEY)
-            }
+            clearPreservedAiKeys()
         }
 
         deleteRequest.onblocked = () => {
@@ -273,6 +266,12 @@ export const ImportButton = (props: ImportButtonProps) => {
             icon: <GoogleDriveIcon menuItem/>,
             disabled: isDriveSyncing || !isGoogleDriveConfigured,
             onClick: handleDriveMenuClick,
+        },
+        {
+            key: 'ai-provider',
+            label: 'AI provider',
+            icon: <KeyOutlined/>,
+            onClick: () => { setIsAiModalVisible(true) },
         },
         {
             type: 'divider',
@@ -333,6 +332,18 @@ export const ImportButton = (props: ImportButtonProps) => {
                     />
                 </Dropdown>
             </div>
+            <Modal
+                title='AI provider'
+                open={isAiModalVisible}
+                onCancel={() => { setIsAiModalVisible(false) }}
+                footer={null}
+                destroyOnHidden
+            >
+                <ApiKeyInput
+                    className='!p-0 !border-0'
+                    onSaved={() => { setIsAiModalVisible(false) }}
+                />
+            </Modal>
             <Modal
                 title='Google Drive'
                 open={isDriveModalVisible}
@@ -435,7 +446,7 @@ export const ImportButton = (props: ImportButtonProps) => {
                     onChange={(e) => { setPreserveToken(e.target.checked) }}
                     style={{ marginTop: '16px' }}
                 >
-                    Preserve OpenAI API token
+                    Preserve AI API keys
                 </Checkbox>
             </Modal>
             <Modal

@@ -97,6 +97,7 @@ const sanitizeAppSettingsForBackup = (settings: Record<string, unknown>, exporte
     return {
         ...settings,
         openaiApiKey: '',
+        anthropicApiKey: '',
         lastExportedAt: exportedAt,
         googleDriveBackup,
     } as AppSettings

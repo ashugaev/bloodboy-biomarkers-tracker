@@ -1,3 +1,5 @@
 export { useExtractBiomarkers } from './openai.biomarkers'
 export type { ExtractedBiomarker, ExtractionResult } from './openai.biomarkers'
-export { useOpenAI } from './openai.client'
+export { useAiClient } from './ai.client'
+export { AI_PROVIDERS, DEFAULT_AI_PROVIDER } from './ai.types'
+export type { AiProvider } from './ai.types'

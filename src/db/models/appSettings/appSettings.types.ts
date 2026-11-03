@@ -14,9 +14,13 @@ export interface GoogleDriveBackupSettings {
     connectedAt?: Date
 }
 
+export type AiProvider = 'openai' | 'anthropic'
+
 export interface AppSettings {
     id: string
     openaiApiKey: string
+    anthropicApiKey?: string
+    aiProvider?: AiProvider
     lastExportedAt?: Date
     googleDriveBackup?: GoogleDriveBackupSettings
     createdAt: Date

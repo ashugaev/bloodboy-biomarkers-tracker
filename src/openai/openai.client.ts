@@ -1,72 +1,56 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-
-import { App } from 'antd'
 import OpenAI from 'openai'
-import posthog from 'posthog-js'
+import { ChatCompletionMessageParam } from 'openai/resources'
 
-import { deleteAppSettings, useAppSettings } from '@/db/models/appSettings'
+import { AI_PROVIDERS, VisionJsonRequest } from './ai.types'
 
-export const useOpenAI = () => {
-    const { message } = App.useApp()
-    const { data: settings, loading } = useAppSettings()
-    const apiKey = settings[0]?.openaiApiKey
-    const [minLoadingTime, setMinLoadingTime] = useState(true)
+export const createOpenAIJsonCompletion = async (apiKey: string, request: VisionJsonRequest): Promise<string | null> => {
+    const client = new OpenAI({
+        apiKey,
+        dangerouslyAllowBrowser: true,
+    })
 
-    // Minimum loading time to prevent blinking of the component
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setMinLoadingTime(false)
-        }, 200)
-        return () => { clearTimeout(timer) }
-    }, [])
-
-    const resetApiKey = useCallback(async () => {
-        if (settings[0]) {
-            await deleteAppSettings(settings[0].id)
-        }
-    }, [settings])
-
-    const client = useMemo(() => {
-        if (!apiKey) return null
-
-        const openaiClient = new OpenAI({
-            apiKey,
-            dangerouslyAllowBrowser: true,
-        })
-
-        return {
-            chat: {
-                completions: {
-                    create: async (...args: Parameters<typeof openaiClient.chat.completions.create>): Promise<Awaited<ReturnType<typeof openaiClient.chat.completions.create>>> => {
-                        try {
-                            return await openaiClient.chat.completions.create(...args)
-                        } catch (error: unknown) {
-                            const err = error as { status?: number, message?: string }
-                            try {
-                                posthog.capture('openai_api_error', {
-                                    status: err.status,
-                                    errorType: err.status === 401 ? 'invalid_api_key' : 'api_error',
-                                })
-                            } catch {
-                                // PostHog not initialized yet
-                            }
-                            if (err.status === 401) {
-                                void message.error('Invalid API key')
-                                void resetApiKey()
-                            } else {
-                                void message.error(`OpenAI API error: ${err.message ?? 'Unknown error'}`)
-                            }
-                            throw error
-                        }
+    const messages: ChatCompletionMessageParam[] = [
+        {
+            role: 'system',
+            content: request.systemPrompt,
+        },
+        {
+            role: 'user',
+            content: [
+                {
+                    type: 'text',
+                    text: request.userText,
+                },
+                {
+                    type: 'image_url',
+                    image_url: {
+                        url: request.imageDataUrl,
                     },
                 },
-            },
-        }
-    }, [apiKey, resetApiKey, message])
+            ],
+        },
+    ]
 
-    return {
-        client,
-        hasApiKey: !!apiKey,
-        loading: loading || minLoadingTime,
+    if (request.followUpText) {
+        messages.push({
+            role: 'user',
+            content: [
+                {
+                    type: 'text',
+                    text: request.followUpText,
+                },
+            ],
+        })
     }
+
+    const completion = await client.chat.completions.create({
+        model: request.model ?? AI_PROVIDERS.openai.defaultModel,
+        messages,
+        reasoning_effort: 'low',
+        temperature: 1,
+        response_format: { type: 'json_object' },
+        stream: false,
+    })
+
+    return completion.choices[0]?.message.content ?? null
 }
