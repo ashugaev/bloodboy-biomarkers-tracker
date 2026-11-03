@@ -37,6 +37,16 @@ const GoogleDriveAutoBackup = () => {
     return null
 }
 
+const AppGoogleDriveAutoBackup = () => {
+    const location = useLocation()
+
+    if (location.pathname === '/') {
+        return null
+    }
+
+    return <GoogleDriveAutoBackup/>
+}
+
 export const App = () => {
     useCurrentUser()
 
@@ -45,7 +55,7 @@ export const App = () => {
             <AntApp>
                 <BrowserRouter basename={config.baseUrl}>
                     <PageViewTracker/>
-                    <GoogleDriveAutoBackup/>
+                    <AppGoogleDriveAutoBackup/>
                     <Routes>
                         <Route path='/' element={<HomePage/>}/>
                         <Route path='/data' element={<DataPage/>}/>

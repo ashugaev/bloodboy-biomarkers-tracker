@@ -5,6 +5,7 @@ import {
     DisconnectOutlined,
     DownloadOutlined,
     MenuOutlined,
+    ReloadOutlined,
     UploadOutlined,
     WarningFilled,
 } from '@ant-design/icons'
@@ -19,6 +20,7 @@ import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
 import { useBiomarkerRecords } from '@/db/models/biomarkerRecord'
 import { useDocuments } from '@/db/models/document'
 import {
+    clearGoogleDriveAccessToken,
     disconnectGoogleDriveBackup,
     getGoogleDriveBackupErrorMessage,
     markGoogleDriveBackupError,
@@ -183,6 +185,11 @@ export const ImportButton = (props: ImportButtonProps) => {
         }
     }
 
+    const handleDriveReconnect = async () => {
+        clearGoogleDriveAccessToken()
+        await handleDriveConnect()
+    }
+
     const handleDriveDisconnect = async () => {
         await disconnectGoogleDriveBackup()
         setIsDriveModalVisible(false)
@@ -297,7 +304,21 @@ export const ImportButton = (props: ImportButtonProps) => {
                     </Tooltip>
                 )}
                 {driveSettings?.lastError && (
-                    <Tooltip title={driveSettings.lastError}>
+                    <Tooltip
+                        title={(
+                            <div className='flex flex-col items-start gap-2'>
+                                <span>{driveSettings.lastError}</span>
+                                <Button
+                                    size='small'
+                                    icon={<ReloadOutlined/>}
+                                    loading={isDriveSyncing}
+                                    onClick={() => { void handleDriveReconnect() }}
+                                >
+                                    Reconnect Google Drive
+                                </Button>
+                            </div>
+                        )}
+                    >
                         <span className='inline-flex items-center text-base leading-none cursor-help'>
                             <WarningFilled style={{ color: COLORS.ERROR }}/>
                         </span>
@@ -346,14 +367,26 @@ export const ImportButton = (props: ImportButtonProps) => {
                                 </a>
                             </p>
                         )}
-                        <Button
-                            danger
-                            icon={<DisconnectOutlined/>}
-                            loading={isDriveSyncing}
-                            onClick={() => { void handleDriveDisconnect() }}
-                        >
-                            Disconnect Google Drive
-                        </Button>
+                        <div className='flex flex-wrap gap-2'>
+                            {driveSettings?.lastError && (
+                                <Button
+                                    type='primary'
+                                    icon={<ReloadOutlined/>}
+                                    loading={isDriveSyncing}
+                                    onClick={() => { void handleDriveReconnect() }}
+                                >
+                                    Reconnect Google Drive
+                                </Button>
+                            )}
+                            <Button
+                                danger
+                                icon={<DisconnectOutlined/>}
+                                disabled={isDriveSyncing}
+                                onClick={() => { void handleDriveDisconnect() }}
+                            >
+                                Disconnect Google Drive
+                            </Button>
+                        </div>
                     </>
                 ) : (
                     <>
