@@ -125,7 +125,7 @@ test('extracts with an OpenAI API key', async ({ page }) => {
             id: 'chatcmpl-e2e',
             object: 'chat.completion',
             created: 0,
-            model: 'gpt-5.4',
+            model: 'gpt-6.1-sol',
             choices: [{
                 index: 0,
                 message: {

@@ -26,7 +26,7 @@ export const AI_PROVIDERS: Record<AiProvider, AiProviderInfo> = {
         keyPlaceholder: 'sk-...',
         keyUrl: 'https://platform.openai.com/api-keys',
         keyUrlLabel: 'platform.openai.com/api-keys',
-        defaultModel: 'gpt-5.4',
+        defaultModel: 'gpt-6.1-sol',
     },
     anthropic: {
         label: 'Claude',

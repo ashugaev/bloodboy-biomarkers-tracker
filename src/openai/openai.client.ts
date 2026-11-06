@@ -46,8 +46,7 @@ export const createOpenAIJsonCompletion = async (apiKey: string, request: Vision
     const completion = await client.chat.completions.create({
         model: request.model ?? AI_PROVIDERS.openai.defaultModel,
         messages,
-        reasoning_effort: 'low',
-        temperature: 1,
+        reasoning_effort: 'medium',
         response_format: { type: 'json_object' },
         stream: false,
     })
