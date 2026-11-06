@@ -1,6 +1,5 @@
 import { Dexie, EntityTable } from 'dexie'
 
-import { DB_NAME } from '@/constants'
 import { AppSettings } from '@/db/models/appSettings'
 import { BiomarkerConfig } from '@/db/models/biomarkerConfig'
 import { BiomarkerRecord } from '@/db/models/biomarkerRecord'
@@ -11,6 +10,7 @@ import { SavedFilter } from '@/db/models/savedFilter'
 import { Unit } from '@/db/models/unit'
 import { User } from '@/db/models/user'
 import { VerifiedConversion } from '@/db/models/verifiedConversion'
+import { getLoadedProfileDbName } from '@/profiles/profiles.service'
 
 let currentUserId: string | null = null
 let isImporting = false
@@ -31,7 +31,7 @@ export const getIsImporting = (): boolean => {
     return isImporting
 }
 
-class BloodTestDatabase extends Dexie {
+export class BloodTestDatabase extends Dexie {
     biomarkerConfigs!: EntityTable<BiomarkerConfig, 'id'>
     biomarkerRecords!: EntityTable<BiomarkerRecord, 'id'>
     uploadedFiles!: EntityTable<UploadedDocument, 'id'>
@@ -43,8 +43,8 @@ class BloodTestDatabase extends Dexie {
     blockedMerges!: EntityTable<BlockedMerge, 'id'>
     formulas!: EntityTable<Formula, 'id'>
 
-    constructor () {
-        super(DB_NAME)
+    constructor (name = getLoadedProfileDbName()) {
+        super(name)
 
         this.version(1).stores({
             biomarkerConfigs: 'id, userId, approved, createdAt, updatedAt',

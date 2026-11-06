@@ -5,12 +5,14 @@ import { config } from '@/config'
 import { MAIN_SETTINGS_ID, PRESERVED_OPENAI_TOKEN_KEY } from '@/constants'
 import { GoogleDriveBackupSettings } from '@/db/models/appSettings'
 // eslint-disable-next-line no-restricted-imports
-import { db, setIsImporting } from '@/db/services/db.service'
+import { BloodTestDatabase, db, setIsImporting } from '@/db/services/db.service'
 
 interface ImportDatabaseBackupOptions {
     reload?: boolean
-    successMessage?: string
+    successMessage?: string | null
     googleDriveBackup?: GoogleDriveBackupSettings
+    database?: BloodTestDatabase
+    afterImport?: () => Promise<void>
 }
 
 export const importDatabaseBackup = async (
@@ -21,11 +23,13 @@ export const importDatabaseBackup = async (
         reload = true,
         successMessage = 'Data imported successfully. Refreshing...',
         googleDriveBackup,
+        database = db,
+        afterImport,
     } = options
 
     setIsImporting(true)
 
-    const currentSettings = await db.appSettings.toArray()
+    const currentSettings = await database.appSettings.toArray()
     const tokenToPreserve = currentSettings[0]?.openaiApiKey || null
     const googleDriveBackupToPreserve = googleDriveBackup ?? currentSettings[0]?.googleDriveBackup
 
@@ -34,24 +38,24 @@ export const importDatabaseBackup = async (
     }
 
     try {
-        await db.transaction('rw', db.tables, async () => {
-            await Promise.all(db.tables.map(table => table.clear()))
+        await database.transaction('rw', database.tables, async () => {
+            await Promise.all(database.tables.map(table => table.clear()))
         })
 
-        await importDB(file)
+        await importDB(file, { name: database.name })
 
         if (tokenToPreserve != null || googleDriveBackupToPreserve != null) {
             const preservedToken = sessionStorage.getItem(PRESERVED_OPENAI_TOKEN_KEY)
             if (preservedToken != null || googleDriveBackupToPreserve != null) {
-                const importedSettings = await db.appSettings.toArray()
+                const importedSettings = await database.appSettings.toArray()
                 if (importedSettings[0]) {
-                    await db.appSettings.update(importedSettings[0].id, {
+                    await database.appSettings.update(importedSettings[0].id, {
                         ...(preservedToken ? { openaiApiKey: preservedToken } : {}),
                         ...(googleDriveBackupToPreserve ? { googleDriveBackup: googleDriveBackupToPreserve } : {}),
                         updatedAt: new Date(),
                     })
                 } else {
-                    await db.appSettings.add({
+                    await database.appSettings.add({
                         id: MAIN_SETTINGS_ID,
                         openaiApiKey: preservedToken ?? '',
                         ...(googleDriveBackupToPreserve ? { googleDriveBackup: googleDriveBackupToPreserve } : {}),
@@ -63,7 +67,11 @@ export const importDatabaseBackup = async (
             sessionStorage.removeItem(PRESERVED_OPENAI_TOKEN_KEY)
         }
 
-        void message.success(successMessage)
+        await afterImport?.()
+
+        if (successMessage) {
+            void message.success(successMessage)
+        }
     } catch (error) {
         setIsImporting(false)
         sessionStorage.removeItem(PRESERVED_OPENAI_TOKEN_KEY)

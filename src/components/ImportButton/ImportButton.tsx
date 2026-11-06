@@ -13,7 +13,7 @@ import { Button, Checkbox, Dropdown, Modal, MenuProps, Tooltip, message } from '
 import { usePostHog } from 'posthog-js/react'
 
 import { config } from '@/config'
-import { COLORS, DB_NAME, PRESERVED_OPENAI_TOKEN_KEY } from '@/constants'
+import { COLORS, PRESERVED_OPENAI_TOKEN_KEY } from '@/constants'
 import { useExportStatus } from '@/db'
 import { useAppSettings } from '@/db/models/appSettings'
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
@@ -25,8 +25,21 @@ import {
     getGoogleDriveBackupErrorMessage,
     markGoogleDriveBackupError,
     syncDatabaseWithGoogleDrive,
+    useGoogleDriveConflictModal,
 } from '@/googleDrive'
-import { captureEvent } from '@/utils'
+import {
+    ProfilesBundle,
+    clearLocalStorageForReset,
+    deleteLoadedProfileDatabase,
+    exportAllProfiles,
+    getLoadedProfile,
+    importAllProfiles,
+    isGoogleDriveSyncEnabled,
+    readProfileRegistry,
+    readProfilesBundle,
+    saveProfileResetSeed,
+} from '@/profiles'
+import { captureEvent, captureException } from '@/utils'
 import { exportData } from '@/utils/exportData'
 import { importData } from '@/utils/importData'
 import { reloadApp } from '@/utils/reloadApp'
@@ -40,6 +53,7 @@ interface GoogleDriveIconProps {
 export const ImportButton = (props: ImportButtonProps) => {
     const { className, onlyApproved = true } = props
     const posthog = usePostHog()
+    const showDriveConflict = useGoogleDriveConflictModal()
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [isModalVisible, setIsModalVisible] = useState(false)
     const [isImportModalVisible, setIsImportModalVisible] = useState(false)
@@ -48,6 +62,7 @@ export const ImportButton = (props: ImportButtonProps) => {
     const [isDriveSyncing, setIsDriveSyncing] = useState(false)
     const [preserveToken, setPreserveToken] = useState(true)
     const [pendingFile, setPendingFile] = useState<File | null>(null)
+    const [pendingBundle, setPendingBundle] = useState<ProfilesBundle | null>(null)
 
     const { data: configs } = useBiomarkerConfigs({
         filter: onlyApproved ? (c) => c.approved : undefined,
@@ -61,7 +76,8 @@ export const ImportButton = (props: ImportButtonProps) => {
     const { data: settings } = useAppSettings()
     const { hasUnexportedChanges } = useExportStatus()
     const driveSettings = settings[0]?.googleDriveBackup
-    const isDriveConnected = driveSettings?.enabled ?? false
+    const isDriveConnected = isGoogleDriveSyncEnabled(driveSettings?.enabled)
+    const loadedProfileName = getLoadedProfile().name
     const isGoogleDriveConfigured = !!config.googleClientId
     const driveBackupLabel = !isGoogleDriveConfigured
         ? 'Google Drive unavailable'
@@ -104,7 +120,10 @@ export const ImportButton = (props: ImportButtonProps) => {
         const file = event.target.files?.[0]
         if (file) {
             setPendingFile(file)
-            setIsImportModalVisible(true)
+            void readProfilesBundle(file).then((bundle) => {
+                setPendingBundle(bundle)
+                setIsImportModalVisible(true)
+            })
         }
         if (fileInputRef.current) {
             fileInputRef.current.value = ''
@@ -117,9 +136,15 @@ export const ImportButton = (props: ImportButtonProps) => {
         setIsImportModalVisible(false)
         captureEvent(posthog, 'data_import_started', {
             fileSize: pendingFile.size,
+            allProfiles: !!pendingBundle,
+            profilesCount: pendingBundle?.profiles.length ?? 1,
         })
         try {
-            await importData(pendingFile)
+            if (pendingBundle) {
+                await importAllProfiles(pendingFile)
+            } else {
+                await importData(pendingFile)
+            }
             captureEvent(posthog, 'data_imported', {
                 configsCount: configs.length,
                 recordsCount: records.length,
@@ -133,6 +158,7 @@ export const ImportButton = (props: ImportButtonProps) => {
             })
         }
         setPendingFile(null)
+        setPendingBundle(null)
     }
 
     const handleExport = () => {
@@ -147,6 +173,18 @@ export const ImportButton = (props: ImportButtonProps) => {
             records,
             documents,
         })
+    }
+
+    const handleExportAll = async () => {
+        try {
+            const profilesCount = await exportAllProfiles()
+            void message.success(`All ${profilesCount} profiles exported`)
+            captureEvent(posthog, 'all_profiles_exported', { profilesCount })
+        } catch (error) {
+            console.error('Export all profiles error:', error)
+            void message.error('Failed to export profiles')
+            captureException(posthog, error instanceof Error ? error : new Error(String(error)), { action: 'all_profiles_export' })
+        }
     }
 
     const handleDriveConnect = async () => {
@@ -165,6 +203,8 @@ export const ImportButton = (props: ImportButtonProps) => {
                 void message.success(`Backup saved to Google Drive: ${result.backup.historyFileName}`)
             } else if (result.action === 'downloaded') {
                 void message.success('Newer Google Drive backup restored')
+            } else if (result.action === 'conflict') {
+                showDriveConflict(result)
             } else {
                 void message.success('Google Drive backup is up to date')
             }
@@ -224,10 +264,11 @@ export const ImportButton = (props: ImportButtonProps) => {
         }
 
         setIsResetting(true)
-        const deleteRequest = indexedDB.deleteDatabase(DB_NAME)
+        const googleDriveBackupToKeep = currentSettings?.googleDriveBackup
+        const deleteRequest = deleteLoadedProfileDatabase()
 
         deleteRequest.onsuccess = () => {
-            localStorage.clear()
+            clearLocalStorageForReset()
             if (!tokenToPreserve) {
                 sessionStorage.clear()
             } else {
@@ -237,6 +278,7 @@ export const ImportButton = (props: ImportButtonProps) => {
                     sessionStorage.setItem(PRESERVED_OPENAI_TOKEN_KEY, preservedToken)
                 }
             }
+            saveProfileResetSeed(googleDriveBackupToKeep)
             reloadApp()
         }
 
@@ -267,6 +309,14 @@ export const ImportButton = (props: ImportButtonProps) => {
             icon: <UploadOutlined/>,
             onClick: handleExport,
         },
+        ...(readProfileRegistry().profiles.length > 1
+            ? [{
+                key: 'export-all',
+                label: 'Export all profiles',
+                icon: <UploadOutlined/>,
+                onClick: () => { void handleExportAll() },
+            }]
+            : []),
         {
             key: 'drive-backup',
             label: driveBackupLabel,
@@ -351,7 +401,7 @@ export const ImportButton = (props: ImportButtonProps) => {
                 )}
                 {isDriveConnected ? (
                     <>
-                        <p>Google Drive is connected. Automatic backup sync is enabled.</p>
+                        <p>Google Drive is connected. Automatic backup sync is enabled for all profiles.</p>
                         {lastBackupAt && (
                             <p>Latest sync: {lastBackupAt}</p>
                         )}
@@ -390,7 +440,7 @@ export const ImportButton = (props: ImportButtonProps) => {
                     </>
                 ) : (
                     <>
-                        <p>Connect Google Drive to keep database backups synced automatically.</p>
+                        <p>Connect Google Drive once to keep backups of all profiles synced automatically.</p>
                         <Button
                             type='primary'
                             icon={<GoogleDriveIcon/>}
@@ -403,7 +453,7 @@ export const ImportButton = (props: ImportButtonProps) => {
                 )}
             </Modal>
             <Modal
-                title='Clear All Data'
+                title={`Clear profile "${loadedProfileName}"`}
                 open={isModalVisible}
                 onOk={handleReset}
                 onCancel={() => { setIsModalVisible(false) }}
@@ -417,7 +467,7 @@ export const ImportButton = (props: ImportButtonProps) => {
                 closable={!isResetting}
                 maskClosable={!isResetting}
             >
-                <p>Are you sure you want to delete all your data?</p>
+                <p>Are you sure you want to delete all data in profile &quot;{loadedProfileName}&quot;? Other profiles are not affected.</p>
                 <p>This will permanently remove:</p>
                 <ul
                     style={{
@@ -445,6 +495,7 @@ export const ImportButton = (props: ImportButtonProps) => {
                 onCancel={() => {
                     setIsImportModalVisible(false)
                     setPendingFile(null)
+                    setPendingBundle(null)
                 }}
                 okText='Yes, Import'
                 cancelText='Cancel'
@@ -453,8 +504,17 @@ export const ImportButton = (props: ImportButtonProps) => {
                     style: { backgroundColor: COLORS.ERROR },
                 }}
             >
-                <p>Are you sure you want to import data from the selected file?</p>
-                <p>This will permanently replace all existing data:</p>
+                {pendingBundle ? (
+                    <>
+                        <p>This file contains {pendingBundle.profiles.length} profiles: {pendingBundle.profiles.map(profile => profile.name).join(', ')}.</p>
+                        <p>Data of these profiles will be permanently replaced. Other profiles are not affected:</p>
+                    </>
+                ) : (
+                    <>
+                        <p>Are you sure you want to import data from the selected file into profile &quot;{loadedProfileName}&quot;?</p>
+                        <p>This will permanently replace all existing data in this profile:</p>
+                    </>
+                )}
                 <ul
                     style={{
                         marginLeft: '20px',

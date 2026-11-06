@@ -11,6 +11,7 @@ import { preloadBiomarkerConfigs } from './db/models/biomarkerConfig'
 import { preloadBlockedMerges } from './db/models/blockedMerge'
 import { preloadUnits } from './db/models/unit'
 import { getCurrentUserId } from './db/models/user'
+import { initializeLoadedProfile } from './profiles'
 import { registerE2EHelpers } from './testing/e2e'
 
 import './index.css'
@@ -61,6 +62,7 @@ const rootElement = document.getElementById('root')
 
 if (rootElement) {
     getCurrentUserId()
+        .then(() => initializeLoadedProfile())
         .then(() => preloadUnits())
         .then(() => preloadBiomarkerConfigs())
         .then(() => preloadBlockedMerges())
