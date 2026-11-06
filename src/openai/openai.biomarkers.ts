@@ -1,6 +1,5 @@
 import { useCallback } from 'react'
 
-import { ChatCompletion } from 'openai/resources'
 import { z } from 'zod'
 
 import { useBiomarkerConfigs } from '@/db/models/biomarkerConfig'
@@ -9,7 +8,7 @@ import { Range } from '@/db/types'
 import { isAmbiguousUcumCode } from '@/utils/ucum'
 import { getUnitType } from '@/utils/ucum/unitType'
 
-import { useOpenAI } from './openai.client'
+import { useAiClient } from './ai.client'
 
 export interface ExtractedBiomarker {
     id?: string
@@ -222,7 +221,7 @@ General Rules:
 - Return only valid JSON, no additional text`
 
 export const useExtractBiomarkers = () => {
-    const { client, hasApiKey, loading } = useOpenAI()
+    const { client, hasApiKey, loading } = useAiClient()
     const { data: configs } = useBiomarkerConfigs()
     const { data: units } = useUnits()
 
@@ -241,50 +240,13 @@ export const useExtractBiomarkers = () => {
         })
         const prompt = buildExtractionPrompt(existingBiomarkers)
 
-        const messages = [
-            {
-                role: 'system' as const,
-                content: prompt,
-            },
-            {
-                role: 'user' as const,
-                content: [
-                    {
-                        type: 'text' as const,
-                        text: 'Extract biomarkers from this image.',
-                    },
-                    {
-                        type: 'image_url' as const,
-                        image_url: {
-                            url: imageBase64,
-                        },
-                    },
-                ],
-            },
-        ]
-
-        if (followUpMessage) {
-            messages.push({
-                role: 'user' as const,
-                content: [
-                    {
-                        type: 'text' as const,
-                        text: followUpMessage,
-                    },
-                ],
-            })
-        }
-
-        const completion = await client.chat.completions.create({
-            model: model ?? 'gpt-5.4',
-            messages: messages as never,
-            reasoning_effort: 'low',
-            temperature: 1,
-            response_format: { type: 'json_object' },
-            stream: false,
-        }) as ChatCompletion
-
-        const content = completion.choices[0]?.message.content
+        const content = await client.completeJson({
+            systemPrompt: prompt,
+            imageDataUrl: imageBase64,
+            userText: 'Extract biomarkers from this image.',
+            followUpText: followUpMessage,
+            model,
+        })
         if (!content) return null
 
         const result = JSON.parse(content) as ExtractionResult

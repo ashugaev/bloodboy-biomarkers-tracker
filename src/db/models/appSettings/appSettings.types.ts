@@ -14,11 +14,25 @@ export interface GoogleDriveBackupSettings {
     connectedAt?: Date
 }
 
+export type AiProvider = 'openai' | 'anthropic' | 'openrouter' | 'gemini'
+
 export interface AppSettings {
     id: string
     openaiApiKey: string
+    anthropicApiKey?: string
+    openrouterApiKey?: string
+    geminiApiKey?: string
+    aiProvider?: AiProvider
+    aiModels?: Partial<Record<AiProvider, string>>
     lastExportedAt?: Date
     googleDriveBackup?: GoogleDriveBackupSettings
     createdAt: Date
     updatedAt: Date
 }
+
+export const AI_API_KEY_FIELDS = {
+    openai: 'openaiApiKey',
+    anthropic: 'anthropicApiKey',
+    openrouter: 'openrouterApiKey',
+    gemini: 'geminiApiKey',
+} as const satisfies Record<AiProvider, keyof AppSettings>

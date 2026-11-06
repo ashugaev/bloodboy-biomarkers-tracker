@@ -2,10 +2,12 @@ import { message } from 'antd'
 import { importDB } from 'dexie-export-import'
 
 import { config } from '@/config'
-import { MAIN_SETTINGS_ID, PRESERVED_OPENAI_TOKEN_KEY } from '@/constants'
+import { MAIN_SETTINGS_ID } from '@/constants'
 import { GoogleDriveBackupSettings } from '@/db/models/appSettings'
 // eslint-disable-next-line no-restricted-imports
 import { db, setIsImporting } from '@/db/services/db.service'
+
+import { clearPreservedAiKeys, getAiKeysToPreserve, readPreservedAiKeys, savePreservedAiKeys } from './preservedAiKeys'
 
 interface ImportDatabaseBackupOptions {
     reload?: boolean
@@ -26,11 +28,11 @@ export const importDatabaseBackup = async (
     setIsImporting(true)
 
     const currentSettings = await db.appSettings.toArray()
-    const tokenToPreserve = currentSettings[0]?.openaiApiKey || null
+    const keysToPreserve = getAiKeysToPreserve(currentSettings[0])
     const googleDriveBackupToPreserve = googleDriveBackup ?? currentSettings[0]?.googleDriveBackup
 
-    if (tokenToPreserve) {
-        sessionStorage.setItem(PRESERVED_OPENAI_TOKEN_KEY, tokenToPreserve)
+    if (keysToPreserve) {
+        savePreservedAiKeys(keysToPreserve)
     }
 
     try {
@@ -40,33 +42,34 @@ export const importDatabaseBackup = async (
 
         await importDB(file)
 
-        if (tokenToPreserve != null || googleDriveBackupToPreserve != null) {
-            const preservedToken = sessionStorage.getItem(PRESERVED_OPENAI_TOKEN_KEY)
-            if (preservedToken != null || googleDriveBackupToPreserve != null) {
+        if (keysToPreserve != null || googleDriveBackupToPreserve != null) {
+            const preservedKeys = readPreservedAiKeys()
+            if (preservedKeys != null || googleDriveBackupToPreserve != null) {
                 const importedSettings = await db.appSettings.toArray()
                 if (importedSettings[0]) {
                     await db.appSettings.update(importedSettings[0].id, {
-                        ...(preservedToken ? { openaiApiKey: preservedToken } : {}),
+                        ...(preservedKeys ?? {}),
                         ...(googleDriveBackupToPreserve ? { googleDriveBackup: googleDriveBackupToPreserve } : {}),
                         updatedAt: new Date(),
                     })
                 } else {
                     await db.appSettings.add({
                         id: MAIN_SETTINGS_ID,
-                        openaiApiKey: preservedToken ?? '',
+                        openaiApiKey: '',
+                        ...(preservedKeys ?? {}),
                         ...(googleDriveBackupToPreserve ? { googleDriveBackup: googleDriveBackupToPreserve } : {}),
                         createdAt: new Date(),
                         updatedAt: new Date(),
                     })
                 }
             }
-            sessionStorage.removeItem(PRESERVED_OPENAI_TOKEN_KEY)
+            clearPreservedAiKeys()
         }
 
         void message.success(successMessage)
     } catch (error) {
         setIsImporting(false)
-        sessionStorage.removeItem(PRESERVED_OPENAI_TOKEN_KEY)
+        clearPreservedAiKeys()
         throw error
     }
 
@@ -90,9 +93,6 @@ export const importData = async (file: File) => {
         console.error('Import error:', error)
         setIsImporting(false)
         void message.error('Failed to import data. Make sure you selected a valid JSON backup file.')
-        const preservedToken = sessionStorage.getItem(PRESERVED_OPENAI_TOKEN_KEY)
-        if (preservedToken) {
-            sessionStorage.removeItem(PRESERVED_OPENAI_TOKEN_KEY)
-        }
+        clearPreservedAiKeys()
     }
 }
