@@ -3,6 +3,7 @@ import { GoogleDriveBackupSettings } from '@/db/models/appSettings'
 export interface GoogleDriveBackupResult {
     exportedAt: Date
     dataVersionAt: Date
+    dataFingerprint: string | null
     latestFileId: string
     latestFileName: string
     historyFileId: string
@@ -31,6 +32,7 @@ export interface GoogleDriveBackupManifest {
     format: 'dexie-export-import'
     generatedAt: string
     dataVersionAt?: string
+    dataFingerprint?: string
     profile?: {
         id: string
         name: string
@@ -56,11 +58,27 @@ export interface GoogleDriveBackupState {
     driveSettings?: GoogleDriveBackupSettings
 }
 
-export type GoogleDriveSyncAction = 'uploaded' | 'downloaded' | 'none'
+export type GoogleDriveSyncAction = 'uploaded' | 'downloaded' | 'none' | 'conflict'
+
+export type GoogleDriveSyncPlan = 'upload' | 'download' | 'conflict' | 'in-sync' | 'none'
+
+export type GoogleDriveConflictChoice = 'local' | 'remote'
+
+export interface GoogleDriveSyncState {
+    localFingerprint: string | null
+    localVersionAt: Date | null
+    remoteVersion: string | null
+    remoteVersionAt: Date | null
+    remoteFingerprint?: string
+    syncedLocalFingerprint?: string
+    syncedRemoteVersion?: string
+    lastBackupAt?: Date
+}
 
 export interface GoogleDriveSyncResult {
     action: GoogleDriveSyncAction
     localVersionAt: Date | null
     remoteVersionAt: Date | null
     backup?: GoogleDriveBackupResult
+    conflictBackupFileName?: string
 }

@@ -28,6 +28,7 @@ vi.mock('@/db/services/db.service', () => ({
 
 vi.mock('@/db/utils/exportStatus.utils', () => ({
     getLatestUserDataUpdatedAt: vi.fn(() => Promise.resolve(new Date('2026-02-01T00:00:00Z'))),
+    getUserDataFingerprint: vi.fn(() => Promise.resolve('2026-02-01T00:00:00.000Z|0|1|0|0|0|0|0')),
 }))
 
 vi.mock('@/utils/exportData', () => ({
@@ -219,5 +220,34 @@ describe('google drive backup service', () => {
         expect(drive.uploads.map(upload => upload.metadata.name)).not.toContain('bloodboy_profiles.json')
         const manifest = drive.uploads.find(upload => upload.metadata.name === 'bloodboy_backup_manifest.json')
         expect(manifest?.metadata.parents).toEqual(['id:Bloodboy Backups'])
+    })
+    it('syncs the profile list when the main profile was renamed', async () => {
+        vi.stubGlobal('window', {
+            localStorage: createStorage({
+                'bloodboy.profiles': JSON.stringify({
+                    activeProfileId: 'default',
+                    profiles: [{
+                        id: 'default',
+                        name: 'Alek',
+                        createdAt: '1970-01-01T00:00:00.000Z',
+                        updatedAt: '2026-03-01T00:00:00.000Z',
+                    }],
+                    deletedProfiles: [],
+                }),
+                'bloodboy.googleDrive.accessToken': JSON.stringify({
+                    accessToken: 'token',
+                    expiresAt: Date.now() + 3_600_000,
+                }),
+            }),
+        })
+        const drive = createFakeDrive()
+        vi.stubGlobal('fetch', drive.fetchMock)
+
+        const { syncDatabaseWithGoogleDrive } = await import('./googleDriveBackup.service')
+        await syncDatabaseWithGoogleDrive({ interactive: false })
+
+        const profilesFile = drive.uploads.find(upload => upload.metadata.name === 'bloodboy_profiles.json')
+        expect((JSON.parse(profilesFile?.content ?? '{}') as { profiles: Array<{ name: string }> }).profiles.map(profile => profile.name))
+            .toEqual(['Alek'])
     })
 })

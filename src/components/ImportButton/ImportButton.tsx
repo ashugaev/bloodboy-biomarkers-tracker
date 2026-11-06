@@ -25,6 +25,7 @@ import {
     getGoogleDriveBackupErrorMessage,
     markGoogleDriveBackupError,
     syncDatabaseWithGoogleDrive,
+    useGoogleDriveConflictModal,
 } from '@/googleDrive'
 import {
     ProfilesBundle,
@@ -52,6 +53,7 @@ interface GoogleDriveIconProps {
 export const ImportButton = (props: ImportButtonProps) => {
     const { className, onlyApproved = true } = props
     const posthog = usePostHog()
+    const showDriveConflict = useGoogleDriveConflictModal()
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [isModalVisible, setIsModalVisible] = useState(false)
     const [isImportModalVisible, setIsImportModalVisible] = useState(false)
@@ -201,6 +203,8 @@ export const ImportButton = (props: ImportButtonProps) => {
                 void message.success(`Backup saved to Google Drive: ${result.backup.historyFileName}`)
             } else if (result.action === 'downloaded') {
                 void message.success('Newer Google Drive backup restored')
+            } else if (result.action === 'conflict') {
+                showDriveConflict(result)
             } else {
                 void message.success('Google Drive backup is up to date')
             }

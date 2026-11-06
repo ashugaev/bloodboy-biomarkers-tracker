@@ -10,6 +10,9 @@ export interface GoogleDriveBackupSettings {
     lastBackupFileName?: string
     lastBackupWebViewLink?: string
     lastSyncDirection?: 'uploaded' | 'downloaded' | 'none'
+    syncedLocalFingerprint?: string
+    syncedRemoteVersion?: string
+    conflictBackupFingerprint?: string
     lastError?: string
     connectedAt?: Date
 }

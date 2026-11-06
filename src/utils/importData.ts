@@ -12,6 +12,7 @@ interface ImportDatabaseBackupOptions {
     successMessage?: string | null
     googleDriveBackup?: GoogleDriveBackupSettings
     database?: BloodTestDatabase
+    afterImport?: () => Promise<void>
 }
 
 export const importDatabaseBackup = async (
@@ -23,6 +24,7 @@ export const importDatabaseBackup = async (
         successMessage = 'Data imported successfully. Refreshing...',
         googleDriveBackup,
         database = db,
+        afterImport,
     } = options
 
     setIsImporting(true)
@@ -64,6 +66,8 @@ export const importDatabaseBackup = async (
             }
             sessionStorage.removeItem(PRESERVED_OPENAI_TOKEN_KEY)
         }
+
+        await afterImport?.()
 
         if (successMessage) {
             void message.success(successMessage)

@@ -7,12 +7,14 @@ import { useAppSettings } from '@/db/models/appSettings'
 import { isGoogleDriveSyncEnabled, isLoadedProfileRegistered } from '@/profiles/profiles.service'
 
 import { markGoogleDriveBackupError, syncDatabaseWithGoogleDrive } from './googleDriveBackup.service'
+import { isGoogleDriveConflictPending, useGoogleDriveConflictModal } from './useGoogleDriveConflictModal'
 
 const AUTO_SYNC_DELAY_MS = 3000
 const AUTO_SYNC_INTERVAL_MS = 60_000
 
 export const useGoogleDriveAutoBackup = () => {
     const { message } = AntApp.useApp()
+    const showConflict = useGoogleDriveConflictModal()
     const { data: settings } = useAppSettings()
     const { hasUnexportedChanges, lastExportedAt, loading } = useExportStatus()
     const syncInFlightRef = useRef(false)
@@ -20,7 +22,7 @@ export const useGoogleDriveAutoBackup = () => {
     const lastSyncTriggerRef = useRef<string | null>(null)
 
     const runSync = useCallback(() => {
-        if (syncInFlightRef.current || !isLoadedProfileRegistered()) {
+        if (syncInFlightRef.current || isGoogleDriveConflictPending() || !isLoadedProfileRegistered()) {
             return
         }
 
@@ -34,6 +36,8 @@ export const useGoogleDriveAutoBackup = () => {
                 lastFailureRef.current = null
                 if (result.action === 'downloaded') {
                     void message.success('Newer Google Drive backup found')
+                } else if (result.action === 'conflict') {
+                    showConflict(result)
                 }
             })
             .catch((error) => {
@@ -48,7 +52,7 @@ export const useGoogleDriveAutoBackup = () => {
             .finally(() => {
                 syncInFlightRef.current = false
             })
-    }, [message])
+    }, [message, showConflict])
 
     useEffect(() => {
         const driveSettings = settings[0]?.googleDriveBackup

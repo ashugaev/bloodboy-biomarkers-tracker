@@ -25,6 +25,21 @@ const isModified = (item: TrackedEntity): boolean => {
     return item.updatedAt.getTime() > item.createdAt.getTime()
 }
 
+const getBlockedMergeKey = (merge: BlockedMerge): string => {
+    const sourceUnits = [...merge.sourceUnits].sort().join(',')
+    const targetUnits = [...merge.targetUnits].sort().join(',')
+
+    return `${merge.biomarkerName}|${sourceUnits}|${targetUnits}`
+}
+
+const isUserConfig = (config: BiomarkerConfig): boolean => !config.isDefault || isModified(config)
+
+const isUserUnit = (unit: Unit): boolean => !DEFAULT_UNIT_CODES.has(unit.ucumCode) || isModified(unit)
+
+const isUserBlockedMerge = (merge: BlockedMerge): boolean => {
+    return !DEFAULT_BLOCKED_MERGE_KEYS.has(getBlockedMergeKey(merge)) || isModified(merge)
+}
+
 export const getLatestUpdatedAt = (items: Array<TrackedEntity | undefined>): Date | null => {
     const timestamps = items
         .map(item => item?.updatedAt?.getTime())
@@ -43,26 +58,19 @@ export const getLastExportedAt = (settings: AppSettings | undefined): Date | nul
 
 export const getLatestUserConfig = (configs: BiomarkerConfig[]): BiomarkerConfig | undefined => {
     return configs
-        .filter(config => !config.isDefault || isModified(config))
+        .filter(isUserConfig)
         .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0]
 }
 
 export const getLatestUserUnit = (units: Unit[]): Unit | undefined => {
     return units
-        .filter(unit => !DEFAULT_UNIT_CODES.has(unit.ucumCode) || isModified(unit))
+        .filter(isUserUnit)
         .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0]
-}
-
-const getBlockedMergeKey = (merge: BlockedMerge): string => {
-    const sourceUnits = [...merge.sourceUnits].sort().join(',')
-    const targetUnits = [...merge.targetUnits].sort().join(',')
-
-    return `${merge.biomarkerName}|${sourceUnits}|${targetUnits}`
 }
 
 export const getLatestUserBlockedMerge = (blockedMerges: BlockedMerge[]): BlockedMerge | undefined => {
     return blockedMerges
-        .filter(merge => !DEFAULT_BLOCKED_MERGE_KEYS.has(getBlockedMergeKey(merge)) || isModified(merge))
+        .filter(isUserBlockedMerge)
         .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0]
 }
 
@@ -94,4 +102,41 @@ export const getLatestUserDataUpdatedAt = async (): Promise<Date | null> => {
         latestConversion,
         getLatestUserBlockedMerge(blockedMerges),
     ])
+}
+
+export const getUserDataFingerprint = async (): Promise<string | null> => {
+    const [
+        latestUpdatedAt,
+        configs,
+        recordsCount,
+        documentsCount,
+        units,
+        filtersCount,
+        conversionsCount,
+        blockedMerges,
+    ] = await Promise.all([
+        getLatestUserDataUpdatedAt(),
+        db.biomarkerConfigs.toArray(),
+        db.biomarkerRecords.count(),
+        db.uploadedFiles.count(),
+        db.units.toArray(),
+        db.savedFilters.count(),
+        db.verifiedConversions.count(),
+        db.blockedMerges.toArray(),
+    ])
+    const counts = [
+        configs.filter(isUserConfig).length,
+        recordsCount,
+        documentsCount,
+        units.filter(isUserUnit).length,
+        filtersCount,
+        conversionsCount,
+        blockedMerges.filter(isUserBlockedMerge).length,
+    ]
+
+    if (!latestUpdatedAt && counts.every(count => count === 0)) {
+        return null
+    }
+
+    return [latestUpdatedAt?.toISOString() ?? 'none', ...counts].join('|')
 }

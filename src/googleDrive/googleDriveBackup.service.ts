@@ -1,9 +1,9 @@
 import { config } from '@/config'
-import { DEFAULT_PROFILE_ID, GOOGLE_DRIVE_ACCESS_TOKEN_STORAGE_KEY, MAIN_SETTINGS_ID } from '@/constants'
+import { DEFAULT_PROFILE_ID, DEFAULT_PROFILE_NAME, GOOGLE_DRIVE_ACCESS_TOKEN_STORAGE_KEY, MAIN_SETTINGS_ID } from '@/constants'
 import { AppSettings, GoogleDriveBackupSettings } from '@/db/models/appSettings'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/db/services/db.service'
-import { getLatestUserDataUpdatedAt } from '@/db/utils/exportStatus.utils'
+import { getLatestUserDataUpdatedAt, getUserDataFingerprint } from '@/db/utils/exportStatus.utils'
 import {
     applyRemoteProfileSnapshot,
     getLoadedProfile,
@@ -21,8 +21,10 @@ import {
     GoogleDriveBackupState,
     GoogleDriveBackupStructure,
     GoogleDriveBackupUploadStructure,
+    GoogleDriveConflictChoice,
     GoogleDriveSyncResult,
 } from './googleDriveBackup.types'
+import { getGoogleDriveSyncPlan } from './googleDriveSync.utils'
 
 const GOOGLE_IDENTITY_SCRIPT_ID = 'google-identity-services'
 const GOOGLE_IDENTITY_SCRIPT_SRC = 'https://accounts.google.com/gsi/client'
@@ -430,7 +432,9 @@ const syncProfilesWithGoogleDrive = async (accessToken: string) => {
         ? parseProfileSnapshot(await driveDownloadJson<unknown>(accessToken, remoteFile.id))
         : null
     const merged = applyRemoteProfileSnapshot(remote)
-    const isMainOnly = merged.profiles.length === 1 && merged.deletedProfiles.length === 0
+    const isMainOnly = merged.profiles.length === 1 &&
+        merged.profiles[0].name === DEFAULT_PROFILE_NAME &&
+        merged.deletedProfiles.length === 0
 
     if (remote ? toCanonicalProfileSnapshot(remote) === toCanonicalProfileSnapshot(merged) : isMainOnly) {
         return
@@ -490,6 +494,7 @@ const uploadBackupFiles = async (
     backupBlob: Blob,
     exportedAt: Date,
     dataVersionAt: Date,
+    dataFingerprint: string | null,
 ): Promise<GoogleDriveBackupResult> => {
     const structure = await ensureBackupStructure(accessToken, exportedAt)
     const historyFileName = `bloodboy_db_backup_${toBackupTimestamp(exportedAt)}.json`
@@ -541,6 +546,7 @@ const uploadBackupFiles = async (
         format: 'dexie-export-import',
         generatedAt: exportedAt.toISOString(),
         dataVersionAt: dataVersionAt.toISOString(),
+        ...(dataFingerprint ? { dataFingerprint } : {}),
         profile: {
             id: profile.id,
             name: profile.name,
@@ -580,6 +586,7 @@ const uploadBackupFiles = async (
     return {
         exportedAt,
         dataVersionAt,
+        dataFingerprint,
         latestFileId: latestFile.id,
         latestFileName: LATEST_BACKUP_FILE_NAME,
         historyFileId: historyFile.id,
@@ -691,6 +698,9 @@ const mergeDriveSettings = (
         lastBackupFileName: result.historyFileName,
         lastBackupWebViewLink: result.webViewLink,
         lastSyncDirection,
+        syncedLocalFingerprint: result.dataFingerprint ?? undefined,
+        syncedRemoteVersion: result.exportedAt.toISOString(),
+        conflictBackupFingerprint: undefined,
         lastError: undefined,
         connectedAt: currentSettings?.connectedAt ?? result.exportedAt,
     }
@@ -715,6 +725,8 @@ const mergeImportedDriveSettings = (
         lastBackupFileId: manifest.archivedVersion.fileId,
         lastBackupFileName: manifest.archivedVersion.fileName,
         lastSyncDirection: 'downloaded',
+        syncedRemoteVersion: manifest.generatedAt,
+        conflictBackupFingerprint: undefined,
         lastError: undefined,
         connectedAt: currentSettings?.connectedAt ?? new Date(),
     }
@@ -736,8 +748,9 @@ export const backupDatabaseToGoogleDrive = async (
     const settings = await ensureAppSettings()
     const accessToken = await requestGoogleDriveAccessToken(options.prompt, options.interactive)
     const dataVersionAt = await getLatestUserDataUpdatedAt() ?? exportedAt
+    const dataFingerprint = await getUserDataFingerprint()
     const backupBlob = await createDatabaseBackupBlob(exportedAt)
-    const result = await uploadBackupFiles(accessToken, backupBlob, exportedAt, dataVersionAt)
+    const result = await uploadBackupFiles(accessToken, backupBlob, exportedAt, dataVersionAt, dataFingerprint)
 
     await db.appSettings.update(settings.id, {
         googleDriveBackup: mergeDriveSettings(settings.googleDriveBackup, result, options.forceEnable ?? false),
@@ -753,6 +766,7 @@ const markGoogleDriveSyncNoop = async (
     structure: GoogleDriveBackupStructure | null,
     remoteVersionAt: Date | null,
     forceEnable: boolean,
+    syncMarkers: Pick<GoogleDriveBackupSettings, 'syncedLocalFingerprint' | 'syncedRemoteVersion'> = {},
 ) => {
     await db.appSettings.update(settings.id, {
         googleDriveBackup: {
@@ -768,6 +782,7 @@ const markGoogleDriveSyncNoop = async (
                 }
                 : {}),
             ...(remoteVersionAt ? { lastBackupAt: remoteVersionAt } : {}),
+            ...syncMarkers,
             lastSyncDirection: 'none',
             lastError: undefined,
             connectedAt: settings.googleDriveBackup?.connectedAt ?? new Date(),
@@ -776,40 +791,100 @@ const markGoogleDriveSyncNoop = async (
     })
 }
 
+type RemoteBackup = NonNullable<Awaited<ReturnType<typeof getRemoteBackupManifest>>>
+
+const restoreRemoteBackup = async (
+    accessToken: string,
+    settings: AppSettings,
+    remoteBackup: RemoteBackup,
+    remoteVersionAt: Date,
+    forceEnable: boolean,
+) => {
+    const backupBlob = await downloadLatestBackup(accessToken, remoteBackup.manifest, remoteBackup.structure)
+    const googleDriveBackup = mergeImportedDriveSettings(
+        settings.googleDriveBackup,
+        remoteBackup.manifest,
+        remoteBackup.structure,
+        remoteVersionAt,
+        forceEnable,
+    )
+
+    await importDatabaseBackup(backupBlob, {
+        successMessage: 'Newer Google Drive backup restored. Refreshing...',
+        googleDriveBackup,
+        afterImport: async () => {
+            const importedSettings = await db.appSettings.limit(1).first()
+            if (importedSettings) {
+                await db.appSettings.update(importedSettings.id, {
+                    googleDriveBackup: {
+                        ...googleDriveBackup,
+                        syncedLocalFingerprint: await getUserDataFingerprint() ?? undefined,
+                    },
+                })
+            }
+        },
+    })
+}
+
+const saveConflictSnapshot = async (
+    accessToken: string,
+    settings: AppSettings,
+    localFingerprint: string,
+): Promise<string | undefined> => {
+    if (settings.googleDriveBackup?.conflictBackupFingerprint === localFingerprint) {
+        return undefined
+    }
+
+    const exportedAt = new Date()
+    const structure = await ensureBackupStructure(accessToken, exportedAt)
+    const fileName = `bloodboy_db_backup_${toBackupTimestamp(exportedAt)}_conflict_this_device.json`
+
+    await uploadMultipartFile(accessToken, 'POST', '/files', {
+        name: fileName,
+        mimeType: 'application/json',
+        parents: [structure.monthFolderId],
+    }, await createDatabaseBackupBlob(exportedAt))
+
+    await db.appSettings.update(settings.id, {
+        googleDriveBackup: {
+            ...settings.googleDriveBackup,
+            enabled: settings.googleDriveBackup?.enabled ?? true,
+            conflictBackupFingerprint: localFingerprint,
+        },
+    })
+
+    return fileName
+}
+
 export const syncDatabaseWithGoogleDrive = async (
     options: BackupDatabaseToGoogleDriveOptions = {},
 ): Promise<GoogleDriveSyncResult> => {
     const settings = await ensureAppSettings()
     const accessToken = await requestGoogleDriveAccessToken(options.prompt, options.interactive)
-    if (options.forceEnable) {
+    const forceEnable = options.forceEnable ?? false
+    if (forceEnable) {
         setGoogleDriveSyncEnabled(true)
     }
     await syncProfilesWithGoogleDrive(accessToken)
     const localVersionAt = await getLatestUserDataUpdatedAt()
+    const localFingerprint = await getUserDataFingerprint()
     const remoteBackup = await getRemoteBackupManifest(accessToken)
     const remoteVersionAt = remoteBackup ? getRemoteManifestVersionAt(remoteBackup.manifest) : null
-    const lastSyncedAt = settings.googleDriveBackup?.lastBackupAt ?? null
-    const shouldDownload = remoteBackup && remoteVersionAt && (
-        localVersionAt == null
-            ? lastSyncedAt?.getTime() !== remoteVersionAt.getTime()
-            : remoteVersionAt.getTime() > localVersionAt.getTime() &&
-                remoteVersionAt.getTime() > (lastSyncedAt?.getTime() ?? 0)
-    )
+    const remoteVersion = remoteBackup && remoteVersionAt ? remoteBackup.manifest.generatedAt : null
+    const driveSettings = settings.googleDriveBackup
+    const plan = getGoogleDriveSyncPlan({
+        localFingerprint,
+        localVersionAt,
+        remoteVersion,
+        remoteVersionAt,
+        remoteFingerprint: remoteBackup?.manifest.dataFingerprint,
+        syncedLocalFingerprint: driveSettings?.syncedLocalFingerprint,
+        syncedRemoteVersion: driveSettings?.syncedRemoteVersion,
+        lastBackupAt: driveSettings?.lastBackupAt,
+    })
 
-    if (shouldDownload) {
-        const backupBlob = await downloadLatestBackup(accessToken, remoteBackup.manifest, remoteBackup.structure)
-        const googleDriveBackup = mergeImportedDriveSettings(
-            settings.googleDriveBackup,
-            remoteBackup.manifest,
-            remoteBackup.structure,
-            remoteVersionAt,
-            options.forceEnable ?? false,
-        )
-
-        await importDatabaseBackup(backupBlob, {
-            successMessage: 'Newer Google Drive backup restored. Refreshing...',
-            googleDriveBackup,
-        })
+    if (plan === 'download' && remoteBackup && remoteVersionAt) {
+        await restoreRemoteBackup(accessToken, settings, remoteBackup, remoteVersionAt, forceEnable)
 
         return {
             action: 'downloaded',
@@ -818,10 +893,7 @@ export const syncDatabaseWithGoogleDrive = async (
         }
     }
 
-    if (
-        localVersionAt &&
-        (!remoteVersionAt || localVersionAt.getTime() > remoteVersionAt.getTime())
-    ) {
+    if (plan === 'upload') {
         const backup = await backupDatabaseToGoogleDrive(options)
 
         return {
@@ -832,16 +904,65 @@ export const syncDatabaseWithGoogleDrive = async (
         }
     }
 
+    if (plan === 'conflict' && localFingerprint) {
+        const conflictBackupFileName = await saveConflictSnapshot(accessToken, settings, localFingerprint)
+
+        return {
+            action: 'conflict',
+            localVersionAt,
+            remoteVersionAt,
+            conflictBackupFileName,
+        }
+    }
+
     await markGoogleDriveSyncNoop(
-        settings,
+        await ensureAppSettings(),
         remoteBackup?.structure ?? null,
         remoteVersionAt,
-        options.forceEnable ?? false,
+        forceEnable,
+        plan === 'in-sync' && localFingerprint && remoteVersion
+            ? {
+                syncedLocalFingerprint: localFingerprint,
+                syncedRemoteVersion: remoteVersion,
+            }
+            : {},
     )
 
     return {
         action: 'none',
         localVersionAt,
+        remoteVersionAt,
+    }
+}
+
+export const resolveGoogleDriveSyncConflict = async (
+    choice: GoogleDriveConflictChoice,
+): Promise<GoogleDriveSyncResult> => {
+    if (choice === 'local') {
+        const backup = await backupDatabaseToGoogleDrive({ prompt: '' })
+
+        return {
+            action: 'uploaded',
+            localVersionAt: backup.dataVersionAt,
+            remoteVersionAt: backup.dataVersionAt,
+            backup,
+        }
+    }
+
+    const settings = await ensureAppSettings()
+    const accessToken = await requestGoogleDriveAccessToken('')
+    const remoteBackup = await getRemoteBackupManifest(accessToken)
+    const remoteVersionAt = remoteBackup ? getRemoteManifestVersionAt(remoteBackup.manifest) : null
+
+    if (!remoteBackup || !remoteVersionAt) {
+        throw new GoogleDriveBackupError('Google Drive backup was not found')
+    }
+
+    await restoreRemoteBackup(accessToken, settings, remoteBackup, remoteVersionAt, false)
+
+    return {
+        action: 'downloaded',
+        localVersionAt: await getLatestUserDataUpdatedAt(),
         remoteVersionAt,
     }
 }

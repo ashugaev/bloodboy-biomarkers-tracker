@@ -234,3 +234,21 @@ test('reloads a tab whose profile was deleted in another tab', async ({ page, co
     await expect(page.getByRole('button', { name: 'Profile' })).toHaveText('Main')
     expect(await listDatabaseNames(page)).not.toContain(partner.dbName)
 })
+
+test('renames the main profile and keeps the name after reload', async ({ page }) => {
+    await startWithMainData(page)
+    const profileButton = page.getByRole('button', { name: 'Profile' })
+    await profileButton.click()
+    await page.getByText('Manage profiles').click()
+    await page.getByRole('button', { name: 'Rename Main' }).click()
+    await page.locator('.ant-modal input').first().fill('Alek')
+    await page.locator('.ant-modal').getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(profileButton).toHaveText('Alek')
+
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Profile' })).toHaveText('Alek')
+    expect((await readRegistry(page))?.profiles).toEqual([
+        expect.objectContaining({ id: 'default', name: 'Alek' }),
+    ])
+    expect(await countRows(page, 'bloodboy-db', 'uploadedFiles')).toBe(1)
+})
