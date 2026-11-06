@@ -4,6 +4,7 @@ import { App as AntApp } from 'antd'
 
 import { useExportStatus } from '@/db'
 import { useAppSettings } from '@/db/models/appSettings'
+import { isGoogleDriveSyncEnabled, isLoadedProfileRegistered } from '@/profiles/profiles.service'
 
 import { markGoogleDriveBackupError, syncDatabaseWithGoogleDrive } from './googleDriveBackup.service'
 
@@ -19,7 +20,7 @@ export const useGoogleDriveAutoBackup = () => {
     const lastSyncTriggerRef = useRef<string | null>(null)
 
     const runSync = useCallback(() => {
-        if (syncInFlightRef.current) {
+        if (syncInFlightRef.current || !isLoadedProfileRegistered()) {
             return
         }
 
@@ -54,7 +55,7 @@ export const useGoogleDriveAutoBackup = () => {
 
         if (
             loading ||
-            !driveSettings?.enabled ||
+            !isGoogleDriveSyncEnabled(driveSettings?.enabled) ||
             syncInFlightRef.current
         ) {
             return
@@ -63,7 +64,7 @@ export const useGoogleDriveAutoBackup = () => {
         const triggerKey = [
             hasUnexportedChanges,
             lastExportedAt?.getTime() ?? 'never',
-            driveSettings.lastBackupAt?.getTime() ?? 'never',
+            driveSettings?.lastBackupAt?.getTime() ?? 'never',
         ].join(':')
 
         if (lastSyncTriggerRef.current === triggerKey && !hasUnexportedChanges) {
@@ -82,9 +83,7 @@ export const useGoogleDriveAutoBackup = () => {
     }, [hasUnexportedChanges, lastExportedAt, loading, runSync, settings])
 
     useEffect(() => {
-        const driveSettings = settings[0]?.googleDriveBackup
-
-        if (!driveSettings?.enabled) {
+        if (!isGoogleDriveSyncEnabled(settings[0]?.googleDriveBackup?.enabled)) {
             return
         }
 

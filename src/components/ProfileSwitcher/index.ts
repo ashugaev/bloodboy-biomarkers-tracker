@@ -1,2 +1,2 @@
-export { ProfileSwitcher } from './ProfileSwitcher'
-export type { ProfileSwitcherProps } from './ProfileSwitcher.types'
+export * from './ProfileSwitcher'
+export * from './ProfileSwitcher.types'

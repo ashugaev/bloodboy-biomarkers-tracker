@@ -1,10 +1,16 @@
 import { config } from '@/config'
-import { DEFAULT_PROFILE_ID, MAIN_SETTINGS_ID } from '@/constants'
+import { DEFAULT_PROFILE_ID, GOOGLE_DRIVE_ACCESS_TOKEN_STORAGE_KEY, MAIN_SETTINGS_ID } from '@/constants'
 import { AppSettings, GoogleDriveBackupSettings } from '@/db/models/appSettings'
 // eslint-disable-next-line no-restricted-imports
 import { db } from '@/db/services/db.service'
 import { getLatestUserDataUpdatedAt } from '@/db/utils/exportStatus.utils'
-import { getLoadedProfile } from '@/profiles/profiles.service'
+import {
+    applyRemoteProfileSnapshot,
+    getLoadedProfile,
+    parseProfileSnapshot,
+    setGoogleDriveSyncEnabled,
+    toCanonicalProfileSnapshot,
+} from '@/profiles/profiles.service'
 import { createDatabaseBackupBlob } from '@/utils/exportData'
 import { importDatabaseBackup } from '@/utils/importData'
 
@@ -29,6 +35,7 @@ const HISTORY_FOLDER_NAME = 'history'
 const PROFILES_FOLDER_NAME = 'profiles'
 const MANIFEST_FILE_NAME = 'bloodboy_backup_manifest.json'
 const LATEST_BACKUP_FILE_NAME = 'bloodboy_db_backup_latest.json'
+const PROFILES_FILE_NAME = 'bloodboy_profiles.json'
 
 interface GoogleTokenResponse {
     access_token?: string
@@ -73,8 +80,6 @@ declare global {
     }
 }
 
-const ACCESS_TOKEN_STORAGE_KEY = 'bloodboy.googleDrive.accessToken'
-
 let cachedAccessToken: string | null = null
 let cachedAccessTokenExpiresAt = 0
 
@@ -85,7 +90,7 @@ interface PersistedAccessToken {
 
 const readPersistedAccessToken = (): PersistedAccessToken | null => {
     try {
-        const raw = window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY)
+        const raw = window.localStorage.getItem(GOOGLE_DRIVE_ACCESS_TOKEN_STORAGE_KEY)
         if (!raw) return null
 
         const parsed = JSON.parse(raw) as Partial<PersistedAccessToken>
@@ -105,7 +110,7 @@ const readPersistedAccessToken = (): PersistedAccessToken | null => {
 const persistAccessToken = (accessToken: string, expiresAt: number) => {
     try {
         window.localStorage.setItem(
-            ACCESS_TOKEN_STORAGE_KEY,
+            GOOGLE_DRIVE_ACCESS_TOKEN_STORAGE_KEY,
             JSON.stringify({
                 accessToken,
                 expiresAt,
@@ -118,7 +123,7 @@ const persistAccessToken = (accessToken: string, expiresAt: number) => {
 
 const clearPersistedAccessToken = () => {
     try {
-        window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
+        window.localStorage.removeItem(GOOGLE_DRIVE_ACCESS_TOKEN_STORAGE_KEY)
     } catch {
         // Ignore storage failures.
     }
@@ -398,8 +403,6 @@ const getMonthFolderName = (date: Date): string => {
     return String(date.getUTCMonth() + 1).padStart(2, '0')
 }
 
-// Main profile keeps the original Drive layout; other profiles live in
-// profiles/<profileId> under the same root folder.
 const getProfileBackupPath = (): string => {
     const profile = getLoadedProfile()
 
@@ -418,6 +421,36 @@ const getProfileBackupFolder = async (accessToken: string): Promise<GoogleDriveF
 
     const profilesFolder = await getOrCreateFolder(accessToken, PROFILES_FOLDER_NAME, rootFolder.id)
     return await getOrCreateFolder(accessToken, profile.id, profilesFolder.id)
+}
+
+const syncProfilesWithGoogleDrive = async (accessToken: string) => {
+    const rootFolder = await getOrCreateFolder(accessToken, BACKUP_ROOT_FOLDER_NAME, null)
+    const remoteFile = await findDriveFile(accessToken, PROFILES_FILE_NAME, rootFolder.id, 'application/json')
+    const remote = remoteFile
+        ? parseProfileSnapshot(await driveDownloadJson<unknown>(accessToken, remoteFile.id))
+        : null
+    const merged = applyRemoteProfileSnapshot(remote)
+    const isMainOnly = merged.profiles.length === 1 && merged.deletedProfiles.length === 0
+
+    if (remote ? toCanonicalProfileSnapshot(remote) === toCanonicalProfileSnapshot(merged) : isMainOnly) {
+        return
+    }
+
+    const profilesBlob = new Blob([toCanonicalProfileSnapshot(merged)], { type: 'application/json' })
+
+    if (remoteFile) {
+        await uploadMultipartFile(accessToken, 'PATCH', `/files/${remoteFile.id}`, {
+            name: PROFILES_FILE_NAME,
+            mimeType: 'application/json',
+        }, profilesBlob)
+        return
+    }
+
+    await uploadMultipartFile(accessToken, 'POST', '/files', {
+        name: PROFILES_FILE_NAME,
+        mimeType: 'application/json',
+        parents: [rootFolder.id],
+    }, profilesBlob)
 }
 
 const ensureBaseBackupStructure = async (
@@ -748,6 +781,10 @@ export const syncDatabaseWithGoogleDrive = async (
 ): Promise<GoogleDriveSyncResult> => {
     const settings = await ensureAppSettings()
     const accessToken = await requestGoogleDriveAccessToken(options.prompt, options.interactive)
+    if (options.forceEnable) {
+        setGoogleDriveSyncEnabled(true)
+    }
+    await syncProfilesWithGoogleDrive(accessToken)
     const localVersionAt = await getLatestUserDataUpdatedAt()
     const remoteBackup = await getRemoteBackupManifest(accessToken)
     const remoteVersionAt = remoteBackup ? getRemoteManifestVersionAt(remoteBackup.manifest) : null
@@ -812,6 +849,7 @@ export const syncDatabaseWithGoogleDrive = async (
 export const disconnectGoogleDriveBackup = async () => {
     const settings = await ensureAppSettings()
     clearGoogleDriveAccessToken()
+    setGoogleDriveSyncEnabled(false)
 
     await db.appSettings.update(settings.id, {
         googleDriveBackup: {

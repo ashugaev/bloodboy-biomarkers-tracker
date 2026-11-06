@@ -66,6 +66,7 @@ describe('profiles service', () => {
         expect(readProfileRegistry()).toEqual({
             activeProfileId: 'default',
             profiles: [expect.objectContaining({ id: 'default' })],
+            deletedProfiles: [],
         })
     })
 
@@ -81,15 +82,143 @@ describe('profiles service', () => {
         expect(readProfileRegistry().profiles).toHaveLength(1)
     })
 
-    it('keeps the registry when local storage is cleared on reset', async () => {
-        const { addProfile, clearLocalStorageExceptProfiles, readProfileRegistry } = await loadService()
+    it('keeps the registry and Drive token when local storage is cleared on reset', async () => {
+        const { addProfile, clearLocalStorageForReset, readProfileRegistry } = await loadService()
         addProfile('Kid')
         window.localStorage.setItem('other', 'value')
+        window.localStorage.setItem('bloodboy.googleDrive.accessToken', 'token')
 
-        clearLocalStorageExceptProfiles()
+        clearLocalStorageForReset()
 
         expect(window.localStorage.getItem('other')).toBeNull()
+        expect(window.localStorage.getItem('bloodboy.googleDrive.accessToken')).toBe('token')
         expect(readProfileRegistry().profiles).toHaveLength(2)
+    })
+
+    it('rejects empty and duplicate profile names', async () => {
+        const { addProfile, renameProfile, validateProfileName } = await loadService()
+        const kid = addProfile('Kid')
+
+        expect(validateProfileName('  ')).not.toBeNull()
+        expect(validateProfileName(' kid ')).not.toBeNull()
+        expect(validateProfileName('Kid', kid.id)).toBeNull()
+        expect(() => addProfile('MAIN')).toThrow()
+        expect(() => { renameProfile(kid.id, 'main') }).toThrow()
+    })
+
+    it('does not recover deleted profiles as orphans', async () => {
+        vi.stubGlobal('indexedDB', {
+            databases: vi.fn(() => Promise.resolve([{ name: 'bloodboy-db--deleted-id' }])),
+        })
+        const { readProfileRegistry, recoverOrphanProfiles, removeProfileFromRegistry, upsertProfile } = await loadService()
+        upsertProfile({
+            id: 'deleted-id',
+            name: 'Gone',
+            createdAt: new Date().toISOString(),
+        })
+        removeProfileFromRegistry('deleted-id')
+
+        expect(await recoverOrphanProfiles()).toBe(false)
+        expect(readProfileRegistry().profiles.map(profile => profile.id)).toEqual(['default'])
+    })
+
+    it('merges profile lists from two devices by latest change', async () => {
+        const { mergeProfileSnapshots } = await loadService()
+        const at = (minute: number) => new Date(Date.UTC(2026, 0, 1, 0, minute)).toISOString()
+        const local = {
+            profiles: [
+                {
+                    id: 'default',
+                    name: 'Main',
+                    createdAt: at(0),
+                },
+                {
+                    id: 'a',
+                    name: 'Anna',
+                    createdAt: at(1),
+                    updatedAt: at(5),
+                },
+                {
+                    id: 'b',
+                    name: 'Bob',
+                    createdAt: at(1),
+                    updatedAt: at(1),
+                },
+            ],
+            deletedProfiles: [],
+        }
+        const remote = {
+            profiles: [
+                {
+                    id: 'default',
+                    name: 'Main',
+                    createdAt: at(0),
+                },
+                {
+                    id: 'a',
+                    name: 'Anna old',
+                    createdAt: at(1),
+                    updatedAt: at(2),
+                },
+                {
+                    id: 'c',
+                    name: 'Cat',
+                    createdAt: at(3),
+                    updatedAt: at(3),
+                },
+            ],
+            deletedProfiles: [{
+                id: 'b',
+                deletedAt: at(4),
+            }],
+        }
+
+        const merged = mergeProfileSnapshots(local, remote)
+
+        expect(merged.profiles.map(profile => profile.name)).toEqual(['Main', 'Anna', 'Cat'])
+        expect(merged.deletedProfiles).toEqual([{
+            id: 'b',
+            deletedAt: at(4),
+        }])
+        expect(mergeProfileSnapshots(remote, local)).toEqual(merged)
+    })
+
+    it('restores a deleted profile when it changed after deletion', async () => {
+        const { mergeProfileSnapshots } = await loadService()
+        const merged = mergeProfileSnapshots(
+            {
+                profiles: [{
+                    id: 'a',
+                    name: 'Anna',
+                    createdAt: '2026-01-01T00:00:00.000Z',
+                    updatedAt: '2026-01-03T00:00:00.000Z',
+                }],
+                deletedProfiles: [],
+            },
+            {
+                profiles: [],
+                deletedProfiles: [{
+                    id: 'a',
+                    deletedAt: '2026-01-02T00:00:00.000Z',
+                }],
+            },
+        )
+
+        expect(merged.profiles.map(profile => profile.id)).toEqual(['default', 'a'])
+        expect(merged.deletedProfiles).toEqual([])
+    })
+
+    it('keeps one Drive sync switch for all profiles', async () => {
+        const { isGoogleDriveSyncEnabled, setGoogleDriveSyncEnabled } = await loadService()
+
+        expect(isGoogleDriveSyncEnabled(true)).toBe(true)
+        expect(isGoogleDriveSyncEnabled(undefined)).toBe(false)
+
+        setGoogleDriveSyncEnabled(false)
+        expect(isGoogleDriveSyncEnabled(true)).toBe(false)
+
+        setGoogleDriveSyncEnabled(true)
+        expect(isGoogleDriveSyncEnabled(undefined)).toBe(true)
     })
 
     it('recovers profile databases missing from the registry', async () => {

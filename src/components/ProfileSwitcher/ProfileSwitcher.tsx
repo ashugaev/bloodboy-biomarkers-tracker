@@ -3,28 +3,33 @@ import { useCallback, useEffect, useState } from 'react'
 import {
     CheckOutlined,
     DeleteOutlined,
+    DownloadOutlined,
     EditOutlined,
     PlusOutlined,
     SettingOutlined,
     SwapOutlined,
     UserOutlined,
 } from '@ant-design/icons'
-import { Button, Checkbox, Dropdown, Input, MenuProps, Modal, Popconfirm, Tag, message } from 'antd'
+import { Button, Checkbox, Dropdown, Input, MenuProps, Modal, Tag, message } from 'antd'
 import { usePostHog } from 'posthog-js/react'
 
-import { DEFAULT_PROFILE_ID } from '@/constants'
+import { COLORS, DEFAULT_PROFILE_ID, PROFILES_CHANGED_EVENT } from '@/constants'
 import {
     createProfile,
     deleteProfile,
+    downloadProfileBackup,
     getLoadedProfile,
     readProfileRegistry,
     recoverOrphanProfiles,
     renameProfile,
     switchProfile,
+    validateProfileName,
 } from '@/profiles'
-import { captureEvent } from '@/utils'
+import { captureEvent, captureException } from '@/utils'
 
 import { ProfileSwitcherProps } from './ProfileSwitcher.types'
+
+const toError = (error: unknown): Error => (error instanceof Error ? error : new Error(String(error)))
 
 export const ProfileSwitcher = (props: ProfileSwitcherProps) => {
     const { className } = props
@@ -37,6 +42,11 @@ export const ProfileSwitcher = (props: ProfileSwitcherProps) => {
     const [editingProfileId, setEditingProfileId] = useState<string | null>(null)
     const [editingName, setEditingName] = useState('')
     const [deletingProfileId, setDeletingProfileId] = useState<string | null>(null)
+    const [isBackupDownloaded, setIsBackupDownloaded] = useState(false)
+    const [busyProfileId, setBusyProfileId] = useState<string | null>(null)
+
+    const newProfileNameError = newProfileName ? validateProfileName(newProfileName) : null
+    const editingNameError = editingProfileId ? validateProfileName(editingName, editingProfileId) : null
 
     const refresh = useCallback(() => {
         setRegistry(readProfileRegistry())
@@ -53,56 +63,116 @@ export const ProfileSwitcher = (props: ProfileSwitcherProps) => {
             })
 
         window.addEventListener('storage', refresh)
+        window.addEventListener(PROFILES_CHANGED_EVENT, refresh)
         return () => {
             window.removeEventListener('storage', refresh)
+            window.removeEventListener(PROFILES_CHANGED_EVENT, refresh)
         }
     }, [refresh])
 
     const handleSwitch = (profileId: string) => {
-        captureEvent(posthog, 'profile_switched', {
-            isMainProfile: profileId === DEFAULT_PROFILE_ID,
-            profilesCount: registry.profiles.length,
-        })
-        switchProfile(profileId)
+        try {
+            switchProfile(profileId)
+            captureEvent(posthog, 'profile_switched', {
+                isMainProfile: profileId === DEFAULT_PROFILE_ID,
+                profilesCount: registry.profiles.length,
+            })
+        } catch (error) {
+            void message.error('This profile no longer exists')
+            captureException(posthog, toError(error), { action: 'profile_switch' })
+            refresh()
+        }
     }
 
     const handleCreate = async () => {
-        const name = newProfileName.trim()
-        if (!name) return
+        if (!newProfileName.trim() || newProfileNameError) return
 
-        const profile = await createProfile(name, copySettings)
-        captureEvent(posthog, 'profile_created', {
-            copySettings,
-            profilesCount: registry.profiles.length + 1,
-        })
-        switchProfile(profile.id)
+        try {
+            const profile = await createProfile(newProfileName, copySettings)
+            captureEvent(posthog, 'profile_created', {
+                copySettings,
+                profilesCount: registry.profiles.length + 1,
+            })
+            switchProfile(profile.id)
+        } catch (error) {
+            void message.error(toError(error).message)
+            captureException(posthog, toError(error), { action: 'profile_create' })
+        }
+    }
+
+    const handleRenameStart = (profileId: string, name: string) => {
+        setEditingProfileId(profileId)
+        setEditingName(name)
+        captureEvent(posthog, 'profile_rename_started')
+    }
+
+    const handleRenameCancel = () => {
+        setEditingProfileId(null)
+        captureEvent(posthog, 'profile_rename_cancelled')
     }
 
     const handleRename = (profileId: string) => {
-        const name = editingName.trim()
-        if (!name) return
+        if (editingNameError) return
 
-        renameProfile(profileId, name)
-        captureEvent(posthog, 'profile_renamed')
-        setEditingProfileId(null)
-        refresh()
+        try {
+            renameProfile(profileId, editingName)
+            captureEvent(posthog, 'profile_renamed')
+            setEditingProfileId(null)
+            refresh()
+        } catch (error) {
+            void message.error(toError(error).message)
+            captureException(posthog, toError(error), { action: 'profile_rename' })
+        }
+    }
+
+    const handleDeleteStart = (profileId: string) => {
+        setDeletingProfileId(profileId)
+        setIsBackupDownloaded(false)
+        captureEvent(posthog, 'profile_delete_started')
+    }
+
+    const handleDeleteCancel = () => {
+        setDeletingProfileId(null)
+        captureEvent(posthog, 'profile_delete_cancelled')
+    }
+
+    const handleBackupDownload = async (profileId: string) => {
+        setBusyProfileId(profileId)
+        try {
+            await downloadProfileBackup(profileId)
+            setIsBackupDownloaded(true)
+            captureEvent(posthog, 'profile_backup_downloaded')
+        } catch (error) {
+            void message.error('Failed to download profile backup')
+            captureException(posthog, toError(error), { action: 'profile_backup_download' })
+        } finally {
+            setBusyProfileId(null)
+        }
     }
 
     const handleDelete = async (profileId: string) => {
-        setDeletingProfileId(profileId)
+        setBusyProfileId(profileId)
         try {
             await deleteProfile(profileId)
             captureEvent(posthog, 'profile_deleted', {
                 profilesCount: registry.profiles.length - 1,
             })
-            void message.success('Profile deleted. Its backup was downloaded.')
+            void message.success('Profile deleted')
+            setDeletingProfileId(null)
             refresh()
         } catch (error) {
-            console.error('Failed to delete profile:', error)
-            void message.error(error instanceof Error ? error.message : 'Failed to delete profile')
+            void message.error(toError(error).message)
+            captureException(posthog, toError(error), { action: 'profile_delete' })
         } finally {
-            setDeletingProfileId(null)
+            setBusyProfileId(null)
         }
+    }
+
+    const handleModalClose = () => {
+        setIsModalVisible(false)
+        setDeletingProfileId(null)
+        setEditingProfileId(null)
+        captureEvent(posthog, 'profiles_modal_closed')
     }
 
     const items: MenuProps['items'] = [
@@ -144,78 +214,111 @@ export const ProfileSwitcher = (props: ProfileSwitcherProps) => {
             <Modal
                 title='Profiles'
                 open={isModalVisible}
-                onCancel={() => { setIsModalVisible(false) }}
+                onCancel={handleModalClose}
                 footer={null}
             >
-                <p className='mb-3'>Each profile keeps its own data, settings, exports and Google Drive backups.</p>
+                <p className='mb-3'>Each profile keeps its own data, settings and backups.</p>
                 <div className='flex flex-col gap-2 mb-4'>
                     {registry.profiles.map(profile => {
                         const isLoaded = profile.id === loadedProfile.id
                         const isEditing = editingProfileId === profile.id
+                        const isDeleting = deletingProfileId === profile.id
+                        const isBusy = busyProfileId === profile.id
 
                         return (
-                            <div key={profile.id} className='flex items-center justify-between gap-2'>
-                                {isEditing ? (
-                                    <Input
-                                        size='small'
-                                        value={editingName}
-                                        autoFocus
-                                        maxLength={60}
-                                        onChange={(event) => { setEditingName(event.target.value) }}
-                                        onPressEnter={() => { handleRename(profile.id) }}
-                                    />
-                                ) : (
-                                    <span className='truncate'>
-                                        {profile.name}
-                                        {isLoaded && <Tag className='ml-2'>current</Tag>}
-                                    </span>
-                                )}
-                                <div className='flex shrink-0 gap-1'>
+                            <div key={profile.id} className='flex flex-col gap-1'>
+                                <div className='flex items-center justify-between gap-2'>
                                     {isEditing ? (
-                                        <>
-                                            <Button size='small' type='primary' onClick={() => { handleRename(profile.id) }}>
-                                                Save
-                                            </Button>
-                                            <Button size='small' onClick={() => { setEditingProfileId(null) }}>
-                                                Cancel
-                                            </Button>
-                                        </>
+                                        <Input
+                                            size='small'
+                                            value={editingName}
+                                            autoFocus
+                                            maxLength={60}
+                                            status={editingNameError ? 'error' : undefined}
+                                            onChange={(event) => { setEditingName(event.target.value) }}
+                                            onPressEnter={() => { handleRename(profile.id) }}
+                                        />
                                     ) : (
-                                        <>
-                                            {!isLoaded && (
-                                                <Button size='small' icon={<SwapOutlined/>} onClick={() => { handleSwitch(profile.id) }}>
-                                                    Switch
-                                                </Button>
-                                            )}
-                                            <Button
-                                                size='small'
-                                                icon={<EditOutlined/>}
-                                                aria-label={`Rename ${profile.name}`}
-                                                onClick={() => {
-                                                    setEditingProfileId(profile.id)
-                                                    setEditingName(profile.name)
-                                                }}
-                                            />
-                                            {!isLoaded && profile.id !== DEFAULT_PROFILE_ID && (
-                                                <Popconfirm
-                                                    title='Delete profile?'
-                                                    description='A JSON backup of this profile will be downloaded first.'
-                                                    okText='Download backup and delete'
-                                                    okButtonProps={{ danger: true }}
-                                                    onConfirm={() => { void handleDelete(profile.id) }}
+                                        <span className='truncate'>
+                                            {profile.name}
+                                            {isLoaded && <Tag className='ml-2'>current</Tag>}
+                                        </span>
+                                    )}
+                                    <div className='flex shrink-0 gap-1'>
+                                        {isEditing ? (
+                                            <>
+                                                <Button
+                                                    size='small'
+                                                    type='primary'
+                                                    disabled={!!editingNameError}
+                                                    onClick={() => { handleRename(profile.id) }}
                                                 >
+                                                    Save
+                                                </Button>
+                                                <Button size='small' onClick={handleRenameCancel}>
+                                                    Cancel
+                                                </Button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                {!isLoaded && (
+                                                    <Button size='small' icon={<SwapOutlined/>} onClick={() => { handleSwitch(profile.id) }}>
+                                                        Switch
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    size='small'
+                                                    icon={<EditOutlined/>}
+                                                    aria-label={`Rename ${profile.name}`}
+                                                    onClick={() => { handleRenameStart(profile.id, profile.name) }}
+                                                />
+                                                {!isLoaded && profile.id !== DEFAULT_PROFILE_ID && (
                                                     <Button
                                                         size='small'
                                                         danger
                                                         icon={<DeleteOutlined/>}
                                                         aria-label={`Delete ${profile.name}`}
-                                                        loading={deletingProfileId === profile.id}
+                                                        disabled={isDeleting}
+                                                        onClick={() => { handleDeleteStart(profile.id) }}
                                                     />
-                                                </Popconfirm>
-                                            )}
-                                        </>
-                                    )}
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
+                                {isEditing && editingNameError && (
+                                    <span className='text-xs' style={{ color: COLORS.ERROR }}>{editingNameError}</span>
+                                )}
+                                {isDeleting && (
+                                    <div className='flex flex-wrap items-center gap-2 rounded border p-2' style={{ borderColor: COLORS.ERROR }}>
+                                        <span className='text-sm'>
+                                            {isBackupDownloaded
+                                                ? 'Make sure the backup file is saved, then delete.'
+                                                : 'Download a backup of this profile first.'}
+                                        </span>
+                                        <Button
+                                            size='small'
+                                            icon={<DownloadOutlined/>}
+                                            loading={isBusy && !isBackupDownloaded}
+                                            onClick={() => { void handleBackupDownload(profile.id) }}
+                                        >
+                                            {isBackupDownloaded ? 'Download again' : 'Download backup'}
+                                        </Button>
+                                        <Button
+                                            size='small'
+                                            danger
+                                            type='primary'
+                                            disabled={!isBackupDownloaded}
+                                            loading={isBusy && isBackupDownloaded}
+                                            onClick={() => { void handleDelete(profile.id) }}
+                                        >
+                                            Backup saved, delete
+                                        </Button>
+                                        <Button size='small' onClick={handleDeleteCancel}>
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         )
                     })}
@@ -225,19 +328,23 @@ export const ProfileSwitcher = (props: ProfileSwitcherProps) => {
                         placeholder='New profile name'
                         value={newProfileName}
                         maxLength={60}
+                        status={newProfileNameError ? 'error' : undefined}
                         onChange={(event) => { setNewProfileName(event.target.value) }}
                         onPressEnter={() => { void handleCreate() }}
                     />
+                    {newProfileNameError && (
+                        <span className='text-xs' style={{ color: COLORS.ERROR }}>{newProfileNameError}</span>
+                    )}
                     <Checkbox
                         checked={copySettings}
                         onChange={(event) => { setCopySettings(event.target.checked) }}
                     >
-                        Copy OpenAI API key and Google Drive sync setting
+                        Copy OpenAI API key
                     </Checkbox>
                     <Button
                         type='primary'
                         icon={<PlusOutlined/>}
-                        disabled={!newProfileName.trim()}
+                        disabled={!newProfileName.trim() || !!newProfileNameError}
                         onClick={() => { void handleCreate() }}
                     >
                         Create and switch

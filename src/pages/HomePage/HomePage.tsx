@@ -320,6 +320,25 @@ export const HomePage = (props: HomePageProps) => {
                                         </p>
                                     </div>
                                 </div>
+
+                                <div className='flex gap-x-5 sm:gap-x-8'>
+                                    <svg className='shrink-0 mt-2 size-8 text-gray-800' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
+                                        <path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/>
+                                        <circle cx='9' cy='7' r='4'/>
+                                        <path d='M22 21v-2a4 4 0 0 0-3-3.87'/>
+                                        <path d='M16 3.13a4 4 0 0 1 0 7.75'/>
+                                    </svg>
+                                    <div className='grow'>
+                                        <h3 className='text-base sm:text-lg font-semibold text-gray-800'>
+                                            Family Profiles
+                                            <span className='ml-2 inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700 align-middle'>New</span>
+                                        </h3>
+                                        <p className='mt-1 text-gray-600'>
+                                            Keep separate profiles for you, your partner, kids or parents and switch between them in one click.
+                                            Each profile has its own results, documents and backups. Export or import all profiles in a single file.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className='space-y-6 lg:space-y-10'>
@@ -350,7 +369,7 @@ export const HomePage = (props: HomePageProps) => {
                                             Google Drive Backups
                                         </h3>
                                         <p className='mt-1 text-gray-600'>
-                                            Connect Google Drive to sync the newest database version back to the browser or up to Drive, while preserving dated backup history.
+                                            Connect Google Drive once and every profile syncs automatically across your browsers, while preserving dated backup history.
                                         </p>
                                     </div>
                                 </div>
@@ -541,6 +560,15 @@ export const HomePage = (props: HomePageProps) => {
                                     </svg>
                                     <span className='text-gray-800'>
                                         Optional Google Drive backup history
+                                    </span>
+                                </li>
+
+                                <li className='flex gap-x-2'>
+                                    <svg className='shrink-0 mt-0.5 size-4 text-indigo-600' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
+                                        <polyline points='20 6 9 17 4 12'/>
+                                    </svg>
+                                    <span className='text-gray-800'>
+                                        Unlimited family profiles
                                     </span>
                                 </li>
 

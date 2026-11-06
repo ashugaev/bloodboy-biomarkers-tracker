@@ -1,7 +1,7 @@
 import { message } from 'antd'
 import { exportDB } from 'dexie-export-import'
 
-import { MAIN_SETTINGS_ID } from '@/constants'
+import { DB_NAME, MAIN_SETTINGS_ID } from '@/constants'
 import { AppSettings } from '@/db/models/appSettings'
 import { BiomarkerConfig } from '@/db/models/biomarkerConfig'
 import { BiomarkerRecord } from '@/db/models/biomarkerRecord'
@@ -9,6 +9,19 @@ import { UploadedDocument } from '@/db/models/document'
 // eslint-disable-next-line no-restricted-imports
 import { BloodTestDatabase, db } from '@/db/services/db.service'
 import { getLoadedProfile, getProfileFileTag } from '@/profiles/profiles.service'
+
+const DOWNLOAD_URL_TTL_MS = 60_000
+
+export interface DatabaseExportJson {
+    formatName: string
+    formatVersion: number
+    data: {
+        databaseName: string
+        databaseVersion: number
+        tables: unknown[]
+        data: unknown[]
+    }
+}
 
 export interface ExportDataParams {
     configs: BiomarkerConfig[]
@@ -24,7 +37,7 @@ export const downloadBlob = (blob: Blob, filename: string) => {
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    window.setTimeout(() => { URL.revokeObjectURL(url) }, DOWNLOAD_URL_TTL_MS)
 }
 
 const exportToCSV = (data: ExportDataParams) => {
@@ -103,11 +116,11 @@ const sanitizeAppSettingsForBackup = (settings: Record<string, unknown>, exporte
     } as AppSettings
 }
 
-export const createDatabaseBackupBlob = async (
+export const exportDatabaseJson = async (
     exportedAt: Date,
     database: BloodTestDatabase = db,
-): Promise<Blob> => {
-    return await exportDB(database, {
+): Promise<DatabaseExportJson> => {
+    const blob = await exportDB(database, {
         transform: (table: string, value: unknown) => {
             if (table === 'appSettings' && value && typeof value === 'object' && 'openaiApiKey' in value) {
                 return {
@@ -117,6 +130,18 @@ export const createDatabaseBackupBlob = async (
             return { value }
         },
     })
+    const json = JSON.parse(await blob.text()) as DatabaseExportJson
+    json.data.databaseName = DB_NAME
+
+    return json
+}
+
+export const createDatabaseBackupBlob = async (
+    exportedAt: Date,
+    database: BloodTestDatabase = db,
+): Promise<Blob> => {
+    const json = await exportDatabaseJson(exportedAt, database)
+    return new Blob([JSON.stringify(json)], { type: 'application/json' })
 }
 
 export const exportData = async (data: ExportDataParams) => {
