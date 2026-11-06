@@ -1,23 +1,21 @@
 import { useEffect, useState } from 'react'
 
-import { Button, Input, Segmented } from 'antd'
+import { AutoComplete, Button, Input, Select } from 'antd'
 import { usePostHog } from 'posthog-js/react'
 
 import { MAIN_SETTINGS_ID } from '@/constants'
-import { addAppSettings, AppSettings, updateAppSettings, useAppSettings } from '@/db/models/appSettings'
-import { AI_PROVIDERS, AiProvider, DEFAULT_AI_PROVIDER } from '@/openai'
+import { addAppSettings, AI_API_KEY_FIELDS, AppSettings, updateAppSettings, useAppSettings } from '@/db/models/appSettings'
+import { AI_PROVIDER_ORDER, AI_PROVIDERS, AiProvider, getAiApiKey, getAiModel, getAiProvider } from '@/openai'
 import { captureEvent, clearPreservedAiKeys, readPreservedAiKeys } from '@/utils'
 
 import { ApiKeyInputProps } from './ApiKeyInput.types'
 
-const PROVIDER_OPTIONS = (Object.keys(AI_PROVIDERS) as AiProvider[]).map(provider => ({
+const PROVIDER_OPTIONS = AI_PROVIDER_ORDER.map(provider => ({
     label: AI_PROVIDERS[provider].label,
     value: provider,
 }))
 
-const getApiKey = (settings: AppSettings | undefined, provider: AiProvider) => (
-    provider === 'anthropic' ? settings?.anthropicApiKey : settings?.openaiApiKey
-)
+const hasAnyApiKey = (settings?: AppSettings) => AI_PROVIDER_ORDER.some(provider => !!getAiApiKey(settings, provider))
 
 const saveSettings = async (currentSettings: AppSettings | undefined, changes: Partial<AppSettings>) => {
     if (currentSettings) {
@@ -41,21 +39,23 @@ export const ApiKeyInput = (props: ApiKeyInputProps) => {
     const { className, onSaved } = props
     const posthog = usePostHog()
     const [apiKeyInput, setApiKeyInput] = useState('')
+    const [modelInput, setModelInput] = useState<string | null>(null)
     const { data: settings, loading } = useAppSettings()
 
     const currentSettings = settings[0]
-    const activeProvider = currentSettings?.aiProvider ?? DEFAULT_AI_PROVIDER
+    const activeProvider = getAiProvider(currentSettings)
     const [selectedProvider, setSelectedProvider] = useState<AiProvider | null>(null)
     const provider = selectedProvider ?? activeProvider
     const providerInfo = AI_PROVIDERS[provider]
-    const savedKey = getApiKey(currentSettings, provider)
+    const savedKey = getAiApiKey(currentSettings, provider)
+    const model = modelInput ?? getAiModel(currentSettings, provider)
 
     useEffect(() => {
         if (loading) return
 
         const preservedKeys = readPreservedAiKeys()
         if (!preservedKeys) return
-        if (currentSettings?.openaiApiKey || currentSettings?.anthropicApiKey) {
+        if (hasAnyApiKey(currentSettings)) {
             clearPreservedAiKeys()
             return
         }
@@ -67,37 +67,44 @@ export const ApiKeyInput = (props: ApiKeyInputProps) => {
         void restoreSettings()
     }, [currentSettings, loading])
 
-    const handleSaveApiKey = async () => {
+    const handleSave = async () => {
         const apiKey = apiKeyInput.trim()
-        if (!apiKey) return
+        if (!apiKey && !savedKey) return
 
+        const selectedModel = model.trim() || providerInfo.defaultModel
         await saveSettings(currentSettings, {
             aiProvider: provider,
-            ...(provider === 'anthropic' ? { anthropicApiKey: apiKey } : { openaiApiKey: apiKey }),
+            aiModels: {
+                ...currentSettings?.aiModels,
+                [provider]: selectedModel,
+            },
+            ...(apiKey ? { [AI_API_KEY_FIELDS[provider]]: apiKey } : {}),
         })
-        captureEvent(posthog, savedKey ? 'api_key_updated' : 'api_key_saved', { provider })
+        if (apiKey) {
+            captureEvent(posthog, savedKey ? 'api_key_updated' : 'api_key_saved', { provider })
+        }
+        captureEvent(posthog, 'ai_settings_saved', {
+            provider,
+            model: selectedModel,
+        })
 
         setApiKeyInput('')
-        onSaved?.()
-    }
-
-    const handleUseSavedKey = async () => {
-        await saveSettings(currentSettings, { aiProvider: provider })
-        captureEvent(posthog, 'ai_provider_switched', { provider })
+        setModelInput(null)
         onSaved?.()
     }
 
     return (
         <div className={`bg-white p-6 rounded border border-gray-100 ${className ?? ''}`}>
-            <h3 className='text-lg font-medium mb-3'>AI API Key</h3>
-            <Segmented
-                block
-                className='mb-4'
+            <h3 className='text-lg font-medium mb-3'>AI provider</h3>
+            <Select
+                aria-label='AI provider'
+                className='w-full mb-4'
                 options={PROVIDER_OPTIONS}
                 value={provider}
                 onChange={(value) => {
                     setSelectedProvider(value)
                     setApiKeyInput('')
+                    setModelInput(null)
                 }}
             />
             <p className='text-sm text-gray-600 mb-2'>
@@ -117,26 +124,32 @@ export const ApiKeyInput = (props: ApiKeyInputProps) => {
                     {providerInfo.keyUrlLabel}
                 </a>
             </p>
-            <div className='flex gap-2'>
+            <div className='flex flex-col gap-3'>
                 <Input.Password
                     aria-label={`${providerInfo.label} API key`}
                     placeholder={savedKey ? 'Saved. Enter a new key to replace' : providerInfo.keyPlaceholder}
                     value={apiKeyInput}
                     onChange={(e) => { setApiKeyInput(e.target.value) }}
-                    onPressEnter={() => { void handleSaveApiKey() }}
+                    onPressEnter={() => { void handleSave() }}
                 />
-                <Button type='primary' onClick={() => { void handleSaveApiKey() }}>
+                <div className='flex flex-col gap-1 text-sm text-gray-600'>
+                    <span>Model for parsing</span>
+                    <AutoComplete
+                        aria-label='Model for parsing'
+                        options={providerInfo.models.map(value => ({ value }))}
+                        placeholder={providerInfo.defaultModel}
+                        value={model}
+                        onChange={(value) => { setModelInput(value) }}
+                    />
+                </div>
+                <Button
+                    type='primary'
+                    disabled={!apiKeyInput.trim() && !savedKey}
+                    onClick={() => { void handleSave() }}
+                >
                     Save
                 </Button>
             </div>
-            {savedKey && provider !== activeProvider && (
-                <Button
-                    className='mt-3'
-                    onClick={() => { void handleUseSavedKey() }}
-                >
-                    Use saved {providerInfo.label} key
-                </Button>
-            )}
         </div>
     )
 }

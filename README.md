@@ -27,7 +27,7 @@ Track and visualize your blood test results over time with AI-powered data extra
 - **PDF Upload** - Drag & drop blood test PDFs for automatic data extraction
 - **Built-in PDF Viewer** - View uploaded documents directly in the app 
 - **File Organization** - Organize your files and keep them in one place near to extracted values
-- **AI-Powered** - Biomarker extraction with your own OpenAI or Claude API key
+- **AI-Powered** - Biomarker extraction with your own OpenAI, Claude, Gemini, or OpenRouter API key and a model of your choice
 - **Unit Converter** - Automatic unit conversion
 - **Data Visualization** - Interactive charts and trend analysis
 - **Anomaly Detection** - Filter biomarkers with strong fluctuations between tests
@@ -96,7 +96,7 @@ npm run build
 - **AntDesign 5** - UI components
 - **AG-Grid 32** - Data tables
 - **Dexie** - IndexedDB wrapper
-- **OpenAI** - PDF parsing
+- **OpenAI, Claude, Gemini, OpenRouter** - PDF parsing
 
 ## 📁 Project Structure
 
@@ -111,7 +111,7 @@ src/
 ├── constants/    # App constants
 ├── types/        # TypeScript types
 ├── utils/        # Helper functions
-├── openai/       # OpenAI integration
+├── openai/       # AI provider integrations
 └── App.tsx       # Root component
 ```
 

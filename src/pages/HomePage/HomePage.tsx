@@ -379,10 +379,10 @@ export const HomePage = (props: HomePageProps) => {
                                     </svg>
                                     <div className='grow'>
                                         <h3 className='text-base sm:text-lg font-semibold text-gray-800'>
-                                            Free with Your API Key
+                                            Your AI, Your Key
                                         </h3>
                                         <p className='mt-1 text-gray-600'>
-                                            The core application is free. For optional PDF data extraction, simply connect your personal OpenAI API key for processing.
+                                            The core application is free. For optional PDF data extraction, connect your own OpenAI, Claude, Gemini, or OpenRouter API key and pick the model that parses your reports.
                                         </p>
                                     </div>
                                 </div>
@@ -491,7 +491,7 @@ export const HomePage = (props: HomePageProps) => {
                 <div className='max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto'>
                     <div className='max-w-2xl mx-auto text-center mb-10 lg:mb-14'>
                         <h2 className='text-2xl font-bold sm:text-4xl'>Pricing</h2>
-                        <p className='mt-1 text-gray-600'>Pay only for OpenAI tokens using your own API key</p>
+                        <p className='mt-1 text-gray-600'>Pay only for AI tokens using your own OpenAI, Claude, Gemini, or OpenRouter API key</p>
                     </div>
 
                     <div className='flex justify-center'>
@@ -513,7 +513,7 @@ export const HomePage = (props: HomePageProps) => {
                                         <polyline points='20 6 9 17 4 12'/>
                                     </svg>
                                     <span className='text-gray-800'>
-                                        PDF parsing and data extraction
+                                        PDF parsing with OpenAI, Claude, Gemini, or OpenRouter
                                     </span>
                                 </li>
 
@@ -674,8 +674,8 @@ export const HomePage = (props: HomePageProps) => {
                                             <p className='text-gray-600'>
                                                 Yes, the application is completely free to use. However, for
                                                 the automated data extraction feature from PDF files, you will need to provide
-                                                your own OpenAI API key. This means you are responsible for the costs associated
-                                                with the OpenAI API usage, but the application itself has no fees,
+                                                your own OpenAI, Claude, Gemini, or OpenRouter API key. This means you are responsible
+                                                for the costs of that provider's API usage, but the application itself has no fees,
                                                 subscriptions, or hidden costs.
                                             </p>
                                         </div>

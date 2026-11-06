@@ -1,20 +1,23 @@
 import { PRESERVED_AI_KEYS_KEY } from '@/constants'
-import { AiProvider, AppSettings } from '@/db/models/appSettings'
+import { AI_API_KEY_FIELDS, AppSettings } from '@/db/models/appSettings/appSettings.types'
 
-export interface PreservedAiKeys {
-    openaiApiKey?: string
-    anthropicApiKey?: string
-    aiProvider?: AiProvider
-}
+const API_KEY_FIELDS = Object.values(AI_API_KEY_FIELDS)
+
+export type PreservedAiKeys = Partial<Pick<AppSettings, typeof API_KEY_FIELDS[number] | 'aiProvider' | 'aiModels'>>
+
+const hasApiKey = (keys: PreservedAiKeys) => API_KEY_FIELDS.some(field => !!keys[field])
 
 export const getAiKeysToPreserve = (settings?: AppSettings): PreservedAiKeys | null => {
-    if (!settings?.openaiApiKey && !settings?.anthropicApiKey) return null
+    if (!settings || !hasApiKey(settings)) return null
 
-    return {
-        ...(settings.openaiApiKey ? { openaiApiKey: settings.openaiApiKey } : {}),
-        ...(settings.anthropicApiKey ? { anthropicApiKey: settings.anthropicApiKey } : {}),
-        ...(settings.aiProvider ? { aiProvider: settings.aiProvider } : {}),
-    }
+    const keys: PreservedAiKeys = {}
+    API_KEY_FIELDS.forEach((field) => {
+        if (settings[field]) keys[field] = settings[field]
+    })
+    if (settings.aiProvider) keys.aiProvider = settings.aiProvider
+    if (settings.aiModels) keys.aiModels = settings.aiModels
+
+    return keys
 }
 
 export const savePreservedAiKeys = (keys: PreservedAiKeys) => {
@@ -27,8 +30,7 @@ export const readPreservedAiKeys = (): PreservedAiKeys | null => {
 
     try {
         const parsed = JSON.parse(raw) as PreservedAiKeys
-        if (!parsed.openaiApiKey && !parsed.anthropicApiKey) return null
-        return parsed
+        return hasApiKey(parsed) ? parsed : null
     } catch {
         return null
     }

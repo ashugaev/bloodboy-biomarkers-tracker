@@ -1,34 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
 
-import { AI_PROVIDERS, VisionJsonRequest } from './ai.types'
+import { AI_REASONING_EFFORT, ResolvedVisionJsonRequest } from './ai.types'
+import { extractJsonText, parseImageDataUrl } from './ai.utils'
 
-type ImageMediaType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp'
-
-const IMAGE_MEDIA_TYPES: ImageMediaType[] = ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
-
-export const parseImageDataUrl = (dataUrl: string): { mediaType: ImageMediaType, data: string } => {
-    const match = /^data:([^;,]+);base64,(.+)$/s.exec(dataUrl)
-    const mediaType = match?.[1] as ImageMediaType | undefined
-    if (!match || !mediaType || !IMAGE_MEDIA_TYPES.includes(mediaType)) {
-        throw new Error('Unsupported image data URL')
-    }
-
-    return {
-        mediaType,
-        data: match[2],
-    }
-}
-
-// Reply is free text: strip code fences or prose around the JSON object
-export const extractJsonText = (text: string): string | null => {
-    const start = text.indexOf('{')
-    const end = text.lastIndexOf('}')
-    if (start === -1 || end < start) return null
-
-    return text.slice(start, end + 1)
-}
-
-export const createAnthropicJsonCompletion = async (apiKey: string, request: VisionJsonRequest): Promise<string | null> => {
+export const createAnthropicJsonCompletion = async (apiKey: string, request: ResolvedVisionJsonRequest): Promise<string | null> => {
     const client = new Anthropic({
         apiKey,
         dangerouslyAllowBrowser: true,
@@ -59,11 +34,11 @@ export const createAnthropicJsonCompletion = async (apiKey: string, request: Vis
     }
 
     const response = await client.beta.messages.create({
-        model: request.model ?? AI_PROVIDERS.anthropic.defaultModel,
+        model: request.model,
         max_tokens: 16000,
         betas: ['server-side-fallback-2026-07-01'],
         fallbacks: 'default',
-        output_config: { effort: 'low' },
+        output_config: { effort: AI_REASONING_EFFORT },
         system: request.systemPrompt,
         messages: [{
             role: 'user',

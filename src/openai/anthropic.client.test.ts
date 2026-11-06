@@ -6,7 +6,7 @@ import {
     vi,
 } from 'vitest'
 
-import { createAnthropicJsonCompletion, extractJsonText, parseImageDataUrl } from './anthropic.client'
+import { createAnthropicJsonCompletion } from './anthropic.client'
 
 const IMAGE_DATA_URL = 'data:image/png;base64,iVBORw0KGgo='
 
@@ -44,24 +44,6 @@ describe('anthropic client', () => {
         vi.unstubAllGlobals()
     })
 
-    it('parses a base64 image data URL', () => {
-        expect(parseImageDataUrl(IMAGE_DATA_URL)).toEqual({
-            mediaType: 'image/png',
-            data: 'iVBORw0KGgo=',
-        })
-    })
-
-    it('rejects unsupported data URLs', () => {
-        expect(() => parseImageDataUrl('data:application/pdf;base64,AAAA')).toThrow('Unsupported image data URL')
-        expect(() => parseImageDataUrl('https://example.com/a.png')).toThrow('Unsupported image data URL')
-    })
-
-    it('extracts JSON from fenced or prefixed text', () => {
-        expect(extractJsonText('```json\n{"biomarkers":[]}\n```')).toBe('{"biomarkers":[]}')
-        expect(extractJsonText('Here it is: {"a":{"b":1}} done')).toBe('{"a":{"b":1}}')
-        expect(extractJsonText('no json')).toBeNull()
-    })
-
     it('sends a browser-safe vision request and returns the JSON text', async () => {
         const fetchMock = mockMessagesResponse(messageBody('```json\n{"biomarkers":[]}\n```'))
 
@@ -70,6 +52,7 @@ describe('anthropic client', () => {
             imageDataUrl: IMAGE_DATA_URL,
             userText: 'Extract biomarkers from this image.',
             followUpText: 'fix errors',
+            model: 'claude-opus-5-5',
         })
 
         expect(result).toBe('{"biomarkers":[]}')
@@ -88,7 +71,7 @@ describe('anthropic client', () => {
             model: 'claude-opus-5-5',
             max_tokens: 16000,
             fallbacks: 'default',
-            output_config: { effort: 'low' },
+            output_config: { effort: 'medium' },
             system: 'system prompt',
             messages: [{
                 role: 'user',
@@ -122,6 +105,7 @@ describe('anthropic client', () => {
             systemPrompt: 'system prompt',
             imageDataUrl: IMAGE_DATA_URL,
             userText: 'Extract',
+            model: 'claude-opus-5-5',
         })).rejects.toThrow('Claude declined to process this page')
     })
 
@@ -138,6 +122,7 @@ describe('anthropic client', () => {
             systemPrompt: 'system prompt',
             imageDataUrl: IMAGE_DATA_URL,
             userText: 'Extract',
+            model: 'claude-opus-5-5',
         })).rejects.toMatchObject({ status: 401 })
     })
 })

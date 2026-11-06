@@ -49,6 +49,22 @@ describe('preserved AI keys', () => {
         })
     })
 
+    it('keeps OpenRouter and Gemini keys with chosen models', () => {
+        expect(getAiKeysToPreserve({
+            ...baseSettings,
+            openaiApiKey: '',
+            geminiApiKey: 'AIza',
+            openrouterApiKey: 'sk-or',
+            aiProvider: 'gemini',
+            aiModels: { gemini: 'gemini-3.8-flash' },
+        })).toEqual({
+            geminiApiKey: 'AIza',
+            openrouterApiKey: 'sk-or',
+            aiProvider: 'gemini',
+            aiModels: { gemini: 'gemini-3.8-flash' },
+        })
+    })
+
     it('round-trips through session storage', () => {
         savePreservedAiKeys({
             anthropicApiKey: 'sk-ant',

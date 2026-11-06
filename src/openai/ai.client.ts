@@ -3,23 +3,36 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { App } from 'antd'
 import posthog from 'posthog-js'
 
-import { updateAppSettings, useAppSettings } from '@/db/models/appSettings'
+import { AI_API_KEY_FIELDS, updateAppSettings, useAppSettings } from '@/db/models/appSettings'
 
-import { AI_PROVIDERS, AiProvider, DEFAULT_AI_PROVIDER, VisionJsonRequest } from './ai.types'
+import {
+    AI_PROVIDERS,
+    AiProvider,
+    getAiApiKey,
+    getAiModel,
+    getAiProvider,
+    ResolvedVisionJsonRequest,
+    VisionJsonRequest,
+} from './ai.types'
+import { isInvalidApiKeyError } from './ai.utils'
 import { createAnthropicJsonCompletion } from './anthropic.client'
-import { createOpenAIJsonCompletion } from './openai.client'
+import { createGeminiJsonCompletion } from './gemini.client'
+import { createOpenAIJsonCompletion, createOpenRouterJsonCompletion } from './openai.client'
 
-const API_KEY_FIELDS = {
-    openai: 'openaiApiKey',
-    anthropic: 'anthropicApiKey',
-} as const satisfies Record<AiProvider, string>
+const AI_COMPLETIONS: Record<AiProvider, (apiKey: string, request: ResolvedVisionJsonRequest) => Promise<string | null>> = {
+    openai: createOpenAIJsonCompletion,
+    anthropic: createAnthropicJsonCompletion,
+    openrouter: createOpenRouterJsonCompletion,
+    gemini: createGeminiJsonCompletion,
+}
 
 export const useAiClient = () => {
     const { message } = App.useApp()
     const { data: settings, loading } = useAppSettings()
     const currentSettings = settings[0]
-    const provider = currentSettings?.aiProvider ?? DEFAULT_AI_PROVIDER
-    const apiKey = currentSettings?.[API_KEY_FIELDS[provider]]
+    const provider = getAiProvider(currentSettings)
+    const apiKey = getAiApiKey(currentSettings, provider)
+    const model = getAiModel(currentSettings, provider)
     const settingsId = currentSettings?.id
     const [minLoadingTime, setMinLoadingTime] = useState(true)
 
@@ -34,7 +47,7 @@ export const useAiClient = () => {
     const resetApiKey = useCallback(async () => {
         if (!settingsId) return
         await updateAppSettings(settingsId, {
-            [API_KEY_FIELDS[provider]]: '',
+            [AI_API_KEY_FIELDS[provider]]: '',
             updatedAt: new Date(),
         })
     }, [settingsId, provider])
@@ -42,35 +55,40 @@ export const useAiClient = () => {
     const completeJson = useCallback(async (request: VisionJsonRequest): Promise<string | null> => {
         if (!apiKey) return null
 
+        const label = AI_PROVIDERS[provider].label
         try {
-            return provider === 'anthropic'
-                ? await createAnthropicJsonCompletion(apiKey, request)
-                : await createOpenAIJsonCompletion(apiKey, request)
+            return await AI_COMPLETIONS[provider](apiKey, {
+                ...request,
+                model: request.model ?? model,
+            })
         } catch (error: unknown) {
             const err = error as { status?: number, message?: string }
+            const invalidKey = isInvalidApiKeyError(err)
             try {
-                posthog.capture(provider === 'anthropic' ? 'anthropic_api_error' : 'openai_api_error', {
+                posthog.capture(`${provider}_api_error`, {
+                    model,
                     status: err.status,
-                    errorType: err.status === 401 ? 'invalid_api_key' : 'api_error',
+                    errorType: invalidKey ? 'invalid_api_key' : 'api_error',
                 })
             } catch {
                 // PostHog not initialized yet
             }
-            if (err.status === 401) {
-                void message.error(`Invalid ${AI_PROVIDERS[provider].label} API key`)
+            if (invalidKey) {
+                void message.error(`Invalid ${label} API key`)
                 void resetApiKey()
             } else {
-                void message.error(`${AI_PROVIDERS[provider].label} API error: ${err.message ?? 'Unknown error'}`)
+                void message.error(`${label} API error: ${err.message ?? 'Unknown error'}`)
             }
             throw error
         }
-    }, [apiKey, provider, resetApiKey, message])
+    }, [apiKey, provider, model, resetApiKey, message])
 
     const client = useMemo(() => (apiKey ? { completeJson } : null), [apiKey, completeJson])
 
     return {
         client,
         provider,
+        model,
         hasApiKey: !!apiKey,
         loading: loading || minLoadingTime,
     }

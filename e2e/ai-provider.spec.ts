@@ -1,6 +1,6 @@
 import path from 'node:path'
 
-import { expect, Page, Route, test } from '@playwright/test'
+import { expect, Locator, Page, Route, test } from '@playwright/test'
 
 declare global {
     interface Window {
@@ -63,12 +63,50 @@ const seedWithoutKey = async (page: Page) => {
     await page.reload()
 }
 
-const saveKey = async (page: Page, providerLabel: string, apiKey: string) => {
-    await expect(page.getByRole('heading', { name: 'AI API Key' })).toBeVisible()
-    await page.getByText(providerLabel, { exact: true }).click()
+const chooseProvider = async (page: Page, scope: Page | Locator, providerLabel: string) => {
+    await scope.getByRole('combobox', { name: 'AI provider' }).click({ force: true })
+    await page.locator(`.ant-select-item-option[title="${providerLabel}"]`).click()
+}
+
+const saveKey = async (page: Page, providerLabel: string, apiKey: string, model?: string) => {
+    await expect(page.getByRole('heading', { name: 'AI provider' })).toBeVisible()
+    await chooseProvider(page, page, providerLabel)
     await page.getByLabel(`${providerLabel} API key`).fill(apiKey)
+    if (model) {
+        await page.getByRole('combobox', { name: 'Model for parsing' }).click({ force: true })
+        await page.locator(`.ant-select-item-option[title="${model}"]`).click()
+    }
     await page.getByRole('button', { name: 'Save' }).click()
     await expect(page.locator('input[name="file"]')).toBeAttached()
+}
+
+const chatCompletion = (model: string) => ({
+    id: 'chatcmpl-e2e',
+    object: 'chat.completion',
+    created: 0,
+    model,
+    choices: [{
+        index: 0,
+        message: {
+            role: 'assistant',
+            content: extractionJson,
+        },
+        finish_reason: 'stop',
+    }],
+})
+
+const blockOtherProviders = async (page: Page, allowed: string) => {
+    const hosts = ['api.openai.com', 'api.anthropic.com', 'openrouter.ai', 'generativelanguage.googleapis.com']
+    for (const host of hosts.filter(item => item !== allowed)) {
+        await page.route(`https://${host}/**`, async (route) => {
+            await route.abort()
+        })
+    }
+}
+
+const uploadAndExpectResult = async (page: Page) => {
+    await page.locator('input[name="file"]').setInputFiles(fixturePath)
+    await expect(page.getByText('E2E Glucose').first()).toBeVisible({ timeout: 30000 })
 }
 
 test('extracts with a Claude API key', async ({ page }) => {
@@ -98,15 +136,11 @@ test('extracts with a Claude API key', async ({ page }) => {
             },
         })
     })
-    await page.route('https://api.openai.com/**', async (route) => {
-        await route.abort()
-    })
+    await blockOtherProviders(page, 'api.anthropic.com')
 
     await seedWithoutKey(page)
     await saveKey(page, 'Claude', 'sk-ant-e2e')
-
-    await page.locator('input[name="file"]').setInputFiles(fixturePath)
-    await expect(page.getByText('E2E Glucose').first()).toBeVisible({ timeout: 30000 })
+    await uploadAndExpectResult(page)
 
     expect(anthropicRequests.length).toBeGreaterThan(0)
     const [request] = anthropicRequests
@@ -116,36 +150,81 @@ test('extracts with a Claude API key', async ({ page }) => {
     expect(JSON.stringify(request.body.messages)).toContain('"type":"image"')
 })
 
-test('extracts with an OpenAI API key', async ({ page }) => {
-    let openaiCalls = 0
+test('extracts with an OpenAI API key and the default model', async ({ page }) => {
+    const bodies: Array<Record<string, unknown>> = []
 
     await page.route('https://api.openai.com/**', async (route) => {
-        if (route.request().method() === 'POST') openaiCalls++
-        await fulfillJson(route, {
-            id: 'chatcmpl-e2e',
-            object: 'chat.completion',
-            created: 0,
-            model: 'gpt-6.1-sol',
-            choices: [{
-                index: 0,
-                message: {
-                    role: 'assistant',
-                    content: extractionJson,
-                },
-                finish_reason: 'stop',
-            }],
-        })
+        if (route.request().method() === 'POST') bodies.push(route.request().postDataJSON() as Record<string, unknown>)
+        await fulfillJson(route, chatCompletion('gpt-6.1-sol'))
     })
-    await page.route('https://api.anthropic.com/**', async (route) => {
-        await route.abort()
-    })
+    await blockOtherProviders(page, 'api.openai.com')
 
     await seedWithoutKey(page)
     await saveKey(page, 'OpenAI', 'sk-openai-e2e')
+    await uploadAndExpectResult(page)
 
-    await page.locator('input[name="file"]').setInputFiles(fixturePath)
-    await expect(page.getByText('E2E Glucose').first()).toBeVisible({ timeout: 30000 })
-    expect(openaiCalls).toBeGreaterThan(0)
+    expect(bodies.length).toBeGreaterThan(0)
+    expect(bodies[0]).toMatchObject({
+        model: 'gpt-6.1-sol',
+        reasoning_effort: 'medium',
+    })
+})
+
+test('extracts with an OpenRouter API key and a chosen model', async ({ page }) => {
+    const requests: Array<{ headers: Record<string, string>, body: Record<string, unknown> }> = []
+
+    await page.route('https://openrouter.ai/**', async (route) => {
+        if (route.request().method() === 'POST') {
+            requests.push({
+                headers: await route.request().allHeaders(),
+                body: route.request().postDataJSON() as Record<string, unknown>,
+            })
+        }
+        await fulfillJson(route, chatCompletion('google/gemini-3.8-flash'))
+    })
+    await blockOtherProviders(page, 'openrouter.ai')
+
+    await seedWithoutKey(page)
+    await saveKey(page, 'OpenRouter', 'sk-or-e2e', 'google/gemini-3.8-flash')
+    await uploadAndExpectResult(page)
+
+    expect(requests.length).toBeGreaterThan(0)
+    expect(requests[0].headers.authorization).toBe('Bearer sk-or-e2e')
+    expect(requests[0].body).toMatchObject({
+        model: 'google/gemini-3.8-flash',
+        reasoning: { effort: 'medium' },
+    })
+})
+
+test('extracts with a Gemini API key', async ({ page }) => {
+    const requests: Array<{ url: string, headers: Record<string, string> }> = []
+
+    await page.route('https://generativelanguage.googleapis.com/**', async (route) => {
+        if (route.request().method() === 'POST') {
+            requests.push({
+                url: route.request().url(),
+                headers: await route.request().allHeaders(),
+            })
+        }
+        await fulfillJson(route, {
+            candidates: [{
+                content: {
+                    role: 'model',
+                    parts: [{ text: extractionJson }],
+                },
+                finishReason: 'STOP',
+            }],
+        })
+    })
+    await blockOtherProviders(page, 'generativelanguage.googleapis.com')
+
+    await seedWithoutKey(page)
+    await saveKey(page, 'Gemini', 'AIza-e2e')
+    await uploadAndExpectResult(page)
+
+    expect(requests.length).toBeGreaterThan(0)
+    expect(requests[0].url).toContain('models/gemini-4-argon:generateContent')
+    expect(requests[0].headers['x-goog-api-key']).toBe('AIza-e2e')
 })
 
 test('switches provider from the menu and keeps both keys', async ({ page }) => {
@@ -156,15 +235,16 @@ test('switches provider from the menu and keeps both keys', async ({ page }) => 
     await page.getByText('AI provider', { exact: true }).click()
 
     const dialog = page.getByRole('dialog', { name: 'AI provider' })
-    await dialog.getByText('Claude', { exact: true }).click()
+    await chooseProvider(page, dialog, 'Claude')
     await dialog.getByLabel('Claude API key').fill('sk-ant-e2e')
     await dialog.getByRole('button', { name: 'Save' }).click()
     await expect(dialog).toBeHidden()
 
     await page.locator('header').getByRole('button').last().click()
     await page.getByText('AI provider', { exact: true }).click()
-    await dialog.getByText('OpenAI', { exact: true }).click()
+    await chooseProvider(page, dialog, 'OpenAI')
     await expect(dialog.getByLabel('OpenAI API key')).toHaveAttribute('placeholder', 'Saved. Enter a new key to replace')
-    await dialog.getByRole('button', { name: 'Use saved OpenAI key' }).click()
+    await expect(dialog.getByRole('combobox', { name: 'Model for parsing' })).toHaveValue('gpt-6.1-sol')
+    await dialog.getByRole('button', { name: 'Save' }).click()
     await expect(dialog).toBeHidden()
 })

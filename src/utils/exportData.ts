@@ -2,7 +2,7 @@ import { message } from 'antd'
 import { exportDB } from 'dexie-export-import'
 
 import { MAIN_SETTINGS_ID } from '@/constants'
-import { AppSettings } from '@/db/models/appSettings'
+import { AI_API_KEY_FIELDS, AppSettings } from '@/db/models/appSettings'
 import { BiomarkerConfig } from '@/db/models/biomarkerConfig'
 import { BiomarkerRecord } from '@/db/models/biomarkerRecord'
 import { UploadedDocument } from '@/db/models/document'
@@ -96,8 +96,7 @@ const sanitizeAppSettingsForBackup = (settings: Record<string, unknown>, exporte
 
     return {
         ...settings,
-        openaiApiKey: '',
-        anthropicApiKey: '',
+        ...Object.fromEntries(Object.values(AI_API_KEY_FIELDS).map(field => [field, ''])),
         lastExportedAt: exportedAt,
         googleDriveBackup,
     } as AppSettings
