@@ -4,7 +4,44 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bloodboy</title>
+    <title>Bloodboy: Blood Test Tracker with AI Biomarker Extraction</title>
+    <meta name="description" content="Free, open-source blood test tracker. Upload lab report PDFs, let AI extract biomarkers, and chart trends over time. Data stays in your browser." />
+    <meta name="theme-color" content="#4f46e5" />
+    <link rel="canonical" href="https://bloodboy.report/" />
+    <link rel="apple-touch-icon" href="%BASE_URL%apple-touch-icon.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Bloodboy" />
+    <meta property="og:url" content="https://bloodboy.report/" />
+    <meta property="og:title" content="Bloodboy: Track Your Blood Test Results Over Time" />
+    <meta property="og:description" content="Upload lab report PDFs, let AI extract biomarkers, and chart trends over time. Free, open source, private: data stays in your browser." />
+    <meta property="og:image" content="https://bloodboy.report/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Bloodboy: track your blood test results over time" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Bloodboy: Track Your Blood Test Results Over Time" />
+    <meta name="twitter:description" content="Upload lab report PDFs, let AI extract biomarkers, and chart trends over time. Free, open source, private." />
+    <meta name="twitter:image" content="https://bloodboy.report/og-image.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Bloodboy",
+        "url": "https://bloodboy.report/",
+        "description": "Free, open-source blood test tracker. Upload lab report PDFs, let AI extract biomarkers, and chart trends over time. Data stays in your browser.",
+        "applicationCategory": "HealthApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "image": "https://bloodboy.report/og-image.png",
+        "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+        "codeRepository": "https://github.com/ashugaev/bloodboy-biomarkers-tracker"
+      }
+    </script>
     <script>
       // Restore path from query string for React Router
       // /?/data -> /data
@@ -18,6 +55,12 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <h1>Bloodboy: track your blood test results over time</h1>
+      <p>Upload blood test PDFs, let AI extract biomarkers, and see trends in interactive charts. Any biomarker, any unit, with automatic unit conversion.</p>
+      <p>Free and open source under AGPL-3.0. No account, no subscription. Data stays in your browser, with export and optional Google Drive backup.</p>
+      <p>Bloodboy needs JavaScript. Source code: <a href="https://github.com/ashugaev/bloodboy-biomarkers-tracker">github.com/ashugaev/bloodboy-biomarkers-tracker</a></p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
